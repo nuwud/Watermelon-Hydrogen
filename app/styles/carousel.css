@@ -1,22 +1,18 @@
-/* app/styles/carousel.css */
-.carousel-container canvas {
-    display: block;
-    width: 100% !important;
-    height: 100% !important;
-  }
-  
-  /* Ensure full viewport coverage */
-  html, body, #app {
-    margin: 0;
-    padding: 0;
-    width: 100vw;
-    height: 100%;
-    overflow: hidden;
-    background-color: #000; /* fallback bg */
-  }
-  
-  /* Content container sits above background but below menu */
-  .content-container {
-    position: relative;
-    z-index: 5;
-  }
+html, body, #app, #root {
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+}
+
+.carousel-container canvas, canvas {
+  display: block;
+  width: 100% !important;
+  height: 100% !important;
+}
+
+.content-container {
+  position: relative;
+  z-index: 5;
+}

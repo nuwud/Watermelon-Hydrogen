@@ -7,62 +7,76 @@ export function Carousel3DMenu() {
   const carouselInstanceRef = useRef(null);
 
   useEffect(() => {
-    // This ensures we're only running in the browser
-    if (typeof window === 'undefined') return;
+    console.warn('[Carousel3DMenu] useEffect triggered');
 
-    // Load GSAP first
+    if (typeof window === 'undefined') {
+      console.warn('[Carousel3DMenu] Skipping init – window is undefined (SSR)');
+      return;
+    }
+
     const loadGSAP = async () => {
       if (window.gsap) return window.gsap;
-      
+
       return new Promise((resolve, reject) => {
         const script = document.createElement('script');
         script.src = 'https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js';
-        script.onload = () => resolve(window.gsap);
-        script.onerror = reject;
+        script.onload = () => {
+          console.warn('[GSAP] Loaded successfully');
+          resolve(window.gsap);
+        };
+        script.onerror = (err) => {
+          console.error('[GSAP] Failed to load', err);
+          reject(err);
+        };
         document.head.appendChild(script);
       });
     };
 
-    // Load Three.js and initialize carousel
     const loadCarousel = async () => {
       try {
         await loadGSAP();
-        console.warn('GSAP loaded successfully');
-        
-        // Dynamic import Three.js
+
         const THREE = await import('three');
         window.THREE = THREE;
-        
-        // Import needed modules dynamically
+        console.warn('[THREE] Loaded and assigned to window');
+
         const [OrbitControlsModule, {setupCarousel}] = await Promise.all([
           import('three/examples/jsm/controls/OrbitControls.js'),
-          import('./Carousel3DPro/main.js')
+          import('./Carousel3DPro/main.js'),
         ]);
-        
-        // Make OrbitControls globally available if needed
-        window.OrbitControls = OrbitControlsModule.OrbitControls;
-        
-        // Initialize carousel
-        if (containerRef.current && !carouselInstanceRef.current) {
-          carouselInstanceRef.current = setupCarousel(containerRef.current);
-          console.warn('Carousel initialized successfully!');
-          
-          // Force initial rotation and update
-          if (carouselInstanceRef.current?.carousel?.itemGroup) {
-            carouselInstanceRef.current.carousel.itemGroup.rotation.set(0, 0, 0);
-            carouselInstanceRef.current.carousel.update();
-          }
 
-          window.debugCarousel = carouselInstanceRef.current;
+        window.OrbitControls = OrbitControlsModule.OrbitControls;
+
+        if (!containerRef.current) {
+          console.error('[Carousel3DMenu] containerRef.current is null!');
+          return;
         }
+
+        console.warn('[Carousel3DMenu] Calling setupCarousel with:', containerRef.current);
+        carouselInstanceRef.current = setupCarousel(containerRef.current);
+
+        if (carouselInstanceRef.current?.carousel?.itemGroup) {
+          carouselInstanceRef.current.carousel.itemGroup.rotation.set(0, 0, 0);
+          carouselInstanceRef.current.carousel.update();
+        }
+
+        window.debugCarousel = carouselInstanceRef.current;
+        console.warn('[Carousel3DMenu] Carousel initialized and attached to window.debugCarousel');
+
       } catch (error) {
-        console.error('Error loading carousel:', error);
+        console.error('[Carousel3DMenu] Error loading carousel:', error);
       }
     };
 
-    loadCarousel();
+    // Slight delay to ensure container DOM is mounted
+    requestAnimationFrame(() => {
+      if (containerRef.current) {
+        loadCarousel();
+      } else {
+        console.warn('[Carousel3DMenu] requestAnimationFrame: containerRef still null');
+      }
+    });
 
-    // Cleanup function
     return () => {
       if (carouselInstanceRef.current?.dispose) {
         carouselInstanceRef.current.dispose();
@@ -74,8 +88,9 @@ export function Carousel3DMenu() {
   return (
     <ClientOnly fallback={<div>Loading 3D Menu...</div>}>
       {() => (
-        <div 
-          ref={containerRef} 
+        <div
+          id="carousel-container"
+          ref={containerRef}
           style={{
             width: '100vw',
             height: '100vh',
@@ -83,9 +98,12 @@ export function Carousel3DMenu() {
             top: 0,
             left: 0,
             overflow: 'hidden',
-            zIndex: 10
+            background: '#000',
+            zIndex: 10,
           }}
-        />
+        >
+          <p style={{color: '#fff', padding: '1rem'}}>3D Menu Loading...</p>
+        </div>
       )}
     </ClientOnly>
   );
