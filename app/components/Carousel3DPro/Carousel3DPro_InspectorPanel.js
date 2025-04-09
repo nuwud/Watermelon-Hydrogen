@@ -1,13 +1,31 @@
-/**
- * Alternative inspector implementation using dat.GUI
- * This provides sliders and controls for precise adjustment of carousel settings
- * 
- * NOTE: This implementation requires the dat.GUI library, unlike the vanilla JS
- * implementation in Carousel3DProInspector.js
- */
-
 import * as dat from 'dat.gui';
 import { getThemeByName, createCustomTheme } from './CarouselStyleConfig.js';
+
+function createButton(label, onClick, bgColor = '#444') {
+    const btn = document.createElement('button');
+    btn.innerText = label;
+    btn.onclick = onClick;
+    btn.style.padding = '6px 12px';
+    btn.style.backgroundColor = bgColor;
+    btn.style.color = '#fff';
+    btn.style.border = 'none';
+    btn.style.borderRadius = '4px';
+    btn.style.marginTop = '10px';
+    return btn;
+}
+
+function toggleTheme() {
+    document.body.classList.toggle('dark-theme');
+}
+
+function createThemeSection() {
+    const section = document.createElement('div');
+    section.style.marginTop = '10px';
+    section.style.padding = '10px';
+    section.style.border = '1px dashed #ccc';
+    section.style.background = '#f9f9f9';
+    return section;
+}
 
 export class Carousel3DProInspectorGUI {
     constructor(carouselInstance) {
@@ -48,16 +66,28 @@ export class Carousel3DProInspectorGUI {
                 this.carousel.init();
             });
 
-        // Add Theme Toggle Button to Control Panel
-        const themeButton = createButton('Change Theme', () => {
-            try {
-                toggleTheme(); // Call the toggleTheme function
-            } catch (e) {
-                console.error("Error toggling theme:", e);
-            }
-        }, '#614080'); // Use a custom color for the button
+        // Custom Button Section
+        const themeSection = createThemeSection();
 
-        themeSection.appendChild(themeButton); // Add the button to the theme section
+        // Button 1: Custom Theme
+        const themeButton = createButton('Custom Theme', () => {
+            const custom = createCustomTheme({ base: '#663399' });
+            Object.assign(this.carousel.style, custom);
+            this.carousel.dispose();
+            this.carousel.meshes = [];
+            this.carousel.group.clear();
+            this.carousel.init();
+        }, '#663399');
+
+        // Button 2: Toggle Dark Mode
+        const toggleButton = createButton('Toggle Dark Theme', () => {
+            toggleTheme();
+        }, '#222');
+
+        themeSection.appendChild(themeButton);
+        themeSection.appendChild(toggleButton);
+
+        this.gui.domElement.appendChild(themeSection);
     }
 
     switchTheme(name) {
@@ -72,11 +102,4 @@ export class Carousel3DProInspectorGUI {
     destroy() {
         this.gui.destroy();
     }
-}
-
-// Export for use in main.js
-if (typeof module !== 'undefined' && module.exports) {
-    module.exports = { Carousel3DProInspectorGUI };
-} else {
-    window.Carousel3DProInspectorGUI = Carousel3DProInspectorGUI;
 }

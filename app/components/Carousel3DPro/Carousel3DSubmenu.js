@@ -7,8 +7,7 @@
 import * as THREE from 'three';
 import { TextGeometry } from 'three/examples/jsm/geometries/TextGeometry.js';
 import { FontLoader } from 'three/examples/jsm/loaders/FontLoader.js';
-import { getGlowShaderMaterial, getOpacityFadeMaterial } from './CarouselShaderFX.js';
-import { defaultCarouselStyle } from './CarouselStyleConfig.js';
+// Removed unused imports: getGlowShaderMaterial, getOpacityFadeMaterial, defaultCarouselStyle
 
 // Access GSAP from the global scope
 const gsap = window.gsap;
@@ -407,10 +406,10 @@ export class Carousel3DSubmenu extends THREE.Group {
       container.userData = { 
         index, 
         isSubmenuItem: true,
-        item: item,
-        angle: angle,
-        mesh: mesh,
-        hitArea: hitArea,
+        item,
+        angle,
+        mesh,
+        hitArea,
         originalAngle: angle,
         springVelocity: 0,
         springTarget: 0,
@@ -730,7 +729,10 @@ export class Carousel3DSubmenu extends THREE.Group {
       // Highlight the first item
       this.currentIndex = 0;
       const selectedMesh = firstItem.userData.mesh;
-      const selectedIcon = firstItem.userData.iconMesh;
+      const selectedIcon = this.itemMeshes[this.currentIndex]?.userData?.iconMesh;
+        if (selectedIcon) {
+          console.warn("✅ Selected icon ready for use:", selectedIcon);
+        }
       
       // Apply highlight colors
 selectedMesh.material.color.set(this.config.highlightColor || 0x00ffff);

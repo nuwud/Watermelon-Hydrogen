@@ -9,6 +9,7 @@
  */
 
 import * as THREE from 'three';
+import { TextGeometry } from 'three/examples/jsm/geometries/TextGeometry.js'; // Import TextGeometry
 
 export function createBubblePanel(width = 2, height = 1, depth = 0.1, color = 0xffffff) {
     const geometry = new THREE.BoxGeometry(width, height, depth);
@@ -137,14 +138,6 @@ export class BubblePanel3DInspector {
 
         // Create the panel mesh
         this.panel = new THREE.Mesh(geometry, material);
-
-        // Apply glow effect if available
-        if (typeof applyGlowEffect === 'function') {
-            applyGlowEffect(this.panel, {
-                intensity: 0.15,
-                color: new THREE.Color(0x88ffff)
-            });
-        }
 
         this.container.add(this.panel);
     }
@@ -364,4 +357,4 @@ export class BubblePanel3DInspector {
     }
 }
 
-export default BubblePanel3D;
+export default BubblePanel3DInspector;

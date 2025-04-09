@@ -15,7 +15,7 @@ import { getGlowShaderMaterial } from './CarouselShaderFX.js';
 import { defaultCarouselStyle } from './CarouselStyleConfig.js';
 
 // Access GSAP from the global scope
-const gsap = window.gsap;
+const gsap = typeof window !== 'undefined' ? window.gsap : undefined;
 
 // Core structure and update logic here
 export class Carousel3DPro extends Group {
@@ -218,13 +218,16 @@ export class Carousel3DPro extends Group {
   
   handleWheel(event) {
     // Skip processing if a submenu is active
-    if (this.parent?.userData?.activeSubmenu) {
-      return;
-    }
+    if (this.parent?.userData?.activeSubmenu) return;
     
-    // Your existing wheel handling code...
     const scrollAmount = event.deltaY > 0 ? 1 : -1;
-    // Rest of your zoom or rotation code...
+    
+    // Use scrollAmount to rotate or navigate
+    if (scrollAmount > 0) {
+      this.goToNext();
+    } else {
+      this.goToPrev();
+    }
   }
   
   update() {
@@ -371,7 +374,7 @@ export class Carousel3DPro extends Group {
     return this.items[this.currentIndex];
   }
   
-  resize(width, height) {
+  resize() {
     // Update for responsive layout
     // This would be called by the parent component when window resizes
   }

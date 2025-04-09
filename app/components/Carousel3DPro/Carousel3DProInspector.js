@@ -4,20 +4,20 @@
  * that displays live debug and configuration data for the Carousel3DPro system.
  * It renders a draggable, floating inspector box in the top-left of the screen
  * using HTML + CSS overlay (for now), showing:
- * 
+ *
  * - Current selected item
  * - Index / total count
  * - Rotation value
  * - Active theme name
  * - Controls to switch themes or regenerate the carousel
- * 
+ *
  * The panel should update in real-time as the user rotates the carousel.
- * 
+ *
  * @REQUIREMENTS
  * - No external libraries besides DOM / Vanilla JS
  * - Works with existing Carousel3DPro class via event hooks or direct access
  * - Should be easy to enable/disable from `main.js`
- * 
+ *
  * @FUTURE-NOTE
  * This should eventually become a 3D floating HUD (BubblePanel3D) instead of HTML,
  * but this is the browser UI prototype.
@@ -31,6 +31,8 @@
  * - BubblePanel3D.js: 3D panel implementation (requires Three.js)
  */
 
+import { Carousel3DPro } from './Carousel3DPro'; // Import Carousel3DPro
+
 class Carousel3DProInspector {
     constructor(carousel, options = {}) {
         this.carousel = carousel;
@@ -39,7 +41,6 @@ class Carousel3DProInspector {
             showKeyboardShortcuts: true,
             minimalMode: false,
             updateInterval: 100,
-            // Add new options
             enablePerformanceMetrics: true,
             theme: 'dark', // 'dark' or 'light'
             ...options
@@ -81,31 +82,32 @@ class Carousel3DProInspector {
         };
     }
 
+    get isDarkTheme() {
+        return this.options.theme === 'dark';
+    }
+
     createInspectorUI() {
         // Create container
         this.container = document.createElement('div');
         this.container.className = 'carousel-3d-inspector';
-
-        // Apply theme
-        const isDarkTheme = this.options.theme === 'dark';
 
         // Style the container
         Object.assign(this.container.style, {
             position: 'fixed',
             top: `${this.options.initialPosition.y}px`,
             left: `${this.options.initialPosition.x}px`,
-            backgroundColor: isDarkTheme ? 'rgba(30, 30, 30, 0.9)' : 'rgba(240, 240, 240, 0.9)',
-            color: isDarkTheme ? '#e0e0e0' : '#222',
+            backgroundColor: this.isDarkTheme ? 'rgba(30, 30, 30, 0.9)' : 'rgba(240, 240, 240, 0.9)',
+            color: this.isDarkTheme ? '#e0e0e0' : '#222',
             padding: '12px',
             borderRadius: '8px',
-            boxShadow: isDarkTheme ? '0 3px 14px rgba(0, 0, 0, 0.4)' : '0 3px 14px rgba(0, 0, 0, 0.2)',
+            boxShadow: this.isDarkTheme ? '0 3px 14px rgba(0, 0, 0, 0.4)' : '0 3px 14px rgba(0, 0, 0, 0.2)',
             fontFamily: 'system-ui, -apple-system, sans-serif',
             fontSize: '13px',
             zIndex: '9999',
             userSelect: 'none',
             width: this.options.minimalMode ? '180px' : '260px',
             transition: 'background-color 0.3s, color 0.3s, width 0.2s',
-            border: isDarkTheme ? '1px solid rgba(255, 255, 255, 0.1)' : '1px solid rgba(0, 0, 0, 0.1)'
+            border: this.isDarkTheme ? '1px solid rgba(255, 255, 255, 0.1)' : '1px solid rgba(0, 0, 0, 0.1)'
         });
 
         // Add header with drag handle
@@ -114,7 +116,7 @@ class Carousel3DProInspector {
         Object.assign(header.style, {
             padding: '4px 0',
             marginBottom: '8px',
-            borderBottom: isDarkTheme ? '1px solid rgba(255, 255, 255, 0.2)' : '1px solid rgba(0, 0, 0, 0.1)',
+            borderBottom: this.isDarkTheme ? '1px solid rgba(255, 255, 255, 0.2)' : '1px solid rgba(0, 0, 0, 0.1)',
             cursor: 'move',
             display: 'flex',
             justifyContent: 'space-between',
@@ -136,7 +138,7 @@ class Carousel3DProInspector {
         Object.assign(minBtn.style, {
             background: 'none',
             border: 'none',
-            color: isDarkTheme ? 'white' : 'black',
+            color: this.isDarkTheme ? 'white' : 'black',
             fontSize: '16px',
             cursor: 'pointer',
             padding: '0 5px'
@@ -149,7 +151,7 @@ class Carousel3DProInspector {
         Object.assign(closeBtn.style, {
             background: 'none',
             border: 'none',
-            color: isDarkTheme ? 'white' : 'black',
+            color: this.isDarkTheme ? 'white' : 'black',
             fontSize: '14px',
             cursor: 'pointer',
             padding: '0 5px'
@@ -164,9 +166,9 @@ class Carousel3DProInspector {
         this.container.appendChild(header);
 
         // Create content sections with collapsible functionality
-        this.createInfoSection(isDarkTheme);
-        this.createPerformanceSection(isDarkTheme);
-        this.createControlsSection(isDarkTheme);
+        this.createInfoSection(this.isDarkTheme);
+        this.createPerformanceSection(this.isDarkTheme);
+        this.createControlsSection(this.isDarkTheme);
 
         // Add to DOM
         document.body.appendChild(this.container);
@@ -390,6 +392,7 @@ class Carousel3DProInspector {
         this.container.appendChild(sectionWrapper.wrapper);
     }
 
+    // eslint-disable-next-line no-unused-vars
     createCollapsibleSection(title, initiallyExpanded, isDarkTheme) {
         const wrapper = document.createElement('div');
         wrapper.className = 'inspector-section';
@@ -473,6 +476,7 @@ class Carousel3DProInspector {
             const getCarouselValue = (propAccessor, fallback) => {
                 try {
                     return propAccessor() ?? fallback;
+                // eslint-disable-next-line no-unused-vars
                 } catch (e) {
                     return fallback;
                 }
@@ -688,11 +692,15 @@ if (typeof module !== 'undefined' && module.exports) {
     window.Carousel3DProInspector = Carousel3DProInspector;
 }
 
+if (process.env.NODE_ENV === 'development') {
+    window.inspector = new Carousel3DProInspector(carousel);
+  }
+
 // Create carousel
 const carousel = new Carousel3DPro(/* options */);
 
 // Create and enable inspector
-const inspector = new Carousel3DProInspector(carousel);
+window.inspector = new Carousel3DProInspector(carousel);
 
 // You can toggle it on/off with:
 // inspector.toggle();
