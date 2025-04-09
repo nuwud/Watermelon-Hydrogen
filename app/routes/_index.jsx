@@ -2,13 +2,6 @@ import { useLoaderData } from '@remix-run/react';
 import {Carousel3DMenu} from '~/components/Carousel3DMenu';
 
 /**
- * @type {MetaFunction}
- */
-export const meta = () => {
-  return [{title: 'Hydrogen | Home'}];
-};
-
-/**
  * @param {LoaderFunctionArgs} args
  */
 export async function loader(args) {
