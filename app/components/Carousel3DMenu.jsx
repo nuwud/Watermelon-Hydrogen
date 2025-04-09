@@ -1,6 +1,6 @@
 // app/components/Carousel3DMenu.jsx
 import {useEffect, useRef} from 'react';
-import {ClientOnly} from '@shopify/hydrogen';
+import ClientOnly from './ClientOnly';
 
 export function Carousel3DMenu() {
   const containerRef = useRef(null);
@@ -27,7 +27,7 @@ export function Carousel3DMenu() {
     const loadCarousel = async () => {
       try {
         await loadGSAP();
-        console.log('GSAP loaded successfully');
+        console.warn('GSAP loaded successfully');
         
         // Dynamic import Three.js
         const THREE = await import('three');
@@ -45,7 +45,7 @@ export function Carousel3DMenu() {
         // Initialize carousel
         if (containerRef.current && !carouselInstanceRef.current) {
           carouselInstanceRef.current = setupCarousel(containerRef.current);
-          console.log('Carousel initialized successfully!');
+          console.warn('Carousel initialized successfully!');
           
           // Force initial rotation and update
           if (carouselInstanceRef.current?.carousel?.itemGroup) {
