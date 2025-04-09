@@ -43,6 +43,11 @@ export function links() {
       href: 'https://shop.app',
     },
     {rel: 'icon', type: 'image/svg+xml', href: favicon},
+    // Add this for Three.js
+    {
+      rel: 'preconnect',
+      href: 'https://threejs.org',
+    },
   ];
 }
 

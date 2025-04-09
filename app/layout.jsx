@@ -9,6 +9,7 @@ import {
 } from '@remix-run/react';
 import resetStyles from '~/styles/reset.css?url';
 import appStyles from '~/styles/app.css?url';
+import carouselStyles from '~/styles/carousel.css?url'; // Add this line
 import {PageLayout} from '~/components/PageLayout';
 
 export default function Layout() {
@@ -22,6 +23,7 @@ export default function Layout() {
         <meta name="viewport" content="width=device-width,initial-scale=1" />
         <link rel="stylesheet" href={resetStyles}></link>
         <link rel="stylesheet" href={appStyles}></link>
+        <link rel="stylesheet" href={carouselStyles}></link> {/* Add this line */}
         <Meta />
         <Links />
       </head>
