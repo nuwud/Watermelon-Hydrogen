@@ -10,7 +10,7 @@ import { FontLoader } from 'three/examples/jsm/loaders/FontLoader.js';
 // Removed unused imports: getGlowShaderMaterial, getOpacityFadeMaterial, defaultCarouselStyle
 
 // Access GSAP from the global scope
-const gsap = window.gsap;
+import gsap from 'gsap';
 
 // Cache font to improve performance
 let cachedFont = null;
@@ -54,7 +54,7 @@ export class Carousel3DSubmenu extends THREE.Group {
       }
     } else {
       // Load font if not cached
-      this.fontLoader.load('https://threejs.org/examples/fonts/helvetiker_regular.typeface.json', (font) => {
+      this.fontLoader.load('/helvetiker_regular.typeface.json', (font) => {
         cachedFont = font; // Cache for future use
         this.font = font;
         this.createItems();

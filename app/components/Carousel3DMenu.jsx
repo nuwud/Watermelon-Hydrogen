@@ -12,14 +12,15 @@ export function Carousel3DMenu() {
 
     const loadGSAP = async () => {
       if (window.gsap) return window.gsap;
-      return new Promise((resolve, reject) => {
-        const script = document.createElement('script');
-        script.src = 'https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js';
-        script.onload = () => resolve(window.gsap);
-        script.onerror = reject;
-        document.head.appendChild(script);
-      });
-    };
+      try {
+        const gsap = await import('gsap');
+        window.gsap = gsap.default;
+        return gsap.default;
+      } catch (err) {
+        console.error('Failed to load GSAP:', err);
+        throw err;
+      }
+    };    
 
     const loadCarousel = async () => {
       try {

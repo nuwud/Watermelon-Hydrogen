@@ -33,7 +33,7 @@ export class Carousel3DPro extends Group {
   async init() {
     try {
       const fontLoader = new FontLoader();
-      fontLoader.load('/fonts/helvetiker_regular.typeface.json', (font) => {
+      fontLoader.load('/helvetiker_regular.typeface.json', (font) => {
         this.font = font;
         this.buildCarousel();
       });

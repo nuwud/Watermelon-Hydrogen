@@ -35,9 +35,8 @@ export class Carousel3DPro extends Group {
     // Callback for item clicks
     this.onItemClick = null;
 
-    this.fontLoader = new FontLoader();
-    this.fontLoader.load('https://threejs.org/examples/fonts/helvetiker_regular.typeface.json', (font) => {
-      this.font = font;
+    this.font = null; // Initialize font to null
+    this.loadFont().then(() => {
       this.createItems();
     });
 
@@ -47,6 +46,30 @@ export class Carousel3DPro extends Group {
 
     this.levelingSpeed = 0.1; // Controls how quickly items level out
     this.maxTilt = Math.PI / 24; // Limits maximum tilt (about 7.5 degrees)
+  }
+
+  async loadFont() {
+    try {
+      const fontURL = '/helvetiker_regular.typeface.json';
+      const loader = new FontLoader();
+
+      // Use a promise to handle the asynchronous loading
+      this.font = await new Promise((resolve, reject) => {
+        loader.load(
+          fontURL,
+          (font) => {
+            resolve(font);
+          },
+          undefined,
+          (error) => {
+            console.error('An error occurred while loading the font.', error);
+            reject(error);
+          }
+        );
+      });
+    } catch (error) {
+      console.error('Failed to load font:', error);
+    }
   }
   
   createItems() {
