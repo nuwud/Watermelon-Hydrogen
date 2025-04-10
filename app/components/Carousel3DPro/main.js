@@ -35,56 +35,17 @@ export function setupCarousel(container) {
   controls.dampingFactor = 0.05;
   controls.maxDistance = 20;
   controls.minDistance = 5;
-
-  // IMPORTANT: Allow zooming but only via middle-mouse drag, not wheel
-  controls.enableZoom = true;  // Enable zoom functionality in general
-  controls.zoomSpeed = 1.0;    // Normal zoom speed
-
-  // Configure which mouse buttons do what
+  controls.enableZoom = true;
+  controls.zoomSpeed = 1.0;
   controls.mouseButtons = {
     LEFT: THREE.MOUSE.ROTATE,
-    MIDDLE: THREE.MOUSE.DOLLY,  // Middle mouse button (press) handles zoom
-    RIGHT: THREE.MOUSE.PAN      // Right mouse handles pan
+    MIDDLE: THREE.MOUSE.DOLLY,
+    RIGHT: THREE.MOUSE.PAN,
   };
-
-  // Prevent wheel from triggering any OrbitControls actions
-  // Remove wheel event listeners and replace with our own
-  if (controls.mouseButtons) {
-    controls.mouseButtons.WHEEL = null;
-  }
-
-  // Additional safety: Completely remove the wheel listener from OrbitControls
-  renderer.domElement.removeEventListener('wheel', controls.onMouseWheel);
-  window.removeEventListener('wheel', controls.onMouseWheel);
-
-  // Capture all wheel events and handle them ourselves
-  const handleWheel = (event) => {
-    // Force prevent default behavior to stop browser zoom and scrolling
+  controls.handleMouseWheel = (event) => {
     event.preventDefault();
     event.stopPropagation();
-
-    const delta = Math.sign(event.deltaY);
-    
-    // Priority 1: If submenu is active, scroll it
-    if (activeSubmenu && typeof activeSubmenu.scrollSubmenu === 'function') {
-      activeSubmenu.scrollSubmenu(delta);
-    } 
-    // Priority 2: Otherwise, rotate main carousel with continuous spinning
-    else {
-      // Calculate a smooth rotation amount based on delta
-      // Use smaller values for smoother rotation
-      const spinAmount = delta * 0.1;
-      
-      // Use the spin method for continuous rotation instead of snap-to-next
-      carousel.spin(spinAmount);
-      
-      // Update the current item highlight as we spin
-      carousel.updateCurrentItemFromRotation();
-    }
   };
-
-  // Add our wheel handler with passive: false for preventDefault to work
-  window.addEventListener('wheel', handleWheel, { passive: false, capture: true });
 
   const items = ['Home', 'Products', 'Contact', 'About', 'Gallery'];
   const submenus = {
@@ -141,14 +102,12 @@ export function setupCarousel(container) {
 
   scene.add(carousel, ambientLight, directionalLight);
 
-  const handleResize = () => {
+  window.addEventListener('resize', () => {
     camera.aspect = window.innerWidth / window.innerHeight;
     camera.updateProjectionMatrix();
     renderer.setSize(window.innerWidth, window.innerHeight);
     carousel.resize?.(window.innerWidth, window.innerHeight);
-  };
-
-  window.addEventListener('resize', handleResize);
+  });
 
   function closeSubmenu(immediate = false) {
     if (!activeSubmenu || submenuTransitioning) return;
@@ -181,9 +140,6 @@ export function setupCarousel(container) {
       scene.userData.activeSubmenu = null;
       activeSubmenu = null;
       submenuTransitioning = false;
-
-      // Re-enable carousel spinning after submenu is closed
-      window.addEventListener('wheel', handleWheel, { passive: false, capture: true });
     };
 
     if (immediate) {
@@ -235,12 +191,32 @@ export function setupCarousel(container) {
 
   window.addEventListener('click', handleCarouselClick);
 
-  const handleKeyDown = (e) => {
+  window.addEventListener(
+    'wheel',
+    (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+
+      if (activeSubmenu) {
+        activeSubmenu.scrollSubmenu(event.deltaY > 0 ? 1 : -1);
+      } else {
+        if (event.deltaY > 0) carousel.goToNext();
+        else carousel.goToPrev();
+      }
+    },
+    { passive: false }
+  );
+
+  window.addEventListener('keydown', (e) => {
     if (e.key === 'ArrowRight') carousel.goToNext();
     else if (e.key === 'ArrowLeft') carousel.goToPrev();
-  };
+  });
 
-  window.addEventListener('keydown', handleKeyDown);
+  window.addEventListener('resize', () => {
+    camera.aspect = window.innerWidth / window.innerHeight;
+    camera.updateProjectionMatrix();
+    renderer.setSize(window.innerWidth, window.innerHeight);
+  });  
 
   const themes = [defaultCarouselStyle, darkTheme, cyberpunkTheme, lightTheme];
   let themeIndex = 0;
@@ -282,26 +258,5 @@ export function setupCarousel(container) {
     prevItem: () => carousel.goToPrev(),
     toggleTheme,
     closeSubmenu,
-    cleanup: () => {
-      // Remove our custom wheel handler
-      window.removeEventListener('wheel', handleWheel);
-      
-      // Safety cleanup - remove any lingering OrbitControls wheel handlers
-      if (controls && controls.dispose) {
-        controls.dispose();
-      }
-      
-      // Clean up click handlers
-      window.removeEventListener('click', handleCarouselClick);
-      window.removeEventListener('keydown', handleKeyDown);
-      
-      // Clean up resize handler
-      window.removeEventListener('resize', handleResize);
-      
-      // Dispose renderer if it exists
-      if (renderer && renderer.dispose) {
-        renderer.dispose();
-      }
-    }
   };
 }
