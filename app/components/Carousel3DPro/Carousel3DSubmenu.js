@@ -98,27 +98,27 @@ export class Carousel3DSubmenu extends THREE.Group {
     });
 
     this.closeButton = new THREE.Mesh(baseGeometry, baseMaterial);
-    this.closeButton.rotation.set(0, 0, 0);
-    this.fixedElements.rotation.set(0, 0, 0);
-    this.closeButton.rotation.set(Math.PI / 2, 0, 0); // Example: 90 degrees along X-axis
-    this.closeButton.rotation.set(0, Math.PI / 2, 0); // Example: 90 degrees along Y-axis
-    this.closeButton.rotation.set(0, 0, Math.PI / 2); // Example: 90 degrees along Z-axis
+
+    // Rotate the cylinder so its flat face aligns with the "X"
+    this.closeButton.rotation.x = Math.PI / 2; // Rotate 90 degrees along the X-axis
+
+    // Position the close button
     this.closeButton.position.set(1.8, 1.8, 0.5); // Positioned in top corner
     this.closeButton.scale.set(0.8, 0.8, 0.8); // Start slightly smaller for animation
     this.closeButton.renderOrder = 9999;
-    
+
     // Set isCloseButton flag
     this.closeButton.userData = { // Set userData for easy access
       isCloseButton: true, // Flag to identify close button
       originalColor: baseMaterial.color.clone(), // Store original color for reset
       hoverColor: new THREE.Color(0xff0000) // Red hover color
     };
-    
-    // Add X with proper orientation
-    this.createCloseButtonX(); // Create X shape
-    
+
+    // Add the "X" to the red disk
+    this.createCloseButtonX();
+
     // Add to fixed elements group
-    this.fixedElements.add(this.closeButton); // Add to fixed elements group
+    this.fixedElements.add(this.closeButton);
   }
 
   createCloseButtonX() {

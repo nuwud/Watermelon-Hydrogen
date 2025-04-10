@@ -251,8 +251,15 @@ export class Carousel3DPro extends Group {
   }
   
   handleWheel(event) {
+    // Prevent default scroll behavior (i.e., page scroll)
+    event.preventDefault();
+
     // Skip processing if a submenu is active
-    if (this.parent?.userData?.activeSubmenu) return;
+    if (this.parent?.userData?.activeSubmenu) {
+      // Assuming the submenu has a similar API
+      this.parent.userData.activeSubmenu.handleWheel(event);
+      return;
+    }
     
     const scrollAmount = event.deltaY > 0 ? 1 : -1;
     
@@ -311,7 +318,12 @@ export class Carousel3DPro extends Group {
     if (normalizedRotation < 0) normalizedRotation += 2 * Math.PI;
     
     // Calculate which index is at the front (3 o'clock position)
-    const indexFromRotation = Math.round(normalizedRotation / angleStep) % this.items.length;
+    // First get the raw index based on rotation
+    const rawIndex = Math.round(normalizedRotation / angleStep);
+    
+    // REVERSE THE ORDER: Subtract from total items to reverse the direction
+    // This makes the highlight move in the opposite direction of the wheel rotation
+    const indexFromRotation = (this.items.length - rawIndex) % this.items.length;
     
     // If we have a new front item, update it
     if (indexFromRotation !== this.currentIndex) {
@@ -364,11 +376,11 @@ export class Carousel3DPro extends Group {
     const segmentAngle = (2 * Math.PI) / this.items.length;
     this.targetRotation = this.itemGroup.rotation.y - segmentAngle;
     
-    // Animate with smoother, more controlled motion
+    // Animate with smoother, more controlled motion and gentle snap
     gsap.to(this.itemGroup.rotation, {
       y: this.targetRotation,
-      duration: 0.5, // Make transition a bit faster for more responsive feel
-      ease: "power2.out",
+      duration: 0.5, 
+      ease: "back.out(1.2)", // Add gentle snap-to effect
       onComplete: () => {
         this.currentIndex = nextIndex;
         this.isAnimating = false;
@@ -389,11 +401,11 @@ export class Carousel3DPro extends Group {
     const segmentAngle = (2 * Math.PI) / this.items.length;
     this.targetRotation = this.itemGroup.rotation.y + segmentAngle;
     
-    // Animate with smoother, more controlled motion
+    // Animate with smoother, more controlled motion and gentle snap
     gsap.to(this.itemGroup.rotation, {
       y: this.targetRotation,
-      duration: 0.5, // Make transition a bit faster for more responsive feel
-      ease: "power2.out",
+      duration: 0.5, 
+      ease: "back.out(1.2)", // Add gentle snap-to effect
       onComplete: () => {
         this.currentIndex = prevIndex;
         this.isAnimating = false;
