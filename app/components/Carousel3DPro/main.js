@@ -97,7 +97,7 @@ export function setupCarousel(container) {
   let touchVelocity = 0;
   
   // Handle touch start
-  window.addEventListener('touchstart', (event) => {
+  const touchStartHandler = (event) => {
     if (event.touches.length === 1) {
       touchStartX = event.touches[0].clientX;
       touchStartY = event.touches[0].clientY;
@@ -107,10 +107,10 @@ export function setupCarousel(container) {
       // Prevent default to avoid unintended scrolling
       event.preventDefault();
     }
-  }, { passive: false });
+  };
   
   // Handle touch move for swipe detection
-  window.addEventListener('touchmove', (event) => {
+  const touchMoveHandler = (event) => {
     if (event.touches.length !== 1) return;
     
     // Prevent default browser behavior (page scrolling)
@@ -152,10 +152,10 @@ export function setupCarousel(container) {
     }
     
     lastTouchTime = now;
-  }, { passive: false });
+  };
   
   // Handle touch end with momentum effect
-  window.addEventListener('touchend', (event) => {
+  const touchEndHandler = (event) => {
     // Apply momentum based on final velocity
     if (touchVelocity > 0.5) { // Minimum velocity threshold
       if (activeSubmenu) {
@@ -169,8 +169,32 @@ export function setupCarousel(container) {
         carousel.spin(direction * angleStep);
       }
     }
-  }, { passive: false });
+  };
   
+  // Initial setup: attach touch event listeners
+  enableTouchEvents();
+  
+  // Function to enable touch events
+  function enableTouchEvents() {
+    // Reset touch variables
+    touchStartX = 0;
+    touchStartY = 0;
+    lastTouchTime = 0;
+    touchVelocity = 0;
+    
+    // Re-attach touch event listeners
+    window.addEventListener('touchstart', touchStartHandler, { passive: false });
+    window.addEventListener('touchmove', touchMoveHandler, { passive: false });
+    window.addEventListener('touchend', touchEndHandler, { passive: false });
+  }
+  
+  // Function to disable touch events
+  function disableTouchEvents() {
+    window.removeEventListener('touchstart', touchStartHandler);
+    window.removeEventListener('touchmove', touchMoveHandler);
+    window.removeEventListener('touchend', touchEndHandler);
+  }
+
   // FIX 3: Override OrbitControls wheel handler to only work with middle mouse
   const originalOnWheel = controls.onMouseWheel;
   controls.onMouseWheel = function(event) {
@@ -307,6 +331,9 @@ export function setupCarousel(container) {
       scene.userData.activeSubmenu = null;
       activeSubmenu = null;
       submenuTransitioning = false;
+      
+      // CRITICAL: Re-enable touch events after closing submenu
+      enableTouchEvents();
     };
 
     if (immediate) {
@@ -318,6 +345,90 @@ export function setupCarousel(container) {
 
     controls.enabled = true;
   }
+  
+  // Touch event handlers
+  const touchStartHandler = (event) => {
+    if (event.touches.length === 1) {
+      touchStartX = event.touches[0].clientX;
+      touchStartY = event.touches[0].clientY;
+      lastTouchTime = Date.now();
+      touchVelocity = 0;
+      event.preventDefault();
+    }
+  };
+  
+  const touchMoveHandler = (event) => {
+    if (event.touches.length !== 1) return;
+    event.preventDefault();
+    
+    const touchX = event.touches[0].clientX;
+    const touchY = event.touches[0].clientY;
+    const deltaX = touchX - touchStartX;
+    const deltaY = touchY - touchStartY;
+    const now = Date.now();
+    const timeDelta = now - lastTouchTime;
+    if (timeDelta > 0) {
+      touchVelocity = Math.sqrt(deltaX * deltaX + deltaY * deltaY) / timeDelta;
+    }
+    const isHorizontalSwipe = Math.abs(deltaX) > Math.abs(deltaY);
+    const swipeThreshold = 5;
+    
+    if (activeSubmenu) {
+      if (!isHorizontalSwipe && Math.abs(deltaY) > swipeThreshold) {
+        activeSubmenu.scrollSubmenu(deltaY > 0 ? -1 : 1);
+        touchStartY = touchY;
+      }
+    } else {
+      if (isHorizontalSwipe && Math.abs(deltaX) > swipeThreshold) {
+        const angleStep = (2 * Math.PI) / items.length;
+        carousel.spin(deltaX > 0 ? angleStep : -angleStep);
+        touchStartX = touchX;
+      }
+    }
+    
+    lastTouchTime = now;
+  };
+  
+  const touchEndHandler = (event) => {
+    if (touchVelocity > 0.5) {
+      if (activeSubmenu) {
+        const direction = touchStartY < event.changedTouches[0].clientY ? -1 : 1;
+        activeSubmenu.scrollSubmenu(direction);
+      } else {
+        const direction = touchStartX < event.changedTouches[0].clientX ? 1 : -1;
+        const angleStep = (2 * Math.PI) / items.length;
+        carousel.spin(direction * angleStep);
+      }
+    }
+  };
+  
+  // Function to enable touch events
+  function enableTouchEvents() {
+    // Reset touch variables
+    touchStartX = 0;
+    touchStartY = 0;
+    lastTouchTime = 0;
+    touchVelocity = 0;
+    
+    // Re-attach touch event listeners
+    window.addEventListener('touchstart', touchStartHandler, { passive: false });
+    window.addEventListener('touchmove', touchMoveHandler, { passive: false });
+    window.addEventListener('touchend', touchEndHandler, { passive: false });
+  }
+  
+  // Remove duplicate definitions and call enableTouchEvents to start
+  enableTouchEvents();
+
+  // FIX 3: Override OrbitControls wheel handler to only work with middle mouse
+  const originalOnWheel = controls.onMouseWheel;
+  controls.onMouseWheel = function(event) {
+    if (event.buttons !== 4) {
+      // Block all wheel events that don't have middle mouse pressed
+      return;
+    }
+    // Only call original handler for middle mouse + wheel
+    originalOnWheel.call(this, event);
+  };
 
   function handleCarouselClick(event) {
     if (submenuTransitioning) return;
