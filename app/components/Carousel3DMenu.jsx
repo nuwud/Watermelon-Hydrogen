@@ -70,9 +70,11 @@ export function Carousel3DMenu() {
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
+            overflow: 'hidden',
+            position: 'relative',
           }}
         >
-          🧠 Loading Carousel3D...
+          
           <Carousel3DProWrapper items={items} />
         </div>
       )}
