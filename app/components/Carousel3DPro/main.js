@@ -32,21 +32,154 @@ export function setupCarousel(container) {
   renderer.setPixelRatio(window.devicePixelRatio);
   container.appendChild(renderer.domElement);
 
+  // Setup OrbitControls with correct zoom handling
   const controls = new OrbitControls(camera, renderer.domElement);
   controls.enableDamping = true;
   controls.dampingFactor = 0.05;
   controls.maxDistance = 20;
   controls.minDistance = 5;
-  controls.enableZoom = true;
+  
+  // FIX 1: Correct setup for middle mouse zoom only
+  controls.enableZoom = true; // Keep enabled, but we'll control when it's used
   controls.zoomSpeed = 1.0;
+  
+  // Keep rotation and pan controls
   controls.mouseButtons = {
     LEFT: THREE.MOUSE.ROTATE,
-    MIDDLE: THREE.MOUSE.DOLLY,
+    MIDDLE: THREE.MOUSE.DOLLY, // Keep MIDDLE button as dolly/zoom
     RIGHT: THREE.MOUSE.PAN,
   };
-  controls.handleMouseWheel = (event) => {
+  
+  // Disable pinch-to-zoom on touch
+  controls.touches.TWO = null;
+  
+  // FIX 2: Properly handle wheel events with a capture phase listener
+  // We need to capture the wheel event BEFORE OrbitControls gets it
+  window.addEventListener(
+    'wheel',
+    (event) => {
+      // Check middle mouse button first - this is the zoom case
+      if (event.buttons === 4) {
+        // Let OrbitControls handle zooming - do not stop propagation
+        return;
+      }
+      
+      // For all other cases, prevent default and stop propagation
+      event.preventDefault();
+      event.stopPropagation();
+      
+      // Navigate menus based on wheel direction
+      const delta = event.deltaY;
+      
+      if (activeSubmenu) {
+        // Scroll submenu when it's active
+        activeSubmenu.scrollSubmenu(delta > 0 ? 1 : -1);
+      } else {
+        // Navigate main carousel when no submenu
+         // Add logging to diagnose the issue
+          console.warn("Wheel scroll detected", delta > 0 ? "DOWN" : "UP");
+          try {
+            // Direct call to unwrapped method to bypass animation checks
+            const angleStep = (2 * Math.PI) / items.length;
+            carousel.spin(delta > 0 ? -angleStep : angleStep);       
+          } catch (error) {
+            console.error("Error during carousel navigation:", error);
+          }
+      }
+    },
+    { passive: false, capture: true } // Capture phase is critical
+  );
+
+  // MOBILE SUPPORT: Add touch event handlers for swipe navigation
+  let touchStartX = 0;
+  let touchStartY = 0;
+  let lastTouchTime = 0;
+  let touchVelocity = 0;
+  
+  // Handle touch start
+  window.addEventListener('touchstart', (event) => {
+    if (event.touches.length === 1) {
+      touchStartX = event.touches[0].clientX;
+      touchStartY = event.touches[0].clientY;
+      lastTouchTime = Date.now();
+      touchVelocity = 0;
+      
+      // Prevent default to avoid unintended scrolling
+      event.preventDefault();
+    }
+  }, { passive: false });
+  
+  // Handle touch move for swipe detection
+  window.addEventListener('touchmove', (event) => {
+    if (event.touches.length !== 1) return;
+    
+    // Prevent default browser behavior (page scrolling)
     event.preventDefault();
-    event.stopPropagation();
+    
+    const touchX = event.touches[0].clientX;
+    const touchY = event.touches[0].clientY;
+    
+    // Calculate swipe distance and direction
+    const deltaX = touchX - touchStartX;
+    const deltaY = touchY - touchStartY;
+    
+    // Calculate velocity for smooth navigation
+    const now = Date.now();
+    const timeDelta = now - lastTouchTime;
+    if (timeDelta > 0) {
+      touchVelocity = Math.sqrt(deltaX * deltaX + deltaY * deltaY) / timeDelta;
+    }
+    
+    // Use the dominant axis (horizontal or vertical)
+    const isHorizontalSwipe = Math.abs(deltaX) > Math.abs(deltaY);
+    
+    // Apply threshold to avoid accidental swipes
+    const swipeThreshold = 5;
+    
+    if (activeSubmenu) {
+      // For submenu, use vertical swipe
+      if (!isHorizontalSwipe && Math.abs(deltaY) > swipeThreshold) {
+        activeSubmenu.scrollSubmenu(deltaY > 0 ? -1 : 1); // Invert for natural feel
+        touchStartY = touchY; // Reset for continuous scrolling
+      }
+    } else {
+      // For main carousel, use horizontal swipe
+      if (isHorizontalSwipe && Math.abs(deltaX) > swipeThreshold) {
+        const angleStep = (2 * Math.PI) / items.length;
+        carousel.spin(deltaX > 0 ? angleStep : -angleStep); // Direction feels natural
+        touchStartX = touchX; // Reset for continuous rotation
+      }
+    }
+    
+    lastTouchTime = now;
+  }, { passive: false });
+  
+  // Handle touch end with momentum effect
+  window.addEventListener('touchend', (event) => {
+    // Apply momentum based on final velocity
+    if (touchVelocity > 0.5) { // Minimum velocity threshold
+      if (activeSubmenu) {
+        const direction = touchStartY < event.changedTouches[0].clientY ? -1 : 1;
+        // Apply momentum scrolling to submenu
+        activeSubmenu.scrollSubmenu(direction);
+      } else {
+        const direction = touchStartX < event.changedTouches[0].clientX ? 1 : -1;
+        // Apply momentum to carousel
+        const angleStep = (2 * Math.PI) / items.length;
+        carousel.spin(direction * angleStep);
+      }
+    }
+  }, { passive: false });
+  
+  // FIX 3: Override OrbitControls wheel handler to only work with middle mouse
+  const originalOnWheel = controls.onMouseWheel;
+  controls.onMouseWheel = function(event) {
+    if (event.buttons !== 4) {
+      // Block all wheel events that don't have middle mouse pressed
+      return;
+    }
+    // Only call original handler for middle mouse + wheel
+    originalOnWheel.call(this, event);
   };
 
   const items = ['Home', 'Products', 'Contact', 'About', 'Gallery'];
@@ -64,6 +197,38 @@ export function setupCarousel(container) {
 
   const carousel = new Carousel3DPro(items, currentTheme);
   carousel.userData = { camera };
+  carousel.isAnimating = false; // Track animation state
+  
+  // Wrap the original methods to track animation state
+  const originalGoToNext = carousel.goToNext;
+  carousel.goToNext = function() {
+    if (carousel.isAnimating) return;
+    carousel.isAnimating = true;
+    
+    try {
+      originalGoToNext.call(carousel);
+      // Reset animation flag after animation should be complete
+      setTimeout(() => { carousel.isAnimating = false; }, 500);
+    } catch (error) {
+      console.error('Error in goToNext:', error);
+      carousel.isAnimating = false;
+    }
+  };
+  
+  const originalGoToPrev = carousel.goToPrev;
+  carousel.goToPrev = function() {
+    if (carousel.isAnimating) return;
+    carousel.isAnimating = true;
+    
+    try {
+      originalGoToPrev.call(carousel);
+      // Reset animation flag after animation should be complete
+      setTimeout(() => { carousel.isAnimating = false; }, 500);
+    } catch (error) {
+      console.error('Error in goToPrev:', error);
+      carousel.isAnimating = false;
+    }
+  };
 
   carousel.onItemClick = (index, item) => {
     if (submenus[item] && !submenuTransitioning) {
@@ -193,32 +358,10 @@ export function setupCarousel(container) {
 
   window.addEventListener('click', handleCarouselClick);
 
-  window.addEventListener(
-    'wheel',
-    (event) => {
-      event.preventDefault();
-      event.stopPropagation();
-
-      if (activeSubmenu) {
-        activeSubmenu.scrollSubmenu(event.deltaY > 0 ? 1 : -1);
-      } else {
-        if (event.deltaY > 0) carousel.goToNext();
-        else carousel.goToPrev();
-      }
-    },
-    { passive: false }
-  );
-
   window.addEventListener('keydown', (e) => {
     if (e.key === 'ArrowRight') carousel.goToNext();
     else if (e.key === 'ArrowLeft') carousel.goToPrev();
   });
-
-  window.addEventListener('resize', () => {
-    camera.aspect = window.innerWidth / window.innerHeight;
-    camera.updateProjectionMatrix();
-    renderer.setSize(window.innerWidth, window.innerHeight);
-  });  
 
   const themes = [defaultCarouselStyle, darkTheme, cyberpunkTheme, lightTheme];
   let themeIndex = 0;

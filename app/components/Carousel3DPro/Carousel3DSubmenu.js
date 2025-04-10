@@ -82,6 +82,14 @@ export class Carousel3DSubmenu extends THREE.Group {
     
     // Add close button immediately with fixed position - only call once
     this.addCloseButtonPlaceholder();
+    
+    // Listen for submenu-scroll custom events
+    if (typeof window !== 'undefined') {
+      window.addEventListener('submenu-scroll', (e) => {
+        const delta = e.detail.delta;
+        this.scrollSubmenu(delta); // Pass delta directly as scrollSubmenu already handles direction
+      });
+    }
   }
   
   addCloseButtonPlaceholder() {

@@ -250,6 +250,16 @@ export class Carousel3DPro extends Group {
     };
 
     window.addEventListener('click', handleClick);
+    
+    // Add custom event listener for mainmenu-scroll
+    window.addEventListener('mainmenu-scroll', (e) => {
+      const delta = e.detail.delta;
+      if (delta > 0) {
+        this.goToNext();
+      } else {
+        this.goToPrev();
+      }
+    });
   }
   
   handleWheel(event) {
@@ -281,7 +291,6 @@ export class Carousel3DPro extends Group {
         // Apply a more natural rotation speed based on distance
         const rotationAmount = diff * this.rotationSpeed;
         this.itemGroup.rotation.y += rotationAmount;
-        
         // Check if we need to update the current index based on rotation
         this.updateCurrentItemFromRotation();
       } else {
