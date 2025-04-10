@@ -87,6 +87,8 @@ class Carousel3DProInspector {
     }
 
     createInspectorUI() {
+        if (typeof document === 'undefined') return;
+        
         // Create container
         this.container = document.createElement('div');
         this.container.className = 'carousel-3d-inspector';
@@ -550,6 +552,8 @@ class Carousel3DProInspector {
     }
 
     attachEventListeners() {
+        if (typeof document === 'undefined') return;
+        
         // Make panel draggable
         const header = this.container.querySelector('.inspector-header');
 

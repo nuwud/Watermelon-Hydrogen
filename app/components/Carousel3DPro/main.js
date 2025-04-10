@@ -18,6 +18,8 @@ import gsap from 'gsap';
  * @returns {Object} - carousel controls and diagnostics
  */
 export function setupCarousel(container) {
+  if (typeof window === 'undefined') return null;
+
   const scene = new THREE.Scene();
   let currentTheme = defaultCarouselStyle;
   scene.background = new THREE.Color(currentTheme.backgroundColor);

@@ -221,6 +221,8 @@ export class Carousel3DPro extends Group {
   }
   
   setupEventListeners() {
+    if (typeof window === 'undefined') return;
+    
     const handleClick = (event) => {
       const mouse = new THREE.Vector2(
         (event.clientX / window.innerWidth) * 2 - 1,

@@ -9,6 +9,7 @@ export function Carousel3DMenu() {
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
+    // Rest of effect...
 
     const loadGSAP = async () => {
       if (window.gsap) return window.gsap;
