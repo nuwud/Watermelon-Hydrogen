@@ -1,46 +1,44 @@
-// app/components/Carousel3DPro/Carousel3DProWrapper.jsx
 import { useEffect, useRef } from 'react';
-import { Carousel3DPro } from './Carousel3DPro'; // adjust path as needed
+import { Carousel3DPro } from './Carousel3DPro';
+import * as THREE from 'three';
 
 const Carousel3DProWrapper = ({ items = [], config = {} }) => {
   const containerRef = useRef(null);
   const carouselRef = useRef(null);
+  const rendererRef = useRef(null);
 
   useEffect(() => {
-    const container = containerRef.current;
-    if (!container) return;
+    if (!containerRef.current) return;
 
-    try {
-      carouselRef.current = new Carousel3DPro(items, config);
-      container.appendChild(carouselRef.current.domElement);
+    carouselRef.current = new Carousel3DPro(items, config);
 
-      const handleResize = () => {
-        if (carouselRef.current?.resize) {
-          carouselRef.current.resize(container.clientWidth, container.clientHeight);
-        }
-      };
-
-      window.addEventListener('resize', handleResize);
-      handleResize();
-
-      return () => {
-        window.removeEventListener('resize', handleResize);
-        if (carouselRef.current?.dispose) {
-          carouselRef.current.dispose();
-        }
-      };
-    } catch (err) {
-      console.error("🔥 Error in Carousel3DProWrapper:", err);
+    // ✅ DOM safety check before appending
+    if (carouselRef.current?.domElement instanceof HTMLElement) {
+      rendererRef.current = new THREE.WebGLRenderer({ antialias: true });
+      containerRef.current.appendChild(rendererRef.current.domElement);
     }
+
+    const handleResize = () => {
+      if (carouselRef.current?.resize) {
+        carouselRef.current.resize(
+          containerRef.current.clientWidth,
+          containerRef.current.clientHeight
+        );
+      }
+    };
+
+    window.addEventListener('resize', handleResize);
+    handleResize();
+
+    return () => {
+      window.removeEventListener('resize', handleResize);
+      if (carouselRef.current?.dispose) {
+        carouselRef.current.dispose();
+      }
+    };
   }, [items, config]);
 
-  return (
-    <div
-      ref={containerRef}
-      style={{ width: '100%', height: '100%' }}
-      id="carousel3dpro-wrapper"
-    />
-  );
+  return <div ref={containerRef} style={{ width: '100%', height: '100%' }} />;
 };
 
 export default Carousel3DProWrapper;
