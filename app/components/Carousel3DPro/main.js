@@ -76,15 +76,8 @@ export function setupCarousel(container) {
                 activeSubmenu.scrollSubmenu(delta > 0 ? 1 : -1);
             } else {
                 // Navigate main carousel when no submenu
-                // Add logging to diagnose the issue
-                console.warn("Wheel scroll detected", delta > 0 ? "DOWN" : "UP");
-                try {
-                    // Direct call to unwrapped method to bypass animation checks
-                    const angleStep = (2 * Math.PI) / items.length;
-                    carousel.spin(delta > 0 ? -angleStep : angleStep);
-                } catch (error) {
-                    console.error("Error during carousel navigation:", error);
-                }
+                const angleStep = (2 * Math.PI) / items.length;
+                carousel.spin(delta > 0 ? -angleStep : angleStep);
             }
         },
         { passive: false, capture: true } // Capture phase is critical
@@ -184,14 +177,7 @@ export function setupCarousel(container) {
         window.addEventListener('touchmove', touchMoveHandler, { passive: false });
         window.addEventListener('touchend', touchEndHandler, { passive: false });
     }
-
-    // Function to disable touch events
-    //function disableTouchEvents() {
-    //    window.removeEventListener('touchstart', touchStartHandler);
-    //    window.removeEventListener('touchmove', touchMoveHandler);
-    //    window.removeEventListener('touchend', touchEndHandler);
-    //}
-
+    
     // Initial setup: attach touch event listeners
     enableTouchEvents();
 
