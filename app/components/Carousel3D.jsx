@@ -55,10 +55,14 @@ export class Carousel3DPro extends Group {
         height: 0.1,
         curveSegments: 12,
       });
+      geometry.computeBoundingBox(); 
+      geometry.center(); 
 
       const material = getGlowShaderMaterial(this.config);
       const mesh = new THREE.Mesh(geometry, material);
       const angle = i * angleStep;
+      mesh.position.x = i * 2;
+      this.group.add(mesh);
 
       mesh.position.x = radius * Math.cos(angle);
       mesh.position.z = radius * Math.sin(angle);

@@ -83,6 +83,7 @@ export class Carousel3DPro extends Group {
         font: this.font,
         size: 0.5,
         height: 0.1,
+        depth: 0.1,
         curveSegments: 12,
         bevelEnabled: true,
         bevelThickness: 0.03,
@@ -102,6 +103,13 @@ export class Carousel3DPro extends Group {
       });
       
       const mesh = new THREE.Mesh(geometry, material);
+      mesh.name = item.toString();
+      // Calculate or assign default values for x, y, and z
+      const x = 0; // Default or calculated x-coordinate
+      const y = 0; // Default or calculated y-coordinate
+      const z = 0; // Default or calculated z-coordinate
+      mesh.position.set(x, y, z);
+      this.itemGroup.add(mesh);
       
       // Position in cylinder arrangement
       const angle = angleStep * index;
@@ -110,6 +118,9 @@ export class Carousel3DPro extends Group {
 
       // Make each item face outward
       mesh.rotation.y = Math.atan2(mesh.position.x, mesh.position.z);
+      
+      // Store original scale in userData
+      mesh.userData.originalScale = new THREE.Vector3().copy(mesh.scale);
       
       // Add hit area for better click detection
       const textWidth = geometry.boundingBox.max.x - geometry.boundingBox.min.x;
@@ -135,7 +146,7 @@ export class Carousel3DPro extends Group {
 
       // Store hit area and mesh in userData for interaction
       hitArea.userData = { index, mesh };
-      mesh.userData = { index, hitArea };
+      mesh.userData.hitArea = hitArea;
 
       this.itemMeshes.push(mesh);
       this.itemGroup.add(mesh);

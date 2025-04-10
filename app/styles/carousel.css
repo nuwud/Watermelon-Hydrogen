@@ -12,7 +12,22 @@ html, body, #app, #root {
   height: 100% !important;
 }
 
-.content-container {
+/* .content-container {
   position: relative;
   z-index: 5;
+} */
+
+#carousel-container {
+  position: fixed; /* or absolute depending on stack */
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  overflow: hidden;
+  margin: 0;
+  padding: 0; 
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 0;
 }

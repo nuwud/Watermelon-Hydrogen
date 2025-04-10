@@ -212,6 +212,12 @@ export function setupCarousel(container) {
     else if (e.key === 'ArrowLeft') carousel.goToPrev();
   });
 
+  window.addEventListener('resize', () => {
+    camera.aspect = window.innerWidth / window.innerHeight;
+    camera.updateProjectionMatrix();
+    renderer.setSize(window.innerWidth, window.innerHeight);
+  });  
+
   const themes = [defaultCarouselStyle, darkTheme, cyberpunkTheme, lightTheme];
   let themeIndex = 0;
 

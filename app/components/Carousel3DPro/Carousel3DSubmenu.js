@@ -313,6 +313,7 @@ export class Carousel3DSubmenu extends THREE.Group {
         font: this.font,
         size: 0.25,
         height: 0.05,
+        depth: 0.02,
         curveSegments: 12,
         bevelEnabled: true,
         bevelThickness: 0.02,
@@ -338,6 +339,7 @@ export class Carousel3DSubmenu extends THREE.Group {
       });
       
       const mesh = new THREE.Mesh(geometry, material);
+      
       
       // Create a container for the mesh
       const container = new THREE.Group();
