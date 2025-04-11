@@ -101,7 +101,7 @@ export class Carousel3DSubmenu extends THREE.Group {
 
     // Rotate the cylinder so its flat face aligns with the "X"
     this.closeButton.rotation.x = Math.PI / 2; // Rotate 90 degrees along the X-axis 
-    this.closeButton.rotation.z = Math.PI ; // Rotate 180 degrees along the Z-axis
+    this.closeButton.rotation.z = Math.PI / 2; // Rotate to face the same direction as the "X"
     this.closeButton.position.z = 0.5; // Position it slightly in front of the wheel
 
     // Position the close button
