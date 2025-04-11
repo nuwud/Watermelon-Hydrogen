@@ -97,10 +97,7 @@ export class Carousel3DSubmenu extends THREE.Group {
       emissiveIntensity: 0.5 // Stronger glow
     });
 
-    this.closeButton = new THREE.Mesh(baseGeometry, baseMaterial); // Create the close button mesh
-
-    this.closeButton.rotation.x = Math.PI / 2; // ✅ Lays cylinder flat
-    this.closeButton.rotation.y = Math.PI;     // ✅ Flips it 180° to face the same direction as the "X"
+    this.closeButton = new THREE.Mesh(baseGeometry, baseMaterial);
 
     // Position the close button
     this.closeButton.position.set(1.8, 1.8, 0.5); // Positioned in top corner
@@ -135,12 +132,12 @@ export class Carousel3DSubmenu extends THREE.Group {
     // First line of X - properly aligned to disk surface
     const line1 = new THREE.Mesh(lineGeometry1, lineMaterial);
     line1.position.set(0, 0, 0.03); // Raised up from disk surface
-    line1.rotation.z = Math.PI / 4; // 45 degrees
+    line1.rotation.y = Math.PI / 4; // 45 degrees
     
     // Second line of X
     const line2 = new THREE.Mesh(lineGeometry2, lineMaterial);
     line2.position.set(0, 0, 0.03); // Raised up from disk surface
-    line2.rotation.z = -Math.PI / 4; // -45 degrees
+    line2.rotation.y = -Math.PI / 4; // -45 degrees
     
     // Store lines in userData for easy access
     this.closeButton.userData.xLines = [line1, line2];
@@ -737,7 +734,7 @@ export class Carousel3DSubmenu extends THREE.Group {
         }
       
       // Apply highlight colors
-selectedMesh.material.color.set(this.config.highlightColor || 0x00ffff);
+      selectedMesh.material.color.set(this.config.highlightColor || 0x00ffff);
       selectedMesh.material.emissive = new THREE.Color(0x003333);
     }
     
@@ -1027,19 +1024,21 @@ selectedMesh.material.color.set(this.config.highlightColor || 0x00ffff);
           }
         }
       }
-      
-      // Handle close button - make it properly face camera
-      if (this.closeButton) {
-        // Make close button face camera by keeping it perpendicular to view
-        this.closeButton.lookAt(0, 0, 10); // Look at camera position
-        
-        // Keep Z rotation at 0 to ensure X is oriented correctly
-        this.closeButton.rotation.z = 0;
-        
-        // Keep it slightly forward of other elements
-        this.closeButton.position.z = 0.5;
-      }
 
+      if (this.closeButton) {
+        const cameraPosWorld = new THREE.Vector3(0, 0, 10); // Where the camera "is"
+        
+        // Convert to local space relative to closeButton’s parent
+        this.closeButton.parent.worldToLocal(cameraPosWorld);
+      
+        // Make the button face that point
+        this.closeButton.lookAt(cameraPosWorld);
+
+        // Orient the red disk so its flat face looks forward (Z)
+        this.closeButton.rotateZ(Math.PI / 2);
+
+      }
+      
       // Update floating preview position based on parent carousel rotation
       if (this.floatingPreview && this.parentItem && this.parentItem.parent) {
         // If parent carousel is rotating, stop the automatic spin
