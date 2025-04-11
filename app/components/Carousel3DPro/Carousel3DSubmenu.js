@@ -70,45 +70,39 @@ export class Carousel3DSubmenu extends THREE.Group {
     }
     
     // Position directly in front of parent item (not just centered on it)
-    this.position.copy(this.parentItem.position);
+    this.position.copy(this.parentItem.position); // Copy position from parent
     // Move slightly forward from parent item for better visibility
     const forwardDir = new THREE.Vector3(0, 0, 0.2); // Move forward in Z
-    forwardDir.applyQuaternion(this.parentItem.quaternion);
-    this.position.add(forwardDir);
+    forwardDir.applyQuaternion(this.parentItem.quaternion); // Apply parent's rotation
+    this.position.add(forwardDir); // Adjust position
     
     // Create container for fixed UI elements that don't rotate with the wheel
-    this.fixedElements = new THREE.Group();
-    this.add(this.fixedElements);
+    this.fixedElements = new THREE.Group(); // Create a separate group for fixed elements
+    this.add(this.fixedElements); //  Add to the main group
     
     // Add close button immediately with fixed position - only call once
-    this.addCloseButtonPlaceholder();
-    
-    // Listen for submenu-scroll custom events
-    if (typeof window !== 'undefined') {
-      window.addEventListener('submenu-scroll', (e) => {
-        const delta = e.detail.delta;
-        this.scrollSubmenu(delta); // Pass delta directly as scrollSubmenu already handles direction
-      });
-    }
+    this.addCloseButtonPlaceholder(); // Add close button to fixed elements
   }
   
-  addCloseButtonPlaceholder() {
+  addCloseButtonPlaceholder() { // Create a placeholder for the close button
     // Create a red disk with VISIBLE settings
     const baseGeometry = new THREE.CylinderGeometry(0.22, 0.22, 0.05, 24); // Cylinder for close button
     const baseMaterial = new THREE.MeshStandardMaterial({ // Use MeshStandardMaterial for better lighting
       color: 0xff3333, // Red color
       transparent: true, // Start with transparent material
-      opacity: 0.95, // Start visible immediately
+      opacity: 0.45, // Start visible immediately
       metalness: 0.5, // Slightly shiny
       roughness: 0.3, // Less rough for a smoother look
       emissive: 0xff0000, // Red emissive glow
       emissiveIntensity: 0.5 // Stronger glow
     });
 
-    this.closeButton = new THREE.Mesh(baseGeometry, baseMaterial);
+    this.closeButton = new THREE.Mesh(baseGeometry, baseMaterial); // Create the close button mesh
 
     // Rotate the cylinder so its flat face aligns with the "X"
-    this.closeButton.rotation.x = Math.PI / 2; // Rotate 90 degrees along the X-axis
+    this.closeButton.rotation.x = Math.PI / 2; // Rotate 90 degrees along the X-axis 
+    this.closeButton.rotation.z = Math.PI ; // Rotate 180 degrees along the Z-axis
+    this.closeButton.position.z = 0.5; // Position it slightly in front of the wheel
 
     // Position the close button
     this.closeButton.position.set(1.8, 1.8, 0.5); // Positioned in top corner

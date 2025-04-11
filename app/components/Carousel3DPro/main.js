@@ -53,35 +53,50 @@ export function setupCarousel(container) {
     // Disable pinch-to-zoom on touch
     controls.touches.TWO = null;
 
-    // FIX 2: Properly handle wheel events with a capture phase listener
-    // We need to capture the wheel event BEFORE OrbitControls gets it
-    window.addEventListener(
-        'wheel',
-        (event) => {
-            // Check middle mouse button first - this is the zoom case
-            if (event.buttons === 4) {
-                // Let OrbitControls handle zooming - do not stop propagation
-                return;
-            }
+    // Tracking wheel handler state - MUST initially be true
+    let isWheelHandlerActive = true;
+    
+    // Store the wheel event listener so we can remove/add it properly
+    //let wheelHandlerActive = true;
 
-            // For all other cases, prevent default and stop propagation
-            event.preventDefault();
-            event.stopPropagation();
+    // Create the wheel event handler as a named function
+    const wheelEventHandler = function(event) {
+        // Check middle mouse button first - this is the zoom case
+        if (event.buttons === 4) {
+            // Let OrbitControls handle zooming - do not stop propagation
+            return;
+        }
 
-            // Navigate menus based on wheel direction
-            const delta = event.deltaY;
+        // For all other cases, prevent default and stop propagation
+        event.preventDefault();
+        event.stopPropagation();
 
-            if (activeSubmenu) {
-                // Scroll submenu when it's active
-                activeSubmenu.scrollSubmenu(delta > 0 ? 1 : -1);
-            } else {
-                // Navigate main carousel when no submenu
-                const angleStep = (2 * Math.PI) / items.length;
-                carousel.spin(delta > 0 ? -angleStep : angleStep);
-            }
-        },
-        { passive: false, capture: true } // Capture phase is critical
-    );
+        // Navigate menus based on wheel direction
+        const delta = event.deltaY;
+
+        if (activeSubmenu) {
+            // Scroll submenu when it's active
+            activeSubmenu.scrollSubmenu(delta > 0 ? 1 : -1);
+        } else if (isWheelHandlerActive) {
+            // Navigate main carousel when no submenu
+            const angleStep = (2 * Math.PI) / items.length;
+            carousel.spin(delta > 0 ? -angleStep : angleStep);
+        }
+    };
+
+    // Attach wheel handler with capture phase
+    window.addEventListener('wheel', wheelEventHandler, { passive: false, capture: true });
+
+    // FIX 3: Override OrbitControls wheel handler to only work with middle mouse
+    const originalOnWheel = controls.onMouseWheel;
+    controls.onMouseWheel = function(event) {
+        if (event.buttons !== 4) {
+            // Block all wheel events that don't have middle mouse pressed
+            return;
+        }
+        // Only call original handler for middle mouse + wheel
+        originalOnWheel.call(this, event);
+    };
 
     // MOBILE SUPPORT: Add touch event handlers for swipe navigation
     let touchStartX = 0;
@@ -164,6 +179,21 @@ export function setupCarousel(container) {
         }
     };
 
+    // Function to enable all event handlers (touch and wheel)
+    function enableAllEventHandlers() {
+        enableTouchEvents();
+        enableWheelHandler();
+    }
+
+    // Function to disable all event handlers when a submenu is active
+    function disableMainCarouselHandlers() {
+        // Do not actually remove the touch handlers - keep them active
+        // but they will check for activeSubmenu internally
+        
+        // Set the wheel handler flag to false to disable it for main carousel
+        isWheelHandlerActive = false;
+    }
+    
     // Function to enable touch events
     function enableTouchEvents() {
         // Reset touch variables
@@ -173,24 +203,23 @@ export function setupCarousel(container) {
         touchVelocity = 0;
 
         // Re-attach touch event listeners
+        window.removeEventListener('touchstart', touchStartHandler, { passive: false });
+        window.removeEventListener('touchmove', touchMoveHandler, { passive: false });
+        window.removeEventListener('touchend', touchEndHandler, { passive: false });
+        
         window.addEventListener('touchstart', touchStartHandler, { passive: false });
         window.addEventListener('touchmove', touchMoveHandler, { passive: false });
         window.addEventListener('touchend', touchEndHandler, { passive: false });
     }
     
-    // Initial setup: attach touch event listeners
-    enableTouchEvents();
-
-    // FIX 3: Override OrbitControls wheel handler to only work with middle mouse
-    const originalOnWheel = controls.onMouseWheel;
-    controls.onMouseWheel = function(event) {
-        if (event.buttons !== 4) {
-            // Block all wheel events that don't have middle mouse pressed
-            return;
-        }
-        // Only call original handler for middle mouse + wheel
-        originalOnWheel.call(this, event);
-    };
+    // Function to enable wheel handler
+    function enableWheelHandler() {
+        // Set the wheel handler active flag
+        isWheelHandlerActive = true;
+    }
+    
+    // Initial setup: attach event listeners
+    enableAllEventHandlers();
 
     const items = ['Home', 'Products', 'Contact', 'About', 'Gallery'];
     const submenus = {
@@ -247,6 +276,10 @@ export function setupCarousel(container) {
     carousel.onItemClick = (index, item) => {
         if (submenus[item] && !submenuTransitioning) {
             submenuTransitioning = true;
+            
+            // When opening a submenu, disable wheel handler for main carousel
+            disableMainCarouselHandlers();
+            
             if (activeSubmenu) {
                 activeSubmenu.hide();
                 setTimeout(() => {
@@ -264,6 +297,8 @@ export function setupCarousel(container) {
         const mesh = carousel.itemMeshes[index];
         if (!mesh) {
             submenuTransitioning = false;
+            // Re-enable main carousel events if submenu fails to open
+            enableAllEventHandlers();
             return;
         }
 
@@ -291,50 +326,66 @@ export function setupCarousel(container) {
     });
 
     function closeSubmenu(immediate = false) {
-        if (!activeSubmenu || submenuTransitioning) return;
-        submenuTransitioning = true;
-
-        if (activeSubmenu.floatingPreview) {
-            activeSubmenu.stopFloatingPreviewSpin();
-            gsap.to(activeSubmenu.floatingPreview.scale, {
-                x: 0,
-                y: 0,
-                z: 0,
-                duration: 0.2,
-                ease: 'back.in',
-            });
-        }
-
-        if (activeSubmenu.closeButton) {
-            activeSubmenu.closeButton.material.color.set(0xff0000);
-        }
-
-        if (activeSubmenu.parentItem?.material) {
-            gsap.to(activeSubmenu.parentItem.material, {
-                opacity: 1.0,
-                duration: 0.5,
-            });
-        }
-
-        const remove = () => {
-            scene.remove(activeSubmenu);
-            scene.userData.activeSubmenu = null;
-            activeSubmenu = null;
-            submenuTransitioning = false;
-
-            // CRITICAL: Re-enable touch events after closing submenu
-            enableTouchEvents();
-        };
-
-        if (immediate) {
-            remove();
-        } else {
-            activeSubmenu.hide();
-            setTimeout(remove, 300);
-        }
-
-        controls.enabled = true;
-    }
+      if (!activeSubmenu || submenuTransitioning) return;
+      submenuTransitioning = true;
+  
+      if (activeSubmenu.floatingPreview) {
+          activeSubmenu.stopFloatingPreviewSpin();
+          gsap.to(activeSubmenu.floatingPreview.scale, {
+              x: 0,
+              y: 0,
+              z: 0,
+              duration: 0.2,
+              ease: 'back.in',
+          });
+      }
+  
+      if (activeSubmenu.closeButton) {
+          activeSubmenu.closeButton.material.color.set(0xff0000);
+      }
+  
+      if (activeSubmenu.parentItem?.material) {
+          gsap.to(activeSubmenu.parentItem.material, {
+              opacity: 1.0,
+              duration: 0.5,
+          });
+      }
+  
+      const remove = () => {
+          scene.remove(activeSubmenu);
+          scene.userData.activeSubmenu = null;
+          if (carousel && carousel.parent && carousel.parent.userData) {
+              carousel.parent.userData.activeSubmenu = null;
+          }
+          
+          // IMPORTANT: Clear this BEFORE enabling handlers
+          activeSubmenu = null;
+          
+          // Re-enable main carousel handlers
+          enableTouchEvents();
+          enableWheelHandler();
+          
+          // Reset any active animations
+          if (carousel) {
+              carousel.isAnimating = false;
+          }
+          
+          // Finally clear transitioning flag
+          submenuTransitioning = false;
+          
+          // Optional: Force a wheel event to test functionality
+          console.warn('Submenu closed, wheel handler reactivated:', isWheelHandlerActive);
+      };
+  
+      if (immediate) {
+          remove();
+      } else {
+          activeSubmenu.hide();
+          setTimeout(remove, 300);
+      }
+  
+      controls.enabled = true;
+  }
 
     function handleCarouselClick(event) {
         if (submenuTransitioning) return;

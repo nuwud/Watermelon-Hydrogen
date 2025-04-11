@@ -266,12 +266,8 @@ export class Carousel3DPro extends Group {
     // Prevent default scroll behavior (i.e., page scroll)
     event.preventDefault();
 
-    // Skip processing if a submenu is active
-    if (this.parent?.userData?.activeSubmenu) {
-      // Assuming the submenu has a similar API
-      this.parent.userData.activeSubmenu.handleWheel(event);
-      return;
-    }
+    // Skip processing if animation is in progress
+    if (this.isAnimating) return;
     
     const scrollAmount = event.deltaY > 0 ? 1 : -1;
     
