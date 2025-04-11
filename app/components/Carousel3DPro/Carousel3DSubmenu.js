@@ -99,10 +99,8 @@ export class Carousel3DSubmenu extends THREE.Group {
 
     this.closeButton = new THREE.Mesh(baseGeometry, baseMaterial); // Create the close button mesh
 
-    // Rotate the cylinder so its flat face aligns with the "X"
-    this.closeButton.rotation.x = Math.PI / 2; // Rotate 90 degrees along the X-axis 
-    this.closeButton.rotation.z = Math.PI / 2; // Rotate to face the same direction as the "X"
-    this.closeButton.position.z = 0.5; // Position it slightly in front of the wheel
+    this.closeButton.rotation.x = Math.PI / 2; // ✅ Lays cylinder flat
+    this.closeButton.rotation.y = Math.PI;     // ✅ Flips it 180° to face the same direction as the "X"
 
     // Position the close button
     this.closeButton.position.set(1.8, 1.8, 0.5); // Positioned in top corner
