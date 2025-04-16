@@ -8,6 +8,8 @@ import * as THREE from 'three';
 import { TextGeometry } from 'three/examples/jsm/geometries/TextGeometry.js';
 import { FontLoader } from 'three/examples/jsm/loaders/FontLoader.js';
 // Removed unused imports: getGlowShaderMaterial, getOpacityFadeMaterial, defaultCarouselStyle
+import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
+
 
 // Access GSAP from the global scope
 import gsap from 'gsap';
@@ -360,13 +362,77 @@ export class Carousel3DSubmenu extends THREE.Group {
       container.add(hitArea);
       
       // Determine which shape/icon to use
-      let iconMesh;
+      let iconMesh = null; // Initialize iconMesh to null
+      const iconOffset = Math.max(0.7, textWidth * 0.25); // Calculate offset
+      let baseScale = new THREE.Vector3(1, 1, 1); // Default base scale
       
-      if (isGallerySubmenu && galleryShapes[item]) {
-        // Use special Gallery icon
+      if (item === 'Cart') {
+        // Load the GLTF cart model asynchronously
+        const loader = new GLTFLoader();
+        loader.load('/assets/Cart.glb', (gltf) => {
+          const model = gltf.scene;
+      
+          // ✅ Step 1: Save original scale after loading model
+          baseScale.set(0.3, 0.3, 0.3); // Set specific base scale for Cart
+          model.scale.copy(baseScale);
+          model.userData.originalScale = baseScale.clone(); // Store original scale
+          model.position.x = -textWidth / 2 - iconOffset; // Use calculated offset
+          model.userData.isCartIcon = true; // Optional tag
+
+          container.add(model); // Add model to container when loaded
+          container.userData.iconMesh = model; // Store reference in userData
+      
+          model.traverse((child) => {
+            if (child.isMesh) {
+              child.material = child.material.clone(); // Prevent sharing materials
+              child.material.emissive = new THREE.Color(this.getIconColor(index));
+              child.material.emissiveIntensity = 0.3;
+              // Ensure materials are updated
+              child.material.needsUpdate = true; 
+            }
+          });
+      
+          // Animate icon scale after loading (only if the submenu is still visible)
+          if (!this.isBeingDisposed && this.visible) {
+            const isHighlighted = container.userData.index === this.currentIndex;
+            const multiplier = isHighlighted ? 1.3 : 1.0;
+            
+            gsap.set(model.scale, { x: 0, y: 0, z: 0 }); // Start invisible
+            gsap.to(model.scale, {
+              x: model.userData.originalScale.x * multiplier, // Use original scale
+              y: model.userData.originalScale.y * multiplier,
+              z: model.userData.originalScale.z * multiplier,
+              duration: 0.5,
+              ease: 'elastic.out',
+            });
+
+            // If this item is highlighted when loaded, apply spin
+            if (isHighlighted && model) { // Add model check
+                gsap.killTweensOf(model.rotation);
+                gsap.timeline()
+                  .to(model.rotation, {
+                    y: Math.PI * 2, x: Math.PI * 0.8, z: Math.PI * 0.5,
+                    duration: 1.0, ease: "power1.inOut"
+                  })
+                  .to(model.rotation, {
+                    x: 0, z: 0, duration: 0.3, ease: "back.out(2)"
+                  }, "-=0.1");
+            }
+          }
+        }, undefined, (error) => {
+            console.error(`Error loading Cart.glb: ${error}`);
+        });
+
+      } else if (isGallerySubmenu && galleryShapes[item]) {
+        // Use special Gallery icon (synchronous)
         iconMesh = galleryShapes[item]();
+        iconMesh.position.x = -textWidth/2 - iconOffset;
+        iconMesh.userData.originalScale = baseScale.clone(); // Store default base scale (1,1,1)
+        container.add(iconMesh);
+        container.userData.iconMesh = iconMesh;
+        iconMesh.scale.set(0, 0, 0); 
       } else {
-        // Use regular shape
+        // Use regular shape (synchronous)
         const shapeIndex = index % regularShapes.length;
         const shapeGeometry = regularShapes[shapeIndex]();
         const shapeMaterial = new THREE.MeshStandardMaterial({
@@ -378,21 +444,18 @@ export class Carousel3DSubmenu extends THREE.Group {
         });
         
         iconMesh = new THREE.Mesh(shapeGeometry, shapeMaterial);
+        iconMesh.position.x = -textWidth/2 - iconOffset;
+        iconMesh.userData.originalScale = baseScale.clone(); // Store default base scale (1,1,1)
+        container.add(iconMesh);
+        container.userData.iconMesh = iconMesh;
+        iconMesh.scale.set(0, 0, 0);
       }
-      
-      // Position icon to the left with more spacing - ensure it doesn't overlap with text
-      // Calculate distance based on text width to prevent overlap with longer words
-      const iconOffset = Math.max(0.7, textWidth * 0.25); // Increased minimum offset and scaling factor
-      iconMesh.position.x = -textWidth/2 - iconOffset;
       
       // For longer text items, shift the text slightly right to make more room for the icon
       if (textWidth > 2) {
         // For very long text, shift it more to the right
         mesh.position.x = iconOffset * 0.3; // Shift text slightly right
       }
-      
-      // Add to container
-      container.add(iconMesh);
       
       // Position around the parent
       const angle = angleStep * index;
@@ -413,7 +476,8 @@ export class Carousel3DSubmenu extends THREE.Group {
         springVelocity: 0,
         springTarget: 0,
         springStrength: 0.1,
-        springDamping: 0.6
+        springDamping: 0.6,
+        iconMesh: container.userData.iconMesh || null // Ensure iconMesh is stored (might be null initially for Cart)
       };
       
       // Store original scale with the actual mesh
@@ -422,12 +486,9 @@ export class Carousel3DSubmenu extends THREE.Group {
         originalColor: material.color.clone()
       };
       
-      // Store icon reference for animations
-      container.userData.iconMesh = iconMesh;
-      
-      // Start invisible for animation
+      // Start text invisible for animation
       mesh.scale.set(0, 0, 0);
-      iconMesh.scale.set(0, 0, 0);
+      // Icon scale is set to 0 above for non-GLTF items
       hitArea.scale.set(0, 0, 0);
       
       this.itemMeshes.push(container);
@@ -462,19 +523,29 @@ export class Carousel3DSubmenu extends THREE.Group {
           duration: 0.3
         });
         
-        // Reset icon scale
-        gsap.to(currentIcon.scale, {
-          x: 1, y: 1, z: 1,
-          duration: 0.3
-        });
-        
-        // Reset rotation to upright immediately without animation
-        gsap.killTweensOf(currentIcon.rotation);
-        gsap.set(currentIcon.rotation, { x: 0, y: 0, z: 0 });
+        if (currentIcon) {
+          // ✅ Step 2: Update scaling logic
+          const iconOriginal = currentIcon.userData.originalScale || new THREE.Vector3(1,1,1);
+          // Reset icon scale using original scale
+          gsap.to(currentIcon.scale, {
+            x: iconOriginal.x, // Reset to original x
+            y: iconOriginal.y, // Reset to original y
+            z: iconOriginal.z, // Reset to original z
+            duration: 0.3
+          });
+          
+          // Reset rotation to upright immediately without animation
+          gsap.killTweensOf(currentIcon.rotation);
+          gsap.set(currentIcon.rotation, { x: 0, y: 0, z: 0 });
+        }
       } else {
         currentMesh.scale.copy(currentMesh.userData.originalScale);
-        currentIcon.scale.set(1, 1, 1);
-        currentIcon.rotation.set(0, 0, 0); // Reset rotation immediately
+        if (currentIcon) {
+          // ✅ Step 2: Update scaling logic
+          const iconOriginal = currentIcon.userData.originalScale || new THREE.Vector3(1,1,1);
+          currentIcon.scale.copy(iconOriginal); // Reset instantly using original scale
+          currentIcon.rotation.set(0, 0, 0); // Reset rotation immediately
+        }
       }
     }
     
@@ -496,29 +567,37 @@ export class Carousel3DSubmenu extends THREE.Group {
         duration: 0.3
       });
       
-      // Scale up icon
-      gsap.to(selectedIcon.scale, {
-        x: 1.3, y: 1.3, z: 1.3,
-        duration: 0.3,
-        ease: "back.out"
-      });
-      
-      // Add a clean 1-second geodesic spin animation to the icon
-      gsap.killTweensOf(selectedIcon.rotation);
-      gsap.timeline()
-        .to(selectedIcon.rotation, {
-          y: Math.PI * 2, // One full rotation around Y axis
-          x: Math.PI * 0.8, // Add tilt for geodesic effect
-          z: Math.PI * 0.5, // Add roll for geodesic effect
-          duration: 1.0, // Exactly 1 second
-          ease: "power1.inOut"
-        })
-        .to(selectedIcon.rotation, {
-          x: 0, // Reset to upright
-          z: 0, // Reset to upright
-          duration: 0.3, // Quick snap back
-          ease: "back.out(2)" // Snappy elastic ease
-        }, "-=0.1"); // Slight overlap for smoother transition
+      if (selectedIcon) {
+        // ✅ Step 2: Update scaling logic
+        const iconOriginal = selectedIcon.userData.originalScale || new THREE.Vector3(1,1,1);
+        const multiplier = 1.3; // Highlight multiplier
+
+        // Scale up icon using original scale
+        gsap.to(selectedIcon.scale, {
+          x: iconOriginal.x * multiplier,
+          y: iconOriginal.y * multiplier,
+          z: iconOriginal.z * multiplier,
+          duration: 0.3,
+          ease: "back.out"
+        });
+        
+        // Add a clean 1-second geodesic spin animation to the icon
+        gsap.killTweensOf(selectedIcon.rotation);
+        gsap.timeline()
+          .to(selectedIcon.rotation, {
+            y: Math.PI * 2, // One full rotation around Y axis
+            x: Math.PI * 0.8, // Add tilt for geodesic effect
+            z: Math.PI * 0.5, // Add roll for geodesic effect
+            duration: 1.0, // Exactly 1 second
+            ease: "power1.inOut"
+          })
+          .to(selectedIcon.rotation, {
+            x: 0, // Reset to upright
+            z: 0, // Reset to upright
+            duration: 0.3, // Quick snap back
+            ease: "back.out(2)" // Snappy elastic ease
+          }, "-=0.1"); // Slight overlap for smoother transition
+      }
       
       // Position the item at the front (3 o'clock position)
       // The value 0 corresponds to the 3 o'clock position
@@ -538,7 +617,16 @@ export class Carousel3DSubmenu extends THREE.Group {
         selectedMesh.userData.originalScale.z * 1.3
       );
       
-      selectedIcon.scale.set(1.3, 1.3, 1.3);
+      if (selectedIcon) {
+        // ✅ Step 2: Update scaling logic
+        const iconOriginal = selectedIcon.userData.originalScale || new THREE.Vector3(1,1,1);
+        const multiplier = 1.3;
+        selectedIcon.scale.set(
+            iconOriginal.x * multiplier,
+            iconOriginal.y * multiplier,
+            iconOriginal.z * multiplier
+        ); // Set instantly using original scale
+      }
       
       // Set initial rotation to front position without animation
       this.itemGroup.rotation.x = -selectedContainer.userData.angle + 0;
@@ -633,7 +721,10 @@ export class Carousel3DSubmenu extends THREE.Group {
             currentMesh.material.color.copy(currentMesh.userData.originalColor);
             currentMesh.material.emissive = new THREE.Color(0x000000);
             currentMesh.scale.copy(currentMesh.userData.originalScale);
-            currentIcon.scale.set(1, 1, 1);
+
+            // ✅ Step 2: Update scaling logic
+            const iconOriginal = currentIcon.userData.originalScale || new THREE.Vector3(1,1,1);
+            currentIcon.scale.copy(iconOriginal); // Reset instantly using original scale
             
             // Cancel any ongoing animations and reset rotation immediately
             gsap.killTweensOf(currentIcon.rotation);
@@ -655,7 +746,15 @@ export class Carousel3DSubmenu extends THREE.Group {
           mesh.userData.originalScale.y * 1.3,
           mesh.userData.originalScale.z * 1.3
         );
-        icon.scale.set(1.3, 1.3, 1.3);
+
+        // ✅ Step 2: Update scaling logic
+        const iconOriginal = icon.userData.originalScale || new THREE.Vector3(1,1,1);
+        const multiplier = 1.3;
+        icon.scale.set(
+            iconOriginal.x * multiplier,
+            iconOriginal.y * multiplier,
+            iconOriginal.z * multiplier
+        ); // Set instantly using original scale
         
         // Add clean geodesic spin animation
         gsap.killTweensOf(icon.rotation);
@@ -736,6 +835,17 @@ export class Carousel3DSubmenu extends THREE.Group {
       // Apply highlight colors
       selectedMesh.material.color.set(this.config.highlightColor || 0x00ffff);
       selectedMesh.material.emissive = new THREE.Color(0x003333);
+      // Ensure initial highlight uses correct scale if icon is already loaded
+      const firstIcon = firstItem.userData.iconMesh;
+      if (firstIcon) {
+          const iconOriginal = firstIcon.userData.originalScale || new THREE.Vector3(1,1,1);
+          const multiplier = 1.3; // Highlight multiplier
+          firstIcon.scale.set(
+              iconOriginal.x * multiplier,
+              iconOriginal.y * multiplier,
+              iconOriginal.z * multiplier
+          );
+      }
     }
     
     // Make sure entire submenu appears with a smooth animation
@@ -761,55 +871,66 @@ export class Carousel3DSubmenu extends THREE.Group {
     // Then animate all items appearing
     this.itemMeshes.forEach((container, i) => {
       const mesh = container.userData.mesh;
-      const iconMesh = container.userData.iconMesh;
+      const iconMesh = container.userData.iconMesh; // Get iconMesh reference from userData
       const hitArea = container.userData.hitArea;
       
       // Special scaling for the highlighted item (index 0)
       const isHighlighted = i === 0;
-      const targetScaleMultiplier = isHighlighted ? 1.3 : 1.0;
+      const textMultiplier = isHighlighted ? 1.3 : 1.0; // Multiplier for text
       
       // Animate text
       gsap.to(mesh.scale, {
-        x: mesh.userData.originalScale.x * targetScaleMultiplier,
-        y: mesh.userData.originalScale.y * targetScaleMultiplier,
-        z: mesh.userData.originalScale.z * targetScaleMultiplier,
+        x: mesh.userData.originalScale.x * textMultiplier,
+        y: mesh.userData.originalScale.y * textMultiplier,
+        z: mesh.userData.originalScale.z * textMultiplier,
         duration: 0.3,
         delay: i * 0.05,
         ease: "back.out"
       });
       
-      // Animate icon
-      gsap.to(iconMesh.scale, {
-        x: isHighlighted ? 1.3 : 1.0,
-        y: isHighlighted ? 1.3 : 1.0,
-        z: isHighlighted ? 1.3 : 1.0,
-        duration: 0.3,
-        delay: i * 0.05 + 0.1,
-        ease: "elastic.out"
-      });
-      
-      // Only add geodesic spin to the highlighted icon (index 0)
-      if (isHighlighted) {
-        gsap.killTweensOf(iconMesh.rotation);
-        gsap.timeline()
-          .to(iconMesh.rotation, {
-            y: Math.PI * 2,
-            x: Math.PI * 0.8,
-            z: Math.PI * 0.5,
-            duration: 1.0,
-            delay: i * 0.05 + 0.1,
-            ease: "power1.inOut"
-          })
-          .to(iconMesh.rotation, {
-            x: 0,
-            z: 0,
-            duration: 0.3,
-            ease: "back.out(2)"
-          }, "-=0.1");
-      } else {
-        // Ensure non-highlighted items have no rotation
-        iconMesh.rotation.set(0, 0, 0);
-      }
+      if (iconMesh) {
+          // ✅ Step 2: Update scaling logic
+          const iconOriginal = iconMesh.userData.originalScale || new THREE.Vector3(1,1,1);
+          const iconMultiplier = isHighlighted ? 1.3 : 1.0; // Multiplier for icon
+
+          // Animate icon scale from 0 to target scale based on original
+          gsap.fromTo(iconMesh.scale,
+            { x: 0, y: 0, z: 0 }, // Start from 0
+            {
+              x: iconOriginal.x * iconMultiplier,
+              y: iconOriginal.y * iconMultiplier,
+              z: iconOriginal.z * iconMultiplier,
+              duration: 0.3,
+              delay: i * 0.05 + 0.1,
+              ease: "elastic.out"
+            }
+          );
+
+          // Only add geodesic spin to the highlighted icon (index 0)
+          if (isHighlighted) {
+            gsap.killTweensOf(iconMesh.rotation);
+            gsap.timeline()
+              .to(iconMesh.rotation, {
+                y: Math.PI * 2,
+                x: Math.PI * 0.8,
+                z: Math.PI * 0.5,
+                duration: 1.0,
+                delay: i * 0.05 + 0.1, // Keep delay consistent
+                ease: "power1.inOut"
+              })
+              .to(iconMesh.rotation, {
+                x: 0,
+                z: 0,
+                duration: 0.3,
+                ease: "back.out(2)"
+              }, "-=0.1");
+          } else {
+             // Ensure non-highlighted items have no rotation initially
+             if (!gsap.isTweening(iconMesh.rotation)) {
+                 iconMesh.rotation.set(0, 0, 0);
+             }
+          }
+      } // End if (iconMesh)
       
       // Show hit area
       if (hitArea) {
@@ -839,12 +960,15 @@ export class Carousel3DSubmenu extends THREE.Group {
         ease: "back.in"
       });
       
-      gsap.to(iconMesh.scale, {
-        x: 0, y: 0, z: 0,
-        duration: 0.2,
-        delay: i * 0.03,
-        ease: "back.in"
-      });
+      // FIXED: Add null check for iconMesh
+      if (iconMesh) {
+        gsap.to(iconMesh.scale, {
+          x: 0, y: 0, z: 0,
+          duration: 0.2,
+          delay: i * 0.03,
+          ease: "back.in"
+        });
+      }
     });
     
     // Scale out the close button
@@ -917,19 +1041,26 @@ export class Carousel3DSubmenu extends THREE.Group {
           const mesh = container.userData.mesh;
           const iconMesh = container.userData.iconMesh;
           
-          if (!mesh || !iconMesh) return;
-          
+          // FIXED: Add null check for iconMesh before accessing properties
+          // if (!mesh || !iconMesh) return; // Keep this check? Yes, safer.
+          if (!mesh) return; // Only mesh is strictly required for text reset
+
           // Only reset if this isn't already the current item
           if (i !== this.currentIndex) {
             if (mesh.userData && mesh.userData.originalColor) {
               mesh.material.color.copy(mesh.userData.originalColor);
               mesh.material.emissive = new THREE.Color(0x000000);
               mesh.scale.copy(mesh.userData.originalScale);
-              iconMesh.scale.set(1, 1, 1);
               
-              // Make sure non-highlighted icons stay upright
-              if (!gsap.isTweening(iconMesh.rotation)) {
-                iconMesh.rotation.set(0, 0, 0);
+              if (iconMesh) {
+                  // ✅ Step 2: Update scaling logic
+                  const iconOriginal = iconMesh.userData.originalScale || new THREE.Vector3(1,1,1);
+                  iconMesh.scale.copy(iconOriginal); // Reset instantly using original scale
+                  
+                  // Make sure non-highlighted icons stay upright
+                  if (!gsap.isTweening(iconMesh.rotation)) {
+                    iconMesh.rotation.set(0, 0, 0);
+                  }
               }
             }
           }
@@ -971,11 +1102,15 @@ export class Carousel3DSubmenu extends THREE.Group {
               const currentMesh = currentContainer.userData.mesh;
               const currentIcon = currentContainer.userData.iconMesh;
               
+              // FIXED: Add null check for currentIcon
               if (currentMesh && currentMesh.userData && currentIcon) {
                 currentMesh.material.color.copy(currentMesh.userData.originalColor);
                 currentMesh.material.emissive = new THREE.Color(0x000000);
                 currentMesh.scale.copy(currentMesh.userData.originalScale);
-                currentIcon.scale.set(1, 1, 1);
+                
+                // Determine base scale for deselected item
+                const baseScale = currentContainer.userData.item === 'Cart' ? 0.3 : 1.0;
+                currentIcon.scale.set(baseScale, baseScale, baseScale);
                 
                 // Cancel any ongoing animations and reset rotation
                 gsap.killTweensOf(currentIcon.rotation);
@@ -990,6 +1125,7 @@ export class Carousel3DSubmenu extends THREE.Group {
             const frontMesh = frontContainer.userData.mesh;
             const frontIcon = frontContainer.userData.iconMesh;
             
+            // FIXED: Add null check for frontIcon
             if (frontMesh && frontIcon) {
               // Apply highlight
               frontMesh.material.color.set(this.config.highlightColor || 0x00ffff);
@@ -999,7 +1135,15 @@ export class Carousel3DSubmenu extends THREE.Group {
                 frontMesh.userData.originalScale.y * 1.3,
                 frontMesh.userData.originalScale.z * 1.3
               );
-              frontIcon.scale.set(1.3, 1.3, 1.3);
+
+              // ✅ Step 2: Update scaling logic
+              const iconOriginal = frontIcon.userData.originalScale || new THREE.Vector3(1,1,1);
+              const multiplier = 1.3;
+              frontIcon.scale.set(
+                  iconOriginal.x * multiplier,
+                  iconOriginal.y * multiplier,
+                  iconOriginal.z * multiplier
+              ); // Set instantly using original scale
               
               // Add clean 1-second geodesic spin animation only for newly highlighted item
               gsap.killTweensOf(frontIcon.rotation);

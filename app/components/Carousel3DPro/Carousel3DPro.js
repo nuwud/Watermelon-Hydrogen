@@ -12,7 +12,8 @@ import { Group } from 'three';
 import { TextGeometry } from 'three/examples/jsm/geometries/TextGeometry.js';
 import { FontLoader } from 'three/examples/jsm/loaders/FontLoader.js';
 import { getGlowShaderMaterial } from './CarouselShaderFX.js';
-import { defaultCarouselStyle } from './CarouselStyleConfig.js';
+import { defaultCarouselStyle } from './CarouselStyleConfig.js'
+//import { gsap } from 'gsap';
 
 // Access GSAP from the global scope
 const gsap = typeof window !== 'undefined' ? window.gsap : undefined;

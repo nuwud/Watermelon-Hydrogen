@@ -64,8 +64,8 @@ export class BackgroundDome {
                     float fresnel = dot(normalize(vViewPosition), vNormal);
                     fresnel = clamp(1.0 - fresnel, 0.0, 1.0);
                     
-                    // Base color - dark blue/purple base color
-                    vec3 baseColor = vec3(0.05, 0.05, 0.12);
+                    // Base color - lighten the dark blue/purple base color
+                    vec3 baseColor = vec3(0.1, 0.1, 0.2);
                     
                     // Iridescent colors based on viewing angle and time
                     float hue = fresnel * 0.7 + time * 0.05;

@@ -8,6 +8,7 @@ export default function ClientOnly({ fallback = null, children }) {
   const [isClient, setIsClient] = useState(false);
 
   useEffect(() => {
+    console.warn("👀 ClientOnly is running");
     setIsClient(true);
   }, []);
 

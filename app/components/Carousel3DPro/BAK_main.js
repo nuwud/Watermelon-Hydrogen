@@ -11,8 +11,8 @@ import {
     lightTheme,
 } from './CarouselStyleConfig.js';
 import gsap from 'gsap';
-
-
+import { createCartToggleSphere } from '../../../src/cart/initCartToggleSphere.js';
+import { SceneRegistry } from '../../../src/cart/SceneRegistry.js'; 
 
 /**
  * Sets up a 3D carousel instance and mounts it to the provided container
@@ -22,32 +22,8 @@ import gsap from 'gsap';
 export function setupCarousel(container) {
     if (typeof window === 'undefined') return null;
 
-    function waitForDrawerControllerEvent() {
-        return new Promise((resolve) => {
-          if (window.drawerController) return resolve(window.drawerController);
-          window.addEventListener('drawerControllerReady', () => resolve(window.drawerController), { once: true });
-        });
-      }
-
-    // Add the waitForWindowWM helper function here
-    function waitForWindowWM(id, maxRetries = 30) {
-      let retries = 0;
-      const interval = setInterval(() => {
-        if (window.__wm__?.showContent) {
-          window.__wm__.showContent(id);
-          clearInterval(interval);
-          console.warn(`✅ window.__wm__ ready, showing content '${id}'`);
-        } else {
-          retries++;
-          if (retries >= maxRetries) {
-            console.warn(`❌ Failed to show content '${id}' — window.__wm__ not ready after ${maxRetries} retries.`);
-            clearInterval(interval);
-          }
-        }
-      }, 100); // check every 100ms
-    }
-
     const scene = new THREE.Scene();
+    SceneRegistry.set(scene);
     let currentTheme = defaultCarouselStyle;
     scene.background = new THREE.Color(currentTheme.backgroundColor);
 
@@ -82,9 +58,7 @@ export function setupCarousel(container) {
 
     // Tracking wheel handler state - MUST initially be true
     let isWheelHandlerActive = true;
-    
-    // Store the wheel event listener so we can remove/add it properly
-    //let wheelHandlerActive = true;
+
 
     // Create the wheel event handler as a named function
     const wheelEventHandler = function(event) {
@@ -248,7 +222,7 @@ export function setupCarousel(container) {
     // Initial setup: attach event listeners
     enableAllEventHandlers();
 
-    const items = ['Home', 'Products', 'Contact', 'About', 'Gallery', 'Store'];
+    const items = ['Home', 'Products', 'Contact', 'About', 'Gallery'];
     const submenus = {
         Home: ['Dashboard', 'Activity', 'Settings', 'Profile'],
         Products: ['Electronics', 'Clothing', 'Books', 'Home & Garden', 'Toys', 'Sports'],
@@ -256,13 +230,15 @@ export function setupCarousel(container) {
         About: ['Company', 'Team', 'History', 'Mission', 'Values'],
         Contact: ['Email', 'Phone', 'Chat', 'Social Media', 'Office Locations'],
         Gallery: ['Photos', 'Videos', '3D Models', 'Artwork', 'Animations', 'Virtual Tours'],
-        Store: ['Cart', 'Wishlist', 'Orders', 'Account', 'Gift Cards'], 
     };
 
     let activeSubmenu = null;
     let submenuTransitioning = false;
 
-    const carousel = new Carousel3DPro(items, currentTheme);
+    const carousel = new Carousel3DPro(items, {
+        ...currentTheme,
+        submenuItems: submenus
+    });
     carousel.userData = { camera };
     carousel.isAnimating = false; // Track animation state
 
@@ -345,6 +321,7 @@ export function setupCarousel(container) {
     directionalLight.position.set(5, 5, 5);
 
     scene.add(carousel, ambientLight, directionalLight);
+    animateGlowRings();
 
     window.addEventListener('resize', () => {
         camera.aspect = window.innerWidth / window.innerHeight;
@@ -429,41 +406,16 @@ export function setupCarousel(container) {
             const hits = raycaster.intersectObject(activeSubmenu, true);
             if (hits.length > 0) {
                 const obj = hits[0].object;
-                // Check if the clicked object or its parent is a submenu item
-                let submenuItemData = null;
                 if (obj.userData?.isSubmenuItem) {
-                    submenuItemData = obj.userData;
-                } else if (obj.parent?.userData?.isSubmenuItem) {
-                    submenuItemData = obj.parent.userData;
+                    activeSubmenu.selectItem(obj.userData.index, true, true);
                 }
-
-                if (submenuItemData) {
-                    const index = submenuItemData.index;
-                    const item = activeSubmenu.items?.[index];
-
-                    // Handle specific items to trigger floating content
-                    if (item === 'About' || item === 'Favorites' || item === 'Product' || item === 'Shopify' || item === 'Cart') { // Added 'Cart' here too
-                        const id = item.toLowerCase(); // e.g., 'about', 'favorites', 'cart'
-                        // Replace the direct call with the waitForWindowWM function
-                        waitForWindowWM(id);
-                        console.warn(`🍉 Attempting to trigger floating panel: ${id}`);
-                        // Optionally close the submenu after triggering content
-                        // closeSubmenu();
-                    } else {
-                        // Fallback/default behavior for other submenu items
-                        activeSubmenu.selectItem(index, true, true);
-                    }
-                // Removed the separate 'Cart' check as it's now handled above
-                // if (item === 'Cart') { ... }
-                } else if (obj.userData?.isCloseButton || obj.parent?.userData?.isCloseButton) {
-                    // Handle close button click
+                if (obj.userData?.isCloseButton || obj.parent?.userData?.isCloseButton) {
                     closeSubmenu();
                 }
-                return; // Exit after handling submenu click or close button
+                return;
             }
         }
 
-        // ...existing code for handling main carousel item clicks...
         const itemsHit = raycaster.intersectObjects(carousel.itemGroup.children, true);
         for (const hit of itemsHit) {
             let current = hit.object;
@@ -505,24 +457,252 @@ export function setupCarousel(container) {
         Object.assign(carousel, newCarousel);
     };
 
+    function animateGlowRings() {
+        if (!carousel?.itemGroup) return;
+      
+        carousel.itemGroup.children.forEach(child => {
+          if (child.userData?.isGlowRing) {
+            const mat = child.material;
+            gsap.to(mat, {
+              opacity: 0.2,
+              duration: 0.8,
+              yoyo: true,
+              repeat: -1,
+              ease: "sine.inOut"
+            });
+          }
+        });
+
+        carousel.itemMeshes.forEach(mesh => {
+            const ring = mesh.userData.glowRing;
+            if (ring?.material?.uniforms) {
+              ring.material.uniforms.uTime.value = performance.now() / 1000;
+            }
+          });
+
+        Object.values(carousel.itemMeshes).forEach(mesh => {
+            const ring = mesh.userData.glowRing;
+            if (ring?.material?.uniforms) {
+                ring.material.uniforms.uTime.value = performance.now() / 1000;
+            }
+        });
+    }
+
+    //function setupScene(scene) {
+        // ... other 3D setup ...
+    //    createCartToggleSphere(scene); // adds clickable spinning cart
+    //  }
+
+    // Call the setup function to add the cart toggle sphere
+    //setupScene(scene);
+
+    let cartSphere;
+    let cartToggleHandler = null;
+
+    // Function to wait for the drawerController to be available
+    async function waitForDrawerController(attempt = 0) {
+        const scene = SceneRegistry.get();
+        const drawerController = scene?.drawerController;
+      
+        if (drawerController?.toggleCartDrawer) {
+          console.warn('[CartSphere] ✅ drawerController found.');
+          cartToggleHandler = drawerController.toggleCartDrawer;
+          return;
+        }
+      
+        if (attempt > 20) {
+          console.warn('[CartSphere] ❌ Failed to hook into drawerController after 20 attempts.');
+          return;
+        }
+      
+        if (attempt % 5 === 0) { // Log every 5 attempts to reduce noise
+          console.warn(`[CartSphere] Waiting for drawerController... (${attempt}/20)`);
+        }
+      
+        setTimeout(() => waitForDrawerController(attempt + 1), 250);
+      }
+    
+    // Function to animate the cart sphere with continuous rotation
+    function animateCartSphere(sphere) {
+      if (!sphere) return;
+      
+      gsap.to(sphere.rotation, {
+        y: Math.PI * 2, 
+        duration: 4,
+        repeat: -1,
+        ease: "linear",
+        overwrite: true
+      });
+    }
+
+    try {
+      // Create the cart sphere and add spinning animation
+      cartSphere = createCartToggleSphere(scene);
+      animateCartSphere(cartSphere);
+    
+      // Assign the callback for toggling the cart drawer
+      cartSphere.callback = () => {
+        console.warn('[CartSphere] Toggling cart...');
+        cartToggleHandler?.();
+      
+        // Add visual feedback: scale up the sphere briefly
+        gsap.to(cartSphere.scale, {
+          x: 1.2,
+          y: 1.2,
+          z: 1.2,
+          duration: 0.15,
+          yoyo: true,
+          repeat: 1, // Scale back to original size
+          ease: "power1.inOut",
+          material: cartSphere.material,
+          onComplete: () => {
+            cartSphere.scale.set(1, 1, 1); // Reset scale
+          },
+            onCompleteParams: [cartSphere],
+            onCompleteScope: cartSphere,
+
+        });
+      };
+    
+      // Start waiting for the drawerController to be available
+      waitForDrawerController();
+    } catch (err) {
+      console.error('❌ Cart Sphere Init Failed:', err);
+    }
+    
+    // ☑️ Raycasting for cart toggle clicks
+    window.addEventListener('click', (event) => {
+      const mouse = new THREE.Vector2(
+        (event.clientX / window.innerWidth) * 2 - 1,
+        -(event.clientY / window.innerHeight) * 2 + 1
+      );
+    
+      const raycaster = new THREE.Raycaster();
+      raycaster.setFromCamera(mouse, camera);
+    
+      const hits = raycaster.intersectObjects(scene.children, true);
+      for (const hit of hits) {
+        const obj = hit.object;
+        if (obj.userData?.isCartToggle && obj.callback) {
+          obj.callback(); // triggers drawer toggle
+          break;
+        }
+      }
+    });
+
+    SceneRegistry.onSceneReady((scene) => {
+        if (scene.drawerController?.toggleCartDrawer) {
+          cartToggleHandler = scene.drawerController.toggleCartDrawer;
+          console.warn('[CartSphere] ✅ Hooked in immediately from event listener!');
+        } else {
+          console.warn('[CartSphere] ❌ drawerController not found in scene.userData');
+        }
+      });
+
     const animate = () => {
         requestAnimationFrame(animate);
         carousel.update();
         activeSubmenu?.update?.();
         controls.update();
         renderer.render(scene, camera);
-    };
 
+        carousel.itemMeshes.forEach(mesh => {
+            const ring = mesh.userData.glowRing;
+            if (ring?.material?.uniforms) {
+                ring.material.uniforms.uTime.value = performance.now() / 1000; // Update time
+            }
+        });
+    };
+    
     animate();
 
+    // 🔁 Hover detection for submenu glow rings
+    window.addEventListener('pointermove', (e) => {
+      const pointer = new THREE.Vector2(
+        (e.clientX / window.innerWidth) * 2 - 1,
+        -(e.clientY / window.innerHeight) * 2 + 1
+      );
+      const raycaster = new THREE.Raycaster();
+      raycaster.setFromCamera(pointer, camera);
+    
+      const intersects = raycaster.intersectObjects(carousel.itemGroup.children, true);
+    
+      // Hide all glow rings
+      carousel.itemMeshes.forEach(mesh => {
+        const ring = mesh.userData.glowRing;
+        if (ring?.material?.uniforms?.uOpacity !== undefined) {
+          ring.material.uniforms.uOpacity.value = 0.0;
+        }
+      });
+    
+      // Traverse hits to find the parent mesh with a glow ring
+      for (const hit of intersects) {
+        let mesh = hit.object;
+    
+        // Climb the tree to find the top-level mesh attached to the carousel group
+        while (mesh && mesh.parent !== carousel.itemGroup) {
+          mesh = mesh.parent;
+        }
+    
+        // If the mesh has a glow ring, show it and stop
+        if (mesh?.userData?.hasSubmenu && mesh.userData.glowRing) {
+          const ring = mesh.userData.glowRing;
+          if (ring.material?.uniforms?.uOpacity !== undefined) {
+            ring.material.uniforms.uOpacity.value = 1.0;
+            break;
+          }
+        }
+      }
+    });
+    
+    // 🧹 Hide all glow rings when mouse leaves window
+    window.addEventListener('pointerleave', () => {
+      carousel.itemMeshes.forEach(mesh => {
+        const ring = mesh.userData.glowRing;
+        if (ring?.material?.uniforms?.uOpacity !== undefined) {
+          ring.material.uniforms.uOpacity.value = 0.0;
+        }
+      });
+    });
+    
+    // Remove the problematic shaders and use a standard material instead
+    const glowMaterial = new THREE.MeshBasicMaterial({
+        color: 0xffffff,
+        transparent: true,
+        opacity: 0.7
+    });
+
+    // Update the glowMesh with animation capabilities
+    const glowMesh = new THREE.Mesh(
+        new THREE.PlaneGeometry(1, 1),
+        glowMaterial
+    );
+    scene.add(glowMesh);
+
+    // Add a simple pulse animation
+    const pulseGlow = () => {
+        gsap.to(glowMaterial, {
+            opacity: 0.2,
+            duration: 1.0,
+            yoyo: true,
+            repeat: -1,
+            ease: "sine.inOut",
+            onUpdate: () => {
+                glowMaterial.needsUpdate = true;
+            }
+        });
+    };
+    pulseGlow();
+
+    // 🎮 Return controls for external access
     return {
-        carousel,
-        scene,
-        camera,
-        renderer,
-        nextItem: () => carousel.goToNext(),
-        prevItem: () => carousel.goToPrev(),
-        toggleTheme,
-        closeSubmenu,
+      carousel,
+      scene,
+      camera,
+      renderer,
+      nextItem: () => carousel.goToNext(),
+      prevItem: () => carousel.goToPrev(),
+      toggleTheme,
+      closeSubmenu,
     };
 }

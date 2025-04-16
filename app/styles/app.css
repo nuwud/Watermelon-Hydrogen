@@ -508,3 +508,48 @@ button.reset:hover:not(:has(> *)) {
 .account-logout {
   display: inline-block;
 }
+
+
+.glass-panel {
+  background-color: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(15px);
+  border-radius: 0.75rem;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  opacity: 0.7;
+}
+
+.drawer-open {
+  transform: translateX(0%);
+}
+
+.drawer-closed {
+  transform: translateX(100%);
+}
+
+.floating-panel-wrapper {
+  background: rgba(0, 0, 0, 0.75);
+  padding: 16px;
+  border-radius: 8px;
+  max-width: 480px; /* Adjust as needed */
+  color: white;
+  font-family: sans-serif; /* Or your preferred font */
+  box-shadow: 0 0 20px rgba(0,0,0,0.5);
+  pointer-events: auto; /* Ensure clicks pass through */
+}
+
+/* Optional: Style for the close button if your panel component has one */
+.floating-panel-wrapper .close-button {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  background: rgba(255, 0, 0, 0.7);
+  color: white;
+  border: none;
+  border-radius: 50%;
+  width: 24px;
+  height: 24px;
+  cursor: pointer;
+  font-weight: bold;
+  line-height: 24px;
+  text-align: center;
+}
