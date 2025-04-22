@@ -1,181 +1,206 @@
-# 🍉 Watermelon Hydrogen V1
+# **🍉 Watermelon Hydrogen V1**
 
 A fully immersive 3D-powered Shopify storefront built with **Hydrogen**, **Three.js**, and **Oxygen**, featuring a dynamic 3D carousel menu and future-ready admin HUD.
 
 ---
 
-## 🚀 What Is This?
+## **🚀 What Is This?**
 
 **Watermelon Hydrogen V1** is a custom Hydrogen-based Shopify theme that renders a full Three.js experience inside your storefront UI. It features:
 
-- A 3D main carousel (Watermelon Menu)
-- Scrollable submenus
-- Responsive, SSR-safe canvas rendering
-- Client-only mounted WebGL scenes
-- Shopify metafield/product integration pipeline
-- GitHub + Shopify Oxygen continuous deployment
-- Modular expansion path for Admin HUD and recurring billing integration
+* A 3D main carousel (Watermelon Menu)
+
+* Scrollable submenus
+
+* Responsive, SSR-safe canvas rendering
+
+* Client-only mounted WebGL scenes
+
+* Shopify metafield/product integration pipeline
+
+* GitHub \+ Shopify Oxygen continuous deployment
+
+* Modular expansion path for Admin HUD and recurring billing integration
 
 ---
 
-## 🧠 Tech Stack
+## **🧠 Tech Stack**
 
-- Shopify Hydrogen (Remix-based frontend)
-- Three.js (native rendering)
-- Vite (local dev server + bundler)
-- Oxygen (Shopify's deployment platform)
-- GitHub Actions (auto deploy + PR workflows)
-- Tailwind CSS (fully optional, used for HUD/overlay UI)
-- GSAP (for Three.js animations)
-- ESLint + Prettier + TypeScript
+* Shopify Hydrogen (Remix-based frontend)
+
+* Three.js (native rendering)
+
+* Vite (local dev server \+ bundler)
+
+* Oxygen (Shopify's deployment platform)
+
+* GitHub Actions (auto deploy \+ PR workflows)
+
+* Tailwind CSS (fully optional, used for HUD/overlay UI)
+
+* GSAP (for Three.js animations)
+
+* ESLint \+ Prettier \+ TypeScript
 
 ---
 
-## 📂 Folder Structure Highlights
+## **📂 Folder Structure Highlights**
 
-```
 app/
+
 ├── components/
-│   ├── Carousel3D.jsx            # Initial Three.js 3D mount
-│   ├── Carousel3DPro.js          # Main menu wheel logic
-│   ├── Carousel3DSubmenu.js      # Submenu wheel logic
-│   ├── Carousel3DProWrapper.jsx  # React safe client-only wrapper
-│   ├── ClientOnly.jsx            # Prevent SSR canvas crash
+
+│   ├── Carousel3D.jsx            \# Initial Three.js 3D mount
+
+│   ├── Carousel3DPro.js          \# Main menu wheel logic
+
+│   ├── Carousel3DSubmenu.js      \# Submenu wheel logic
+
+│   ├── Carousel3DProWrapper.jsx  \# React safe client-only wrapper
+
+│   ├── ClientOnly.jsx            \# Prevent SSR canvas crash
+
 ├── routes/
-│   ├── _index.jsx                # Homepage renders the Three.js scene
+
+│   ├── \_index.jsx                \# Homepage renders the Three.js scene
+
 public/
-├── fonts/                        # Three.js-compatible typeface fonts
-├── assets/                       # GLTF models or scene textures
-```
+
+├── fonts/                        \# Three.js-compatible typeface fonts
+
+├── assets/                       \# GLTF models or scene textures
 
 ---
 
-## 💻 Getting Started
+## **💻 Getting Started**
 
-### 1. Clone & Install
-```bash
+### **1\. Clone & Install**
+
 git clone https://github.com/nuwud/Watermelon-Hydrogen.git
+
 cd Watermelon-Hydrogen
+
 npm install
-```
 
-### 2. Link to Shopify Storefront
-```bash
-npx shopify hydrogen link --storefront "Watermelon-Hydrogen"
-```
+### **2\. Link to Shopify Storefront**
 
-### 3. Run Locally
-```bash
+npx shopify hydrogen link \--storefront "Watermelon-Hydrogen"
+
+### **3\. Run Locally**
+
 npm run dev
-```
-Browse to [http://localhost:3000](http://localhost:3000)
+
+Browse to [http://localhost:3000](http://localhost:3000/)
 
 ---
 
-## 🌐 Deployment via Oxygen
+## **🌐 Deployment via Oxygen**
 
 This repository is connected to **Shopify Oxygen** via GitHub integration.
 
-- ✅ Push to `main` = Production deploy
-- ✅ Push to other branches = Preview deploy
-- ✅ Pull Requests show deployment previews
+* ✅ Push to `main` \= Production deploy
+
+* ✅ Push to other branches \= Preview deploy
+
+* ✅ Pull Requests show deployment previews
 
 Live deployment:
-> https://watermelon-hydrogen-v1-f8c761aca3a3f342b54f.o2.myshopify.dev/
+
+[https://watermelon-hydrogen-v1-f8c761aca3a3f342b54f.o2.myshopify.dev/](https://watermelon-hydrogen-v1-f8c761aca3a3f342b54f.o2.myshopify.dev/)
 
 ---
 
-## 📈 What This Unlocks (Next Steps)
+## **📈 What This Unlocks (Next Steps)**
 
-- Build immersive product interfaces with GLTF or 3D menus
-- Hook up recurring payments with Stripe or Recharge
-- Control 3D experiences from metafields or admin HUD
-- Fetch/store customer data with Customer Account API
-- Trigger authenticated sessions using OAuth
+* Build immersive product interfaces with GLTF or 3D menus
 
----
+* Hook up recurring payments with Stripe or Recharge
 
-## 🛠 Developer Notes
+* Control 3D experiences from metafields or admin HUD
 
-To avoid `window is not defined` SSR errors:
-```js
-if (typeof window !== 'undefined') {
-  // Safe to run Three.js or DOM logic
-}
-```
+* Fetch/store customer data with Customer Account API
 
-To render Three.js only on the client:
-```jsx
-<ClientOnly>
-  <Carousel3DProWrapper />
-</ClientOnly>
-```
+* Trigger authenticated sessions using OAuth
 
 ---
 
-## 📄 Hydrogen Docs
+## **🩼 Advanced Three.js Scene Lifecycle (`main.js`)**
 
-For full reference to the Hydrogen framework itself, see the original [Hydrogen README](docs/README-hydrogen.md) or [Shopify Hydrogen Docs](https://shopify.dev/custom-storefronts/hydrogen)
+This project features one of the **cleanest and most resilient** Three.js setup \+ teardown flows in any Hydrogen-integrated app. If you're customizing `main.js`, this breakdown is for you.
+
+### **✅ What's Special About It?**
+
+The `setupCarousel(container)` method in `main.js`:
+
+* Fully manages WebGL context, DOM insertion, and animation loop
+
+* Disposes of all Three.js geometries, materials, and event listeners
+
+* Prevents memory leaks via GSAP `killTweensOf` and `clearTimeout` logic
+
+* Tracks touch \+ scroll behavior across mobile and desktop
+
+* Automatically deregisters all handlers on `dispose()`
+
+* Ensures SSR-safe usage with `typeof window` guards
+
+* Groups cleanup logs in the console for easy debugging
+
+### **🧪 How to Use It Safely**
+
+When you're embedding or replacing the carousel, call:
+
+const { dispose } \= setupCarousel(container);
+
+// Later...
+
+dispose(); // Clean shutdown
+
+Make sure you use `ClientOnly` wrappers for all canvas-dependent components in Hydrogen:
+
+\<ClientOnly\>
+
+  \<Carousel3DProWrapper /\>
+
+\</ClientOnly\>
+
+### **📂 Code Patterns We Use**
+
+* `requestAnimationFrame()` → stored \+ cancelled via `animationFrameId`
+
+* `setTimeout()` → pushed into `timeoutIds[]`, cleared on teardown
+
+* `OrbitControls` → cleanly `.dispose()`'d
+
+* Touch, click, wheel, keydown handlers → individually removed
+
+* Scene graph → `.traverse()` for orphaned mesh disposal
+
+### **🔥 Why It Matters**
+
+Memory leaks in Three.js apps degrade performance over time — especially in SPAs like Hydrogen. This file ensures that:
+
+* Old canvases are never re-used
+
+* GPU/CPU load stays clean
+
+* You can swap in new 3D content without restarting the whole app
 
 ---
 
-## 👨‍💻 Made by Patrick Allan Wood
-[NUWUD Multimedia](https://nuwud.net) | West Hills, CA
+### **👨‍👷 Pro Tip**
+
+This pattern is easily reusable in other 3D components. When building HUDs, product zoom views, or rotating galleries — just adapt the same structure from `main.js`.
 
 ---
-```
+
+## **📄 Hydrogen Docs**
+
+For full reference to the Hydrogen framework itself, see the original [Hydrogen README](https://chatgpt.com/c/docs/README-hydrogen.md) or [Shopify Hydrogen Docs](https://shopify.dev/custom-storefronts/hydrogen)
 
 ---
 
-### ✅ Optional Follow-Ups
+## **👨‍💼 Made by Patrick Allan Wood**
 
-1. Save the original Hydrogen README into `docs/README-hydrogen.md`
-2. Add a root `TROUBLESHOOTING.md` for broken deployments or SSR traps
-3. Add `STARTER-KIT.md` to explain how to reuse this as a template
+[NUWUD Multimedia](https://nuwud.net/) | West Hills, CA
 
-
-# Hydrogen template: Skeleton
-
-Hydrogen is Shopify’s stack for headless commerce. Hydrogen is designed to dovetail with [Remix](https://remix.run/), Shopify’s full stack web framework. This template contains a **minimal setup** of components, queries and tooling to get started with Hydrogen.
-
-[Check out Hydrogen docs](https://shopify.dev/custom-storefronts/hydrogen)
-[Get familiar with Remix](https://remix.run/docs/en/v1)
-
-## What's included
-
-- Remix
-- Hydrogen
-- Oxygen
-- Vite
-- Shopify CLI
-- ESLint
-- Prettier
-- GraphQL generator
-- TypeScript and JavaScript flavors
-- Minimal setup of components and routes
-
-## Getting started
-
-**Requirements:**
-
-- Node.js version 18.0.0 or higher
-
-```bash
-npm create @shopify/hydrogen@latest
-```
-
-## Building for production
-
-```bash
-npm run build
-```
-
-## Local development
-
-```bash
-npm run dev
-```
-
-## Setup for using Customer Account API (`/account` section)
-
-Follow step 1 and 2 of <https://shopify.dev/docs/custom-storefronts/building-with-the-customer-account-api/hydrogen#step-1-set-up-a-public-domain-for-local-development>
