@@ -22,12 +22,12 @@ import gsap from 'gsap';
 export function setupCarousel(container) {
     if (typeof window === 'undefined') return null;
 
-    function waitForDrawerControllerEvent() {
-        return new Promise((resolve) => {
-          if (window.drawerController) return resolve(window.drawerController);
-          window.addEventListener('drawerControllerReady', () => resolve(window.drawerController), { once: true });
-        });
-      }
+    // function waitForDrawerControllerEvent() {
+    //     return new Promise((resolve) => {
+    //       if (window.drawerController) return resolve(window.drawerController);
+    //       window.addEventListener('drawerControllerReady', () => resolve(window.drawerController), { once: true });
+    //     });
+    //   }
 
     // Add the waitForWindowWM helper function here
     function waitForWindowWM(id, maxRetries = 30) {

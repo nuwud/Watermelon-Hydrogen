@@ -1,5 +1,5 @@
 // app/components/AboutPanel3D.jsx
-//import React from 'react';
+// import React from 'react';
 
 export default function AboutPanel3D({ onClose }) {
   return (
@@ -12,8 +12,6 @@ export default function AboutPanel3D({ onClose }) {
         padding: '16px',
         borderRadius: '12px',
         textAlign: 'center',
-        depth: '0.5',
-        mathDepth: '0.5',
       }}
     >
       <h2 style={{ marginBottom: '10px' }}>About WatermelonOS</h2>
@@ -30,8 +28,6 @@ export default function AboutPanel3D({ onClose }) {
           borderRadius: '6px',
           cursor: 'pointer',
           color: 'white',
-          depth: '0.5',
-          mathDepth: '0.5',
         }}
       >
         Close

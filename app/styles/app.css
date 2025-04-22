@@ -532,8 +532,12 @@ button.reset:hover:not(:has(> *)) {
   border-radius: 8px;
   max-width: 480px; /* Adjust as needed */
   color: white;
-  font-family: sans-serif; /* Or your preferred font */
-  box-shadow: 0 0 20px rgba(0,0,0,0.5);
+  font-family: 'Arial', sans-serif; /* Updated font-family */
+  font-size: 16px; /* Added font-size */
+  text-align: center; /* Added text-align */
+  transform: scale(1); /* Avoid accidental CSS scaling */
+  perspective: none; /* Prevent skew from world transform */
+  box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
   pointer-events: auto; /* Ensure clicks pass through */
 }
 
@@ -551,5 +555,12 @@ button.reset:hover:not(:has(> *)) {
   cursor: pointer;
   font-weight: bold;
   line-height: 24px;
+  text-align: center;
+}
+
+.floating-panel {
+  width: 300px;
+  max-width: 80vw;
+  font-size: 1rem;
   text-align: center;
 }

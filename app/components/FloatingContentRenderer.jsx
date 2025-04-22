@@ -1,42 +1,32 @@
 // app/components/FloatingContentRenderer.jsx
 import React, { useEffect, useState, Suspense } from 'react';
-import { Html } from '@react-three/drei';
 import { ClientOnly } from '../ClientOnly';
 import { useFloatingContentStore } from '../stores/useFloatingContentStore';
+//import CartPanel3D from './panels/CartPanel3D';
+
 
 // Map string IDs to lazy-loaded content modules
+// Lazy load components for floating panels
 const contentRegistry = {
-    // Ensure this line is present and correct
-    cart: React.lazy(() => import('./cart-drawers/CartDrawer3D')), // Or CartDrawer3D.scene if that's the file name
-    about: React.lazy(() => import('./panels/AboutPanel3D')), // placeholder
-    favorites: React.lazy(() => import('./panels/FavoritesPanel3D')), // placeholder
-    shopifyModel: React.lazy(() => import('./panels/ShopifyModelPanel')), // placeholder
+    about: React.lazy(() => import('./panels/AboutPanel3D')),
+    favorites: React.lazy(() => import('./panels/FavoritesPanel3D')),
+    productmodel: React.lazy(() => import('./panels/ProductModelPanel')),
+    shopifymodel: React.lazy(() => import('./panels/ShopifyModelPanel')),
+    // Verify this path and component structure:
+    cart: React.lazy(() => import('../cart/CartDrawer3D')), // Adjusted path assumption
+    // --- OR ---
+    // Test by temporarily swapping with a known working panel:
+    // cart: React.lazy(() => import('./panels/AboutPanel3D')),
     // Add other mappings here
+    //cart: CartPanel3D, // Directly use the imported component for testing
 };
 
 export default function FloatingContentRenderer() {
     const activeContentId = useFloatingContentStore((state) => state.activeContentId);
     const [ActiveComponent, setActiveComponent] = useState(null);
 
-    // Effect to register the window helper
     useEffect(() => {
-        if (typeof window !== 'undefined') {
-            window.__wm__ = {
-                showContent: (id) => useFloatingContentStore.getState().setActiveContentId(id),
-                clearContent: () => useFloatingContentStore.getState().clearActiveContentId(),
-            };
-            console.warn('✅ window.__wm__ helper registered');
-
-            // Cleanup function to remove the helper when the component unmounts
-            return () => {
-                delete window.__wm__;
-                console.warn('🗑️ window.__wm__ helper removed');
-            };
-        }
-    }, []); // Empty dependency array ensures this runs only once on mount and cleanup on unmount
-
-    useEffect(() => {
-        console.warn('[FloatingContentRenderer] Active Content ID:', activeContentId); // Add this log
+        console.warn('[FloatingContentRenderer] Active Content ID:', activeContentId);
         if (activeContentId && contentRegistry[activeContentId]) {
             setActiveComponent(contentRegistry[activeContentId]);
         } else {
@@ -50,12 +40,12 @@ export default function FloatingContentRenderer() {
     useEffect(() => {
         console.groupCollapsed('[FloatingContentRenderer]');
         console.warn('🔍 activeContentId:', activeContentId);
-        console.warn('🧩 ActiveComponent:', ActiveComponent ? 'Component Loaded' : 'None'); // Simplified log
+        console.warn('🧩 ActiveComponent:', ActiveComponent ? 'Component Loaded' : 'None');
         console.groupEnd();
     }, [activeContentId, ActiveComponent]);
 
     const handleClose = () => {
-        console.warn('[FloatingContentRenderer] Closing panel...'); // Add this log
+        console.warn('[FloatingContentRenderer] Closing panel...');
         useFloatingContentStore.getState().clearActiveContentId();
     };
 
@@ -63,28 +53,34 @@ export default function FloatingContentRenderer() {
         <ClientOnly>
             <Suspense
                 fallback={
-                    <Html center>
-                        <div style={{ color: 'white', background: 'rgba(0,0,0,0.4)', padding: '8px', borderRadius: '5px' }}>
-                            Loading...
-                        </div>
-                    </Html>
+                    // Consider a simpler DOM fallback if Html is removed entirely
+                    <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', color: 'white', background: 'rgba(0,0,0,0.4)', padding: '8px', borderRadius: '5px', zIndex: 10000 }}>
+                        Loading...
+                    </div>
                 }
             >
                 {ActiveComponent && (
-                    <Html
-                        position={[0, 0, -3]} // Push slightly backward from camera (adjust Z as needed)
-                        center
-                        distanceFactor={10} // Adjust perceived size with camera distance
-                        transform // Makes it behave more like world space
-                        occlude={false} // Prevent hiding if occluded
-                        zIndexRange={[100, 0]}
-                        style={{ pointerEvents: 'auto', outline: '2px dashed lime' }} // Keep outline for debugging, ensure pointer events
+                    <div
+                        className="floating-panel" // Use this class for styling if preferred
+                        style={{
+                            position: 'absolute',
+                            top: '50%',
+                            left: '50%',
+                            transform: 'translate(-50%, -50%)',
+                            zIndex: 9999, // Ensure it's above the canvas
+                            background: 'rgba(0,0,0,0.75)', // Example background
+                            padding: '1rem',
+                            borderRadius: '8px',
+                            color: '#fff', // Example text color
+                            pointerEvents: 'auto', // Allow interaction with the panel
+                            // Add any other necessary styles
+                            depth: 0.2,
+                        }}
                     >
-                        {/* Add a wrapper div for styling */}
-                        <div className="floating-panel-wrapper">
-                            <ActiveComponent onClose={handleClose} />
-                        </div>
-                    </Html>
+                        {/* Optional: Add debug border here if needed */}
+                        {/* style={{ border: '2px dashed lime', padding: '1rem', background: 'rgba(0,0,0,0.25)' }} */}
+                        <ActiveComponent onClose={handleClose} />
+                    </div>
                 )}
             </Suspense>
         </ClientOnly>
