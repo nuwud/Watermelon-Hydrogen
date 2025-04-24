@@ -33,6 +33,24 @@ export class Carousel3DPro extends Group {
     this.itemGroup = new THREE.Group();
     this.add(this.itemGroup);
 
+    // Create a central anchor for positioning references
+    this.carouselCenter = new THREE.Object3D();
+    this.carouselCenter.name = 'carouselCenter';
+    this.carouselCenter.position.set(0, 0, 0); // Origin by default
+    this.add(this.carouselCenter); // Attach to main carousel group
+    this.userData.carouselCenter = this.carouselCenter;
+
+    // Optional: Add a debug sphere to visualize it during dev
+    if (this.config.debug) {
+      const helperGeo = new THREE.SphereGeometry(0.2, 16, 16);
+      const helperMat = new THREE.MeshBasicMaterial({ color: 0xff00ff });
+      const helper = new THREE.Mesh(helperGeo, helperMat);
+      this.carouselCenter.add(helper);
+    }
+
+    // Store carouselCenter in userData
+    this.userData.carouselCenter = this.carouselCenter;
+
     // Callback for item clicks
     this.onItemClick = null;
 
@@ -153,8 +171,10 @@ export class Carousel3DPro extends Group {
       this.itemGroup.add(mesh);
     });
     
-    // Apply glow to first item
-    this.selectItem(0, false);
+    if (this.itemMeshes.length > 0) {
+      this.selectItem(0, false); // Select first item without animation or preview
+      // Don't create floating preview automatically
+    }
   }
   
   selectItem(index, animate = true) {

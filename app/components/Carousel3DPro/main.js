@@ -12,8 +12,6 @@ import {
 } from './CarouselStyleConfig.js';
 import gsap from 'gsap';
 
-
-
 /**
  * Sets up a 3D carousel instance and mounts it to the provided container
  * @param {HTMLElement} container - DOM element to mount the canvas to
@@ -400,7 +398,36 @@ export function setupCarousel(container) {
             }
 
             console.warn(`[Watermelon] Spawning submenu for: ${item}`); // Debug log
-            const submenu = new Carousel3DSubmenu(mesh, submenus[item], currentTheme);
+
+            const submenuItems = submenus[item]; // Get the items for the submenu
+
+            // Check if submenuItems is an array
+            if (!Array.isArray(submenuItems)) {
+                console.warn(`[Watermelon] Expected an array of strings for submenu items, but got:`, typeof submenuItems, submenuItems);
+                // Optionally reject or provide default empty array
+                // return reject(new Error(`Invalid submenu items for ${item}`));
+                // submenuItems = []; // Fallback to empty array
+            }
+
+            // Pass carousel instance in config
+            const submenuConfig = { ...currentTheme, carousel };
+            const submenu = new Carousel3DSubmenu(mesh, submenuItems || [], submenuConfig); // Use fallback if needed
+
+            // ---> INJECT SCENE AND CAMERA HERE <---
+            if (scene) {
+                submenu.scene = scene;
+                 console.log('[Watermelon] Injected scene into submenu.');
+            } else {
+                console.error('[Watermelon] CRITICAL: Scene is missing during submenu creation!');
+            }
+            if (camera) {
+                submenu.camera = camera;
+                 console.log('[Watermelon] Injected camera into submenu.');
+            } else {
+                console.error('[Watermelon] CRITICAL: Camera is missing during submenu creation!');
+            }
+            // ---> END INJECTION <---
+
             activeSubmenu = submenu; // Set the new active submenu
             scene.add(submenu);
             scene.userData.activeSubmenu = activeSubmenu; // Update scene userData if needed
@@ -552,13 +579,21 @@ export function setupCarousel(container) {
                     submenuItemData = obj.parent.userData;
                 }
 
-                if (submenuItemData) {
+                if (submenuItemData && typeof submenuItemData.index === 'number') {
                     const index = submenuItemData.index;
                     const item = activeSubmenu.items?.[index];
 
+                    // Force index sync
+                    activeSubmenu.currentIndex = index;
+
                     // Handle specific items to trigger floating content
+                    // Check for specific items FIRST
                     if (item === 'About' || item === 'Favorites' || item === 'Product' || item === 'Shopify' || item === 'Cart') { // Added 'Cart' here too
                         const id = item.toLowerCase(); // e.g., 'about', 'favorites', 'cart'
+
+                        // <<< FIX: Call selectItem to show preview BEFORE triggering panel
+                        activeSubmenu.selectItem(index, true, true); // Show preview
+
                         // Replace the direct call with the waitForWindowWM function
                         waitForWindowWM(id);
                         console.warn(`🍉 Attempting to trigger floating panel: ${id}`);
@@ -566,10 +601,8 @@ export function setupCarousel(container) {
                         // closeSubmenu();
                     } else {
                         // Fallback/default behavior for other submenu items
-                        activeSubmenu.selectItem(index, true, true);
+                        activeSubmenu.selectItem(index, true, true); // <- preview true
                     }
-                // Removed the separate 'Cart' check as it's now handled above
-                // if (item === 'Cart') { ... }
                 } else if (obj.userData?.isCloseButton || obj.parent?.userData?.isCloseButton) {
                     // Handle close button click
                     closeSubmenu();
@@ -591,6 +624,7 @@ export function setupCarousel(container) {
             }
         }
     }
+
     window.addEventListener('click', handleCarouselClick);
 
     // Define keydown handler
