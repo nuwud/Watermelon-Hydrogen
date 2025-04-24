@@ -39,6 +39,7 @@ export class Carousel3DSubmenu extends THREE.Group {
     this.targetRotationLocked = false; // <<< BONUS FIX: Add targetRotation lock flag
     this.isTransitioning = false; // Global flag to track any selection or transition animation
     this.forceSelectLock = false; // 1. Add lock property
+    this.isSelectionOverrideActive = false; // Flag to track if selection override is active
 
     // Create container for items to rotate
     this.itemGroup = new THREE.Group();
@@ -513,6 +514,9 @@ export class Carousel3DSubmenu extends THREE.Group {
     // <<< FIX 1: Set forceLockedIndex at the beginning
     this.forceLockedIndex = index;
 
+    // Set override flag at the beginning of selection
+    this.isSelectionOverrideActive = true;
+
     // Deselect current
     if (this.currentIndex !== index && this.itemMeshes[this.currentIndex]) {
       const currentContainer = this.itemMeshes[this.currentIndex];
@@ -534,6 +538,20 @@ export class Carousel3DSubmenu extends THREE.Group {
         if (currentIcon) {
           // ✅ Step 2: Update scaling logic
           const iconOriginal = currentIcon.userData.originalScale || new THREE.Vector3(1,1,1);
+
+          gsap.to(this.itemGroup.rotation, {
+            // ...existing tween properties...
+            onComplete: () => {
+                // ...existing code...
+                
+                // Clear override flag after a short delay
+                setTimeout(() => {
+                    this.isSelectionOverrideActive = false;
+                    this.forceLockedIndex = null;
+                }, 100);
+            }
+        });
+
           // Reset icon scale using original scale
           gsap.to(currentIcon.scale, {
             x: iconOriginal.x, // Reset to original x
