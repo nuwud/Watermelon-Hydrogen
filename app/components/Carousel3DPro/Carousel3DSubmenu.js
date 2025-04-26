@@ -511,13 +511,15 @@ export class Carousel3DSubmenu extends THREE.Group {
   selectItem(index, animate = true, createPreview = false) {
     if (index < 0 || index >= this.itemMeshes.length) return;
 
-    // <<< FIX 1: Set forceLockedIndex at the beginning
+    // Acquire all locks at the beginning to prevent any interference
+    this.isTransitioning = true;
+    this.selectItemLock = true;
     this.forceLockedIndex = index;
+    this.targetRotationLocked = true;
 
-    // Set override flag at the beginning of selection
-    this.isSelectionOverrideActive = true;
+    console.warn(`[🔒 Selection] Locking to index ${index}, animate: ${animate}, preview: ${createPreview}`);
 
-    // Deselect current
+    // Deselect current item if different
     if (this.currentIndex !== index && this.itemMeshes[this.currentIndex]) {
       const currentContainer = this.itemMeshes[this.currentIndex];
       const currentMesh = currentContainer.userData.mesh;
@@ -536,27 +538,13 @@ export class Carousel3DSubmenu extends THREE.Group {
         });
 
         if (currentIcon) {
-          // ✅ Step 2: Update scaling logic
           const iconOriginal = currentIcon.userData.originalScale || new THREE.Vector3(1,1,1);
-
-          gsap.to(this.itemGroup.rotation, {
-            // ...existing tween properties...
-            onComplete: () => {
-                // ...existing code...
-                
-                // Clear override flag after a short delay
-                setTimeout(() => {
-                    this.isSelectionOverrideActive = false;
-                    this.forceLockedIndex = null;
-                }, 100);
-            }
-        });
 
           // Reset icon scale using original scale
           gsap.to(currentIcon.scale, {
-            x: iconOriginal.x, // Reset to original x
-            y: iconOriginal.y, // Reset to original y
-            z: iconOriginal.z, // Reset to original z
+            x: iconOriginal.x,
+            y: iconOriginal.y,
+            z: iconOriginal.z,
             duration: 0.3
           });
 
@@ -567,15 +555,14 @@ export class Carousel3DSubmenu extends THREE.Group {
       } else {
         currentMesh.scale.copy(currentMesh.userData.originalScale);
         if (currentIcon) {
-          // ✅ Step 2: Update scaling logic
           const iconOriginal = currentIcon.userData.originalScale || new THREE.Vector3(1,1,1);
-          currentIcon.scale.copy(iconOriginal); // Reset instantly using original scale
-          currentIcon.rotation.set(0, 0, 0); // Reset rotation immediately
+          currentIcon.scale.copy(iconOriginal);
+          currentIcon.rotation.set(0, 0, 0);
         }
       }
     }
 
-    // Select new
+    // Select new item
     const selectedContainer = this.itemMeshes[index];
     const selectedMesh = selectedContainer.userData.mesh;
     const selectedIcon = selectedContainer.userData.iconMesh;
@@ -594,9 +581,8 @@ export class Carousel3DSubmenu extends THREE.Group {
       });
 
       if (selectedIcon) {
-        // ✅ Step 2: Update scaling logic
         const iconOriginal = selectedIcon.userData.originalScale || new THREE.Vector3(1,1,1);
-        const multiplier = 1.3; // Highlight multiplier
+        const multiplier = 1.3;
 
         // Scale up icon using original scale
         gsap.to(selectedIcon.scale, {
@@ -607,44 +593,65 @@ export class Carousel3DSubmenu extends THREE.Group {
           ease: "back.out"
         });
 
-        // Add a clean 1-second geodesic spin animation to the icon
+        // Add a clean geodesic spin animation to the icon
         gsap.killTweensOf(selectedIcon.rotation);
         gsap.timeline()
           .to(selectedIcon.rotation, {
-            y: Math.PI * 2, // One full rotation around Y axis
-            x: Math.PI * 0.8, // Add tilt for geodesic effect
-            z: Math.PI * 0.5, // Add roll for geodesic effect
-            duration: 1.0, // Exactly 1 second
-            ease: "power1.inOut" // Smooth acceleration and deceleration
+            y: Math.PI * 2,
+            x: Math.PI * 0.8,
+            z: Math.PI * 0.5,
+            duration: 1.0,
+            ease: "power1.inOut"
           })
           .to(selectedIcon.rotation, {
-            x: 0, // Reset to upright
-            z: 0, // Reset to upright
-            duration: 0.3, // Quick snap back
-            ease: "back.out(2)" // Snappy elastic ease
-          }, "-=0.1"); // Slight overlap for smoother transition
+            x: 0,
+            z: 0,
+            duration: 0.3,
+            ease: "back.out(2)"
+          }, "-=0.1");
       }
 
       // Position the item at the front (3 o'clock position)
       // The value 0 corresponds to the 3 o'clock position
       this.targetRotation = -selectedContainer.userData.angle + 0;
-      this.targetRotationLocked = true; // <<< BONUS FIX: Lock targetRotation
 
-      this.isTransitioning = true; // <<< SET TRANSITION FLAG
-      this.selectItemLock = true; // <<< FIX 1: Lock before animation starts
-      this.forceSelectLock = true; // 2. Set lock before animation
+      // === FIX: Set current index BEFORE the animation starts ===
+      // This is crucial to prevent the flipping issue
+      this.currentIndex = index;
+
+      // Animate rotation
       gsap.to(this.itemGroup.rotation, {
         x: this.targetRotation,
         duration: 0.6,
         ease: "power2.out",
+        onUpdate: () => {
+          // === FIX: Force highlight during animation ===
+          // This ensures the highlighted item doesn't change during rotation
+          if (this.itemMeshes[index]) {
+            const mesh = this.itemMeshes[index].userData.mesh;
+            if (mesh) {
+              mesh.material.color.set(this.config.highlightColor || 0x00ffff);
+              mesh.material.emissive = new THREE.Color(0x003333);
+            }
+          }
+        },
         onComplete: () => {
-          this.currentIndex = index; // Lock in the index *AFTER* rotation is done
-          this.isTransitioning = false; // <<< CLEAR TRANSITION FLAG
-          this.selectItemLock = false; // <<< FIX 1: Unlock directly
-          this.forceLockedIndex = null; // <<< FIX 1: Release lock directly
-          this.targetRotationLocked = false; // <<< BONUS FIX: Unlock targetRotation directly
-          this.forceSelectLock = false; // 2. Unlock after animation
-          // Removed setTimeout wrapper
+          // Release locks in a specific order with slight delays
+          // First confirm the correct index again
+          this.currentIndex = index;
+          
+          // Then release the rotation lock
+          this.targetRotationLocked = false;
+          
+          // Then release the transition flag
+          this.isTransitioning = false;
+          
+          // Small delay before releasing selection locks
+          setTimeout(() => {
+            this.selectItemLock = false;
+            this.forceLockedIndex = null;
+            console.warn(`[🔓 Selection] Unlocked from index ${index}`);
+          }, 50);
         }
       });
     } else {
@@ -656,25 +663,26 @@ export class Carousel3DSubmenu extends THREE.Group {
       );
 
       if (selectedIcon) {
-        // ✅ Step 2: Update scaling logic
         const iconOriginal = selectedIcon.userData.originalScale || new THREE.Vector3(1,1,1);
         const multiplier = 1.3;
         selectedIcon.scale.set(
-            iconOriginal.x * multiplier,
-            iconOriginal.y * multiplier,
-            iconOriginal.z * multiplier
-        ); // Set instantly using original scale
+          iconOriginal.x * multiplier,
+          iconOriginal.y * multiplier,
+          iconOriginal.z * multiplier
+        );
       }
 
       // Set initial rotation to front position without animation
       this.itemGroup.rotation.x = -selectedContainer.userData.angle + 0;
       this.targetRotation = this.itemGroup.rotation.x;
-      // <<< FIX 1: Release lock immediately if not animating
+      
+      // Set index and release locks immediately for non-animated selections
+      this.currentIndex = index;
+      this.targetRotationLocked = false;
       this.forceLockedIndex = null;
-      this.forceSelectLock = false; // 2. Unlock if not animating
+      this.selectItemLock = false;
+      this.isTransitioning = false;
     }
-
-    this.currentIndex = index;
 
     // Only update floating preview when explicitly requested
     if (createPreview) {
@@ -684,63 +692,92 @@ export class Carousel3DSubmenu extends THREE.Group {
   }
 
   scrollSubmenu(delta) {
-    // <<< FIX 1 & BONUS FIX & NEW TRANSITION CHECK >>>
-    if (this.selectItemLock || this.forceLockedIndex !== null || this.isTransitioning) {
-      console.warn("🚫 scrollSubmenu blocked during selectItem animation or transition."); // Updated log
-      return; // Do nothing if selectItem is animating, forcing index, or transitioning
+    // Block scrolling during any locked or transitioning state
+    if (this.selectItemLock || this.forceLockedIndex !== null || this.isTransitioning || this.targetRotationLocked) {
+      console.warn("[🚫 Scroll] Blocked during locks or transition");
+      return;
     }
-    if (this.targetRotationLocked) {
-      console.warn("⛔️ scrollSubmenu blocked due to locked targetRotation.");
-      return; // Do nothing if targetRotation is locked by selectItem
-    }
-    // <<< END LOCK CHECKS >>>
 
     // Calculate angle step between items
     const angleStep = (2 * Math.PI) / this.itemMeshes.length;
 
+    // Acquire locks BEFORE starting animation
+    this.isTransitioning = true;
+    this.targetRotationLocked = true;
+
     // Smooth and more controlled scrolling
     this.targetRotation += delta > 0 ? -angleStep : angleStep;
+
+    // Find which item will be at the front after rotation
+    const anglePerItem = (2 * Math.PI) / this.itemMeshes.length;
+    const totalRotation = this.targetRotation % (2 * Math.PI);
+    const itemIndex = Math.round(totalRotation / anglePerItem);
+    const targetIndex = (this.itemMeshes.length - itemIndex) % this.itemMeshes.length;
+    
+    // Safety check for valid index
+    const newIndex = (targetIndex >= 0 && targetIndex < this.itemMeshes.length) ? 
+                     targetIndex : this.currentIndex;
+                     
+    console.warn(`[🔄 Scroll] Delta: ${delta}, Moving to index: ${newIndex}`);
+
+    // Lock to the calculated index
+    this.forceLockedIndex = newIndex;
 
     // Animate to the new position with improved easing
     gsap.to(this.itemGroup.rotation, {
       x: this.targetRotation,
-      duration: 0.5, // Slightly longer for smoother motion
-      ease: "power3.out", // Better deceleration curve
+      duration: 0.5,
+      ease: "power3.out",
       onUpdate: () => {
-        // Update the highlight during the animation
-        this.updateFrontItemHighlight();
+        // Force highlight to stay on target index during animation
+        if (this.itemMeshes[newIndex]) {
+          const mesh = this.itemMeshes[newIndex].userData.mesh;
+          if (mesh) {
+            mesh.material.color.set(this.config.highlightColor || 0x00ffff);
+            mesh.material.emissive = new THREE.Color(0x003333);
+          }
+        }
       },
       onComplete: () => {
-        this.isAnimating = false;
-        this.updateFrontItemHighlight(true); // <- allow it now
-        // Don't automatically update floating preview when scrolling
-        // Only update existing preview if we already have one visible
-        if (this.showingPreview) {
-          this.updateFloatingPreview(this.currentIndex);
-        }
+        // Update the current index
+        this.currentIndex = newIndex;
+        
+        // Release locks in correct order with slight delays
+        this.targetRotationLocked = false;
+        this.isTransitioning = false;
+        
+        // Small delay before releasing final lock
+        setTimeout(() => {
+          this.forceLockedIndex = null;
+          console.warn(`[🔓 Scroll] Unlocked, now at index: ${this.currentIndex}`);
+          
+          // Only update existing preview if we already have one visible
+          if (this.showingPreview) {
+            this.updateFloatingPreview(this.currentIndex);
+          }
+        }, 50);
       }
     });
   }
 
   updateFrontItemHighlight(force = false) {
-    // <<< ADD isTransitioning CHECK & CONSOLIDATE LOCKS >>>
-    if (this.isTransitioning || this.selectItemLock || this.forceLockedIndex !== null) {
-      // console.warn("🛑 updateFrontItemHighlight skipped during locked state."); // Optional debug
-      return; // Skip highlight update if transitioning or locked
+    // Block updates during any locked or transitioning state
+    if (this.isTransitioning || this.selectItemLock || this.forceLockedIndex !== null || this.targetRotationLocked) {
+      // console.warn(`[🛑 Highlight] Blocked during locks. Transitioning: ${this.isTransitioning}, SelectLock: ${this.selectItemLock}, ForcedIdx: ${this.forceLockedIndex}`);
+      return;
     }
-    // <<< REMOVED REDUNDANT CHECKS >>>
 
-    if ((this.isAnimating && !force)) return; // Keep existing isAnimating check too
+    if (this.isAnimating && !force) return;
+
     // Define front position (3 o'clock)
     const frontPosition = 0;
 
     let closestItem = null;
     let smallestAngleDiff = Infinity;
-    let newIndex = -1; // <<< FIX 1: Initialize newIndex
+    let newIndex = -1;
 
     // Find the item visually closest to the front position
     this.itemMeshes.forEach((container) => {
-      // Calculate the effective angle accounting for rotation
       // Guard against missing userData
       if (!container || !container.userData || !this.itemGroup) return;
 
@@ -767,22 +804,20 @@ export class Carousel3DSubmenu extends THREE.Group {
       if (angleDiff < smallestAngleDiff) {
         smallestAngleDiff = angleDiff;
         closestItem = container;
+        newIndex = container.userData.index;
       }
     });
 
-    // <<< FIX 1: Override closestItem and newIndex if forceLockedIndex is set
-    if (this.forceLockedIndex !== null && this.forceLockedIndex >= 0 && this.forceLockedIndex < this.itemMeshes.length) {
-      // Lock highlight strictly to selected item
-      closestItem = this.itemMeshes[this.forceLockedIndex];
-      newIndex = this.forceLockedIndex;
-      // console.warn(`Highlight locked to index: ${newIndex}`); // Optional debug
-    } else if (closestItem) {
-        newIndex = closestItem.userData.index; // Get index from the found closest item
-    }
-
-
     // Only highlight if we found an item and it's different from current
-    if (closestItem && newIndex !== this.currentIndex) { // <<< FIX 1: Use newIndex here
+    if (closestItem && newIndex !== this.currentIndex && newIndex !== -1) {
+      console.warn(`[📌 Highlight] Changing from ${this.currentIndex} to ${newIndex}, angleDiff: ${smallestAngleDiff.toFixed(4)}`);
+      
+      // === FIX: Add threshold to prevent accidental highlights ===
+      // Only change highlight if the angle difference is significant
+      if (smallestAngleDiff > 0.3) {
+        return; // Skip if the angle difference is too small
+      }
+
       // Deselect current item
       if (this.currentIndex >= 0 && this.currentIndex < this.itemMeshes.length) {
         const currentContainer = this.itemMeshes[this.currentIndex];
@@ -790,29 +825,29 @@ export class Carousel3DSubmenu extends THREE.Group {
           const currentMesh = currentContainer.userData.mesh;
           const currentIcon = currentContainer.userData.iconMesh;
 
-          if (currentMesh && currentMesh.userData && currentIcon) {
+          if (currentMesh && currentMesh.userData) {
             // Reset to original appearance
             currentMesh.material.color.copy(currentMesh.userData.originalColor);
             currentMesh.material.emissive = new THREE.Color(0x000000);
             currentMesh.scale.copy(currentMesh.userData.originalScale);
 
-            // ✅ Step 2: Update scaling logic
-            const iconOriginal = currentIcon.userData.originalScale || new THREE.Vector3(1,1,1);
-            currentIcon.scale.copy(iconOriginal); // Reset instantly using original scale
+            if (currentIcon && currentIcon.userData) {
+              const iconOriginal = currentIcon.userData.originalScale || new THREE.Vector3(1,1,1);
+              currentIcon.scale.copy(iconOriginal);
 
-            // Cancel any ongoing animations and reset rotation immediately
-            gsap.killTweensOf(currentIcon.rotation);
-            gsap.set(currentIcon.rotation, { x: 0, y: 0, z: 0 });
+              // Cancel any ongoing animations and reset rotation immediately
+              gsap.killTweensOf(currentIcon.rotation);
+              gsap.set(currentIcon.rotation, { x: 0, y: 0, z: 0 });
+            }
           }
         }
       }
 
       // Highlight the new item
-      // const newIndex = closestItem.userData.index; // <<< FIX 1: Moved index assignment up
       const mesh = closestItem.userData.mesh;
       const icon = closestItem.userData.iconMesh;
 
-      if (mesh && icon) {
+      if (mesh) {
         mesh.material.color.set(this.config.highlightColor || 0x00ffff);
         mesh.material.emissive = new THREE.Color(0x003333);
         mesh.scale.set(
@@ -821,37 +856,39 @@ export class Carousel3DSubmenu extends THREE.Group {
           mesh.userData.originalScale.z * 1.3
         );
 
-        // ✅ Step 2: Update scaling logic
-        const iconOriginal = icon.userData.originalScale || new THREE.Vector3(1,1,1);
-        const multiplier = 1.3;
-        icon.scale.set(
+        if (icon) {
+          const iconOriginal = icon.userData.originalScale || new THREE.Vector3(1,1,1);
+          const multiplier = 1.3;
+          icon.scale.set(
             iconOriginal.x * multiplier,
             iconOriginal.y * multiplier,
             iconOriginal.z * multiplier
-        ); // Set instantly using original scale
+          );
 
-        // Add clean geodesic spin animation
-        gsap.killTweensOf(icon.rotation);
-        gsap.timeline()
-          .to(icon.rotation, {
-            y: Math.PI * 2,
-            x: Math.PI * 0.8,
-            z: Math.PI * 0.5,
-            duration: 1.0,
-            ease: "power1.inOut"
-          })
-          .to(icon.rotation, {
-            x: 0,
-            z: 0,
-            duration: 0.3,
-            ease: "back.out(2)"
-          }, "-=0.1");
+          // Add clean geodesic spin animation
+          gsap.killTweensOf(icon.rotation);
+          gsap.timeline()
+            .to(icon.rotation, {
+              y: Math.PI * 2,
+              x: Math.PI * 0.8,
+              z: Math.PI * 0.5,
+              duration: 1.0,
+              ease: "power1.inOut"
+            })
+            .to(icon.rotation, {
+              x: 0,
+              z: 0,
+              duration: 0.3,
+              ease: "back.out(2)"
+            }, "-=0.1");
+        }
 
-        this.currentIndex = newIndex; // <<< FIX 1: Use newIndex here
+        // Update current index
+        this.currentIndex = newIndex;
 
         // Only update if we're already showing a preview
         if (this.showingPreview) {
-          this.updateFloatingPreview(newIndex); // <<< FIX 1: Use newIndex here
+          this.updateFloatingPreview(newIndex);
         }
       }
     }
@@ -1756,15 +1793,15 @@ export class Carousel3DSubmenu extends THREE.Group {
        return;
      }
 
-    // ... rest of the existing updateCurrentItemFromRotation logic ...
-
     // Normalize rotation to be within 0 and 2*PI
-    // ...existing code...
+    const normalizedRotation = ((this.itemGroup.rotation.x % (Math.PI * 2)) + (Math.PI * 2)) % (Math.PI * 2);
 
     // Calculate the index based on rotation
-    // ...existing code...
+    const index = Math.floor((normalizedRotation / (2 * Math.PI)) * this.items.length) % this.items.length;
 
     // Update currentItemIndex if it has changed
-    // ...existing code...
+    if (index !== this.currentIndex) {
+      this.selectItem(index, true);
+    }
   }
 }
