@@ -65,26 +65,6 @@ export class Carousel3DPro extends Group {
 
     this.levelingSpeed = 0.1; // Controls how quickly items level out
     this.maxTilt = Math.PI / 24; // Limits maximum tilt (about 7.5 degrees)
-
-    // --- Submenu Manager Communication ---
-    this.submenuActive = false;
-
-    this.openSubmenu = (submenuInstance) => {
-      this.submenuActive = true;
-      this.stopSpin(); // Pause main carousel spinning
-      this.submenuInstance = submenuInstance;
-    };
-
-    this.closeSubmenu = () => {
-      this.submenuActive = false;
-      this.resumeSpin(); // Resume main carousel spinning
-      this.submenuInstance = null;
-    };
-
-    this.handleSubmenuItemClick = (submenuIndex) => {
-      if (!this.submenuInstance) return;
-      this.submenuInstance.selectSubmenuItem(submenuIndex);
-    };
   }
 
   async loadFont() {
@@ -362,7 +342,7 @@ export class Carousel3DPro extends Group {
     const currentRotation = this.itemGroup.rotation.y;
     
     // Normalize rotation to get a value between 0 and 2π
-    let normalizedRotation = currentRotation % (Math.PI * 2);
+    let normalizedRotation = currentRotation % (2 * Math.PI);
     if (normalizedRotation < 0) normalizedRotation += 2 * Math.PI;
     
     // Calculate which index is at the front (3 o'clock position)

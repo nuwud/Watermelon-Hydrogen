@@ -582,24 +582,9 @@ export function setupCarousel(container) {
                 if (submenuItemData && typeof submenuItemData.index === 'number') {
                     const index = submenuItemData.index;
                     const item = activeSubmenu.items?.[index];
-                    
-                    // Set a strong selection lock BEFORE any operations
-                    activeSubmenu.selectionLocked = true;
-                    activeSubmenu.manualSelectionIndex = index;
-                    
-                    console.warn('[🔒 Selection Lock]', {
-                      index,
-                      action: 'Manual selection locking enabled'
-                    });
-                    
-                    // Your existing conditional code for checking locks
-                    if (!activeSubmenu.selectItemLock && 
-                        activeSubmenu.forceLockedIndex === null && 
-                        !activeSubmenu.isTransitioning) {
-                        activeSubmenu.currentIndex = index;
-                    }
-                    
-                    // Then continue with your existing logic for handling item selection...
+
+                    // Force index sync
+                    activeSubmenu.currentIndex = index;
 
                     // Handle specific items to trigger floating content
                     // Check for specific items FIRST
