@@ -19,7 +19,7 @@ import gsap from 'gsap';
  */
 export function setupCarousel(container) {
     
-    if (typeof window === 'undefined') return null;
+    if (typeof window === 'undefined') return null; // Ensure we're in a browser environment
 
     let animationFrameId = null; // Declare animationFrameId
     const timeoutIds = []; // Array to store timeout IDs
@@ -33,99 +33,99 @@ export function setupCarousel(container) {
     //   }
 
     // Add the waitForWindowWM helper function here
-    function waitForWindowWM(id, maxRetries = 30) {
-      let retries = 0;
+    function waitForWindowWM(id, maxRetries = 30) { // Function to wait for window.__wm__ to be ready
+      let retries = 0; // Initialize retry count
       // Clear any existing interval before starting a new one
-      if (wmCheckIntervalId) {
-          clearInterval(wmCheckIntervalId);
+      if (wmCheckIntervalId) {   
+          clearInterval(wmCheckIntervalId); // Reset the ID
       }
-      wmCheckIntervalId = setInterval(() => {
-        if (window.__wm__?.showContent) {
-          window.__wm__.showContent(id);
-          clearInterval(wmCheckIntervalId);
+      wmCheckIntervalId = setInterval(() => { // Check if window.__wm__ is ready
+        if (window.__wm__?.showContent) { // Check if window.__wm__ is defined and has showContent method
+          window.__wm__.showContent(id); // Call the showContent method with the provided id
+          clearInterval(wmCheckIntervalId); // Clear the interval once ready
           wmCheckIntervalId = null; // Reset the ID
-          console.warn(`✅ window.__wm__ ready, showing content '${id}'`);
+          console.warn(`✅ window.__wm__ ready, showing content '${id}'`); // Log success
         } else {
-          retries++;
-          if (retries >= maxRetries) {
+          retries++; // Increment retry count
+          if (retries >= maxRetries) { // If max retries reached, log failure and clear interval
             console.warn(`❌ Failed to show content '${id}' — window.__wm__ not ready after ${maxRetries} retries.`);
-            clearInterval(wmCheckIntervalId);
+            clearInterval(wmCheckIntervalId); // Clear the interval
             wmCheckIntervalId = null; // Reset the ID
           }
         }
-      }, 100); // check every 100ms
+      }, 100); // check every 100ms 
     }
 
     const scene = new THREE.Scene();
-    let currentTheme = defaultCarouselStyle;
-    scene.background = new THREE.Color(currentTheme.backgroundColor);
+    let currentTheme = defaultCarouselStyle; // Initialize with default theme
+    scene.background = new THREE.Color(currentTheme.backgroundColor); // Set initial background color
 
-    const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-    camera.position.set(0, 2, 10);
+    const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000); // Set up camera
+    camera.position.set(0, 2, 10); // Position the camera
 
-    const renderer = new THREE.WebGLRenderer({ antialias: true });
-    renderer.setSize(window.innerWidth, window.innerHeight);
-    renderer.setPixelRatio(window.devicePixelRatio);
-    container.appendChild(renderer.domElement);
+    const renderer = new THREE.WebGLRenderer({ antialias: true }); // Create WebGL renderer
+    renderer.setSize(window.innerWidth, window.innerHeight); // Set renderer size
+    renderer.setPixelRatio(window.devicePixelRatio); // Set pixel ratio for high DPI displays
+    container.appendChild(renderer.domElement); // Append renderer to the container
 
     // Setup OrbitControls with correct zoom handling
-    const controls = new OrbitControls(camera, renderer.domElement);
-    controls.enableDamping = true;
-    controls.dampingFactor = 0.05;
-    controls.maxDistance = 20;
-    controls.minDistance = 5;
+    const controls = new OrbitControls(camera, renderer.domElement); // Initialize OrbitControls
+    controls.enableDamping = true; // Enable damping (inertia) for smoother controls
+    controls.dampingFactor = 0.05; // Damping factor for smoother controls
+    controls.maxDistance = 20; // Maximum distance for zooming out
+    controls.minDistance = 5; // Minimum distance for zooming in
 
     // FIX 1: Correct setup for middle mouse zoom only
     controls.enableZoom = true; // Keep enabled, but we'll control when it's used
-    controls.zoomSpeed = 1.0;
+    controls.zoomSpeed = 1.0; // Zoom speed for middle mouse button
 
     // Keep rotation and pan controls
-    controls.mouseButtons = {
-        LEFT: THREE.MOUSE.ROTATE,
+    controls.mouseButtons = { // Set mouse button controls
+        LEFT: THREE.MOUSE.ROTATE, // Keep LEFT button as rotate
         MIDDLE: THREE.MOUSE.DOLLY, // Keep MIDDLE button as dolly/zoom
-        RIGHT: THREE.MOUSE.PAN,
+        RIGHT: THREE.MOUSE.PAN, // Keep RIGHT button as pan
     };
 
     // Disable pinch-to-zoom on touch
-    controls.touches.TWO = null;
+    controls.touches.TWO = null; // Disable pinch-to-zoom gesture on touch devices
 
     // Tracking wheel handler state - MUST initially be true
-    let isWheelHandlerActive = true;
+    let isWheelHandlerActive = true; 
     
     // Store the wheel event listener so we can remove/add it properly
     //let wheelHandlerActive = true;
 
     // Create the wheel event handler as a named function
-    const wheelEventHandler = function(event) {
+    const wheelEventHandler = function(event) { // Check if the wheel handler is active
         // Check middle mouse button first - this is the zoom case
-        if (event.buttons === 4) {
+        if (event.buttons === 4) { // Middle mouse button pressed
             // Let OrbitControls handle zooming - do not stop propagation
-            return;
+            return; // Allow default behavior for middle mouse zoom
         }
 
         // For all other cases, prevent default and stop propagation
-        event.preventDefault();
-        event.stopPropagation();
+        event.preventDefault(); // Prevent default scrolling behavior
+        event.stopPropagation(); // Stop propagation to prevent interference with other handlers
 
         // Navigate menus based on wheel direction
-        const delta = event.deltaY;
+        const delta = event.deltaY; // Get the wheel delta
 
-        if (activeSubmenu) {
+        if (activeSubmenu) { // If a submenu is active
             // Scroll submenu when it's active
-            activeSubmenu.scrollSubmenu(delta > 0 ? 1 : -1);
-        } else if (isWheelHandlerActive) {
+            activeSubmenu.scrollSubmenu(delta > 0 ? 1 : -1); // Invert for natural feel
+        } else if (isWheelHandlerActive) { // If no submenu is active and wheel handler is active
             // Navigate main carousel when no submenu
-            const angleStep = (2 * Math.PI) / items.length;
-            carousel.spin(delta > 0 ? -angleStep : angleStep);
+            const angleStep = (2 * Math.PI) / items.length; // Calculate angle step based on number of items
+            carousel.spin(delta > 0 ? -angleStep : angleStep); // Invert direction for natural feel
         }
     };
 
     // Attach wheel handler with capture phase
-    window.addEventListener('wheel', wheelEventHandler, { passive: false, capture: true });
+    window.addEventListener('wheel', wheelEventHandler, { passive: false, capture: true }); // Attach wheel event listener with capture phase
 
     // FIX 3: Override OrbitControls wheel handler to only work with middle mouse
-    const originalOnWheel = controls.onMouseWheel;
-    controls.onMouseWheel = function(event) {
+    const originalOnWheel = controls.onMouseWheel; // Store the original onMouseWheel method
+    controls.onMouseWheel = function(event) { // Override the onMouseWheel method
         if (event.buttons !== 4) {
             // Block all wheel events that don't have middle mouse pressed
             return;
@@ -135,250 +135,250 @@ export function setupCarousel(container) {
     };
 
     // MOBILE SUPPORT: Add touch event handlers for swipe navigation
-    let touchStartX = 0;
-    let touchStartY = 0;
-    let lastTouchTime = 0;
-    let touchVelocity = 0;
+    let touchStartX = 0; // Track initial touch X position
+    let touchStartY = 0; // Track initial touch Y position
+    let lastTouchTime = 0; // Track the last touch time
+    let touchVelocity = 0; // Track touch velocity for momentum effect
 
     // Handle touch start
-    const touchStartHandler = (event) => {
-        if (event.touches.length === 1) {
-            touchStartX = event.touches[0].clientX;
-            touchStartY = event.touches[0].clientY;
-            lastTouchTime = Date.now();
-            touchVelocity = 0;
+    const touchStartHandler = (event) => { // 
+        if (event.touches.length === 1) { // Only handle single touch events
+            touchStartX = event.touches[0].clientX; // Store initial touch X position
+            touchStartY = event.touches[0].clientY; // Store initial touch Y position
+            lastTouchTime = Date.now(); // Store the current time
+            touchVelocity = 0; // Reset touch velocity
 
             // Prevent default to avoid unintended scrolling
-            event.preventDefault();
+            event.preventDefault(); // Prevent default browser behavior (page scrolling)
         }
     };
 
     // Handle touch move for swipe detection
-    const touchMoveHandler = (event) => {
-        if (event.touches.length !== 1) return;
+    const touchMoveHandler = (event) => { // 
+        if (event.touches.length !== 1) return; // Only handle single touch events
 
         // Prevent default browser behavior (page scrolling)
-        event.preventDefault();
+        event.preventDefault(); // Prevent default browser behavior (page scrolling)
 
-        const touchX = event.touches[0].clientX;
-        const touchY = event.touches[0].clientY;
+        const touchX = event.touches[0].clientX; // Get current touch X position
+        const touchY = event.touches[0].clientY; // Get current touch Y position
 
-        // Calculate swipe distance and direction
-        const deltaX = touchX - touchStartX;
-        const deltaY = touchY - touchStartY;
+        // Calculate swipe distance and direction 
+        const deltaX = touchX - touchStartX; // Calculate change in X position
+        const deltaY = touchY - touchStartY; // Calculate change in Y position
 
         // Calculate velocity for smooth navigation
-        const now = Date.now();
-        const timeDelta = now - lastTouchTime;
-        if (timeDelta > 0) {
-            touchVelocity = Math.sqrt(deltaX * deltaX + deltaY * deltaY) / timeDelta;
+        const now = Date.now(); // Get the current time
+        const timeDelta = now - lastTouchTime; // Calculate time since last touch event
+        if (timeDelta > 0) { // Avoid division by zero
+            touchVelocity = Math.sqrt(deltaX * deltaX + deltaY * deltaY) / timeDelta; // Calculate touch velocity
         }
 
         // Use the dominant axis (horizontal or vertical)
-        const isHorizontalSwipe = Math.abs(deltaX) > Math.abs(deltaY);
+        const isHorizontalSwipe = Math.abs(deltaX) > Math.abs(deltaY); // Determine if the swipe is more horizontal than vertical
 
         // Apply threshold to avoid accidental swipes
-        const swipeThreshold = 5;
+        const swipeThreshold = 5; // Set a threshold for swipe detection
 
         if (activeSubmenu) {
             // For submenu, use vertical swipe
-            if (!isHorizontalSwipe && Math.abs(deltaY) > swipeThreshold) {
+            if (!isHorizontalSwipe && Math.abs(deltaY) > swipeThreshold) { // Check if the swipe is vertical and exceeds the threshold
                 activeSubmenu.scrollSubmenu(deltaY > 0 ? -1 : 1); // Invert for natural feel
                 touchStartY = touchY; // Reset for continuous scrolling
             }
         } else {
             // For main carousel, use horizontal swipe
-            if (isHorizontalSwipe && Math.abs(deltaX) > swipeThreshold) {
-                const angleStep = (2 * Math.PI) / items.length;
+            if (isHorizontalSwipe && Math.abs(deltaX) > swipeThreshold) { // Check if the swipe is horizontal and exceeds the threshold
+                const angleStep = (2 * Math.PI) / items.length; // Calculate angle step based on number of items
                 carousel.spin(deltaX > 0 ? angleStep : -angleStep); // Direction feels natural
                 touchStartX = touchX; // Reset for continuous rotation
             }
         }
 
-        lastTouchTime = now;
+        lastTouchTime = now; // Update the last touch time
     };
 
     // Handle touch end with momentum effect
-    const touchEndHandler = (event) => {
+    const touchEndHandler = (event) => { // 
         // Apply momentum based on final velocity
-        if (touchVelocity > 0.5) {
-            if (activeSubmenu) {
-                const direction = touchStartY < event.changedTouches[0].clientY ? -1 : 1;
+        if (touchVelocity > 0.5) { // Check if the velocity exceeds a threshold
+            if (activeSubmenu) { // If a submenu is active
+                const direction = touchStartY < event.changedTouches[0].clientY ? -1 : 1; 
                 // Apply momentum scrolling to submenu
-                activeSubmenu.scrollSubmenu(direction);
+                activeSubmenu.scrollSubmenu(direction); 
             } else {
-                const direction = touchStartX < event.changedTouches[0].clientX ? 1 : -1;
+                const direction = touchStartX < event.changedTouches[0].clientX ? 1 : -1; 
                 // Apply momentum to carousel
-                const angleStep = (2 * Math.PI) / items.length;
-                carousel.spin(direction * angleStep);
+                const angleStep = (2 * Math.PI) / items.length; // Calculate angle step based on number of items    
+                carousel.spin(direction * angleStep); 
             }
         }
     };
 
     // Function to enable all event handlers (touch and wheel)
-    function enableAllEventHandlers() {
-        enableTouchEvents();
-        enableWheelHandler();
+    function enableAllEventHandlers() { // Re-attach all event listeners
+        enableTouchEvents(); // Re-attach touch event listeners
+        enableWheelHandler(); // Re-enable wheel handler
     }
 
     // Function to disable all event handlers when a submenu is active
-    function disableMainCarouselHandlers() {
+    function disableMainCarouselHandlers() { // Detach touch event listeners
         // Do not actually remove the touch handlers - keep them active
         // but they will check for activeSubmenu internally
         
         // Set the wheel handler flag to false to disable it for main carousel
-        isWheelHandlerActive = false;
+        isWheelHandlerActive = false; // Disable wheel handler for main carousel
     }
     
     // Function to enable touch events
-    function enableTouchEvents() {
+    function enableTouchEvents() { 
         // Reset touch variables
-        touchStartX = 0;
-        touchStartY = 0;
-        lastTouchTime = 0;
-        touchVelocity = 0;
+        touchStartX = 0; // Reset initial touch X position
+        touchStartY = 0; // Reset initial touch Y position
+        lastTouchTime = 0; // Reset last touch time
+        touchVelocity = 0; // Reset touch velocity
 
         // Re-attach touch event listeners
-        window.removeEventListener('touchstart', touchStartHandler, { passive: false });
-        window.removeEventListener('touchmove', touchMoveHandler, { passive: false });
-        window.removeEventListener('touchend', touchEndHandler, { passive: false });
+        window.removeEventListener('touchstart', touchStartHandler, { passive: false }); // Remove existing touchstart listener
+        window.removeEventListener('touchmove', touchMoveHandler, { passive: false }); // Remove existing touchmove listener
+        window.removeEventListener('touchend', touchEndHandler, { passive: false }); // Remove existing touchend listener
         
-        window.addEventListener('touchstart', touchStartHandler, { passive: false });
-        window.addEventListener('touchmove', touchMoveHandler, { passive: false });
-        window.addEventListener('touchend', touchEndHandler, { passive: false });
+        window.addEventListener('touchstart', touchStartHandler, { passive: false }); // Attach touchstart event listener
+        window.addEventListener('touchmove', touchMoveHandler, { passive: false }); // Attach touchmove event listener
+        window.addEventListener('touchend', touchEndHandler, { passive: false }); // Attach touchend event listener
     }
     
     // Function to enable wheel handler
-    function enableWheelHandler() {
+    function enableWheelHandler() { // Re-attach wheel event listener
         // Set the wheel handler active flag
-        isWheelHandlerActive = true;
+        isWheelHandlerActive = true; // Enable wheel handler for main carousel
     }
     
     // Initial setup: attach event listeners
-    enableAllEventHandlers();
+    enableAllEventHandlers(); // Attach all event listeners initially
 
-    const items = ['Home', 'Products', 'Contact', 'About', 'Gallery', 'Store'];
-    const submenus = {
-        Home: ['Dashboard', 'Activity', 'Settings', 'Profile'],
-        Products: ['Electronics', 'Clothing', 'Books', 'Home & Garden', 'Toys', 'Sports'],
-        Services: ['Consulting', 'Training', 'Support', 'Installation', 'Maintenance'],
-        About: ['Company', 'Team', 'History', 'Mission', 'Values'],
-        Contact: ['Email', 'Phone', 'Chat', 'Social Media', 'Office Locations'],
-        Gallery: ['Photos', 'Videos', '3D Models', 'Artwork', 'Animations', 'Virtual Tours'],
-        Store: ['Cart', 'Wishlist', 'Orders', 'Account', 'Gift Cards'], 
+    const items = ['Home', 'Products', 'Contact', 'About', 'Gallery', 'Store']; // Define the main carousel items
+    const submenus = { // Define the submenus for each main item
+        Home: ['Dashboard', 'Activity', 'Settings', 'Profile'], // Submenu items for Home
+        Products: ['Electronics', 'Clothing', 'Books', 'Home & Garden', 'Toys', 'Sports'], // Submenu items for Products
+        Services: ['Consulting', 'Training', 'Support', 'Installation', 'Maintenance'], // Submenu items for Services
+        About: ['Company', 'Team', 'History', 'Mission', 'Values'], // Submenu items for About
+        Contact: ['Email', 'Phone', 'Chat', 'Social Media', 'Office Locations'], // Submenu items for Contact
+        Gallery: ['Photos', 'Videos', '3D Models', 'Artwork', 'Animations', 'Virtual Tours'], // Submenu items for Gallery
+        Store: ['Cart', 'Wishlist', 'Orders', 'Account', 'Gift Cards'], // Submenu items for Store
     };
 
-    let activeSubmenu = null;
-    let isTransitioning = false; // New flag for async handling
+    let activeSubmenu = null; // Track the currently active submenu
+    let isTransitioning = false; // New flag for async handling, initially false
 
-    const carousel = new Carousel3DPro(items, currentTheme);
-    carousel.userData = { camera };
+    const carousel = new Carousel3DPro(items, currentTheme); // Create the carousel instance
+    carousel.userData = { camera }; // Store camera reference in userData for later access
     carousel.isAnimating = false; // Track animation state
 
     // Wrap the original methods to track animation state
-    const originalGoToNext = carousel.goToNext;
-    carousel.goToNext = function() {
-        if (carousel.isAnimating) return;
-        carousel.isAnimating = true;
+    const originalGoToNext = carousel.goToNext; // Store original goToNext method
+    carousel.goToNext = function() { 
+        if (carousel.isAnimating) return; // Prevent multiple animations from running simultaneously
+        carousel.isAnimating = true; // Set animation flag to true
 
         try {
-            originalGoToNext.call(carousel);
+            originalGoToNext.call(carousel); // Call the original goToNext method
             // Reset animation flag after animation should be complete
-            const timeoutId = setTimeout(() => {
-                carousel.isAnimating = false;
+            const timeoutId = setTimeout(() => { // Reset the animation flag after a delay
+                carousel.isAnimating = false; // Reset animation flag to allow future animations
                 // Remove this ID from the tracking array once executed
-                const index = timeoutIds.indexOf(timeoutId);
-                if (index > -1) timeoutIds.splice(index, 1);
-            }, 500);
+                const index = timeoutIds.indexOf(timeoutId); // Find the index of the timeout ID
+                if (index > -1) timeoutIds.splice(index, 1); // Remove the timeout ID from the tracking array
+            }, 500); // Match this delay to your animation duration
             timeoutIds.push(timeoutId); // Store the timeout ID
-        } catch (error) {
-            console.error('Error in goToNext:', error);
-            carousel.isAnimating = false;
+        } catch (error) { // Catch any errors that occur during the animation
+            console.error('Error in goToNext:', error); // Log the error to the console
+            carousel.isAnimating = false; // Reset animation flag on error
         }
     };
 
-    const originalGoToPrev = carousel.goToPrev;
-    carousel.goToPrev = function() {
-        if (carousel.isAnimating) return;
-        carousel.isAnimating = true;
+    const originalGoToPrev = carousel.goToPrev; // Store original goToPrev method
+    carousel.goToPrev = function() { // 
+        if (carousel.isAnimating) return; // Prevent multiple animations from running simultaneously
+        carousel.isAnimating = true; // Set animation flag to true
 
         try {
-            originalGoToPrev.call(carousel);
+            originalGoToPrev.call(carousel); // Call the original goToPrev method
             // Reset animation flag after animation should be complete
-            const timeoutId = setTimeout(() => {
-                carousel.isAnimating = false;
+            const timeoutId = setTimeout(() => { // Reset the animation flag after a delay
+                carousel.isAnimating = false; // Reset animation flag to allow future animations
                 // Remove this ID from the tracking array once executed
-                const index = timeoutIds.indexOf(timeoutId);
-                if (index > -1) timeoutIds.splice(index, 1);
-            }, 500);
+                const index = timeoutIds.indexOf(timeoutId); // Find the index of the timeout ID
+                if (index > -1) timeoutIds.splice(index, 1); // Remove the timeout ID from the tracking array
+            }, 500); // Match this delay to your animation duration
             timeoutIds.push(timeoutId); // Store the timeout ID
-        } catch (error) {
-            console.error('Error in goToPrev:', error);
-            carousel.isAnimating = false;
+        } catch (error) { 
+            console.error('Error in goToPrev:', error); // Log the error to the console
+            carousel.isAnimating = false; // Reset animation flag on error
         }
     };
 
     // Refactored onItemClick using async/await
-    carousel.onItemClick = async (index, item) => {
+    carousel.onItemClick = async (index, item) => { 
         if (!submenus[item]) return; // Ignore items without submenus
 
-        if (isTransitioning) {
-            console.warn('[Watermelon] Submenu transition in progress. Skipping click.');
-            return;
+        if (isTransitioning) { // Check if a transition is already in progress
+            console.warn('[Watermelon] Submenu transition in progress. Skipping click.'); // Debug log
+            return; // Prevent multiple transitions from overlapping
         }
 
-        isTransitioning = true;
+        isTransitioning = true; // Set the transition flag to true
         console.warn('[Watermelon] Starting submenu transition...'); // Debug log
 
         // When opening a submenu, disable wheel handler for main carousel
         // Note: Touch handlers remain active but check activeSubmenu internally
-        disableMainCarouselHandlers();
+        disableMainCarouselHandlers(); // Disable main carousel handlers to prevent interference
 
         try {
             // Close existing submenu if there is one
-            await closeSubmenuAsync();
+            await closeSubmenuAsync(); // Wait for the submenu to close before proceeding
 
             // Spawn the new submenu
-            await spawnSubmenuAsync(item, index);
+            await spawnSubmenuAsync(item, index); // Wait for the new submenu to spawn before proceeding
 
-        } catch (err) {
-            console.error('[Watermelon] Error during submenu transition:', err);
+        } catch (err) { // Handle any errors that occur during the transition
+            console.error('[Watermelon] Error during submenu transition:', err); // Debug log
             // Ensure handlers are re-enabled even if an error occurs during spawn/close
-            enableAllEventHandlers();
-        } finally {
+            enableAllEventHandlers(); // Re-enable main carousel handlers on error
+        } finally { // Ensure handlers are re-enabled after the transition completes
             // Add a small buffer before allowing the next transition
             // This helps prevent issues if animations slightly overlap the promise resolution
-            setTimeout(() => {
-                isTransitioning = false;
+            setTimeout(() => { // Re-enable main carousel handlers after a short delay
+                isTransitioning = false; // Reset the transition flag to allow future transitions
                 console.warn('[Watermelon] Submenu transition complete.'); // Debug log
-            }, 50);
+            }, 50); // Adjust this delay as needed based on your animation timing
         }
     };
 
     // New async helper to close the active submenu
-    async function closeSubmenuAsync() {
+    async function closeSubmenuAsync() { // Check if a submenu is active
         if (!activeSubmenu) return Promise.resolve(); // Nothing to close
 
         console.warn('[Watermelon] Closing existing submenu...'); // Debug log
-        return new Promise((resolve) => {
-            const closingSubmenu = activeSubmenu;
+        return new Promise((resolve) => { // Disable main carousel handlers immediately
+            const closingSubmenu = activeSubmenu; // Keep a reference to the submenu being closed
             activeSubmenu = null; // Clear the reference immediately
 
             // Hide animation
-            closingSubmenu.hide?.();
+            closingSubmenu.hide?.(); // Call the hide method if it exists
 
             // Wait for hide animation + disposal
-            const timeoutId = setTimeout(() => {
-                scene.remove(closingSubmenu);
+            const timeoutId = setTimeout(() => { // Remove the submenu from the scene after a delay
+                scene.remove(closingSubmenu); // Remove the submenu from the scene
                 closingSubmenu.dispose?.(); // Dispose resources
                 console.warn('[Watermelon] Existing submenu closed and disposed.'); // Debug log
 
                 // IMPORTANT: Re-enable handlers *after* the old submenu is fully gone
-                enableAllEventHandlers();
+                enableAllEventHandlers(); // Re-enable main carousel handlers after closing submenu
 
                 // Remove this ID from the tracking array once executed
-                const index = timeoutIds.indexOf(timeoutId);
-                if (index > -1) timeoutIds.splice(index, 1);
+                const index = timeoutIds.indexOf(timeoutId); // Find the index of the timeout ID
+                if (index > -1) timeoutIds.splice(index, 1); // Remove the timeout ID from the tracking array
 
                 resolve(); // Signal completion
             }, 300); // Match your existing submenu close timing
@@ -387,14 +387,14 @@ export function setupCarousel(container) {
     }
 
     // New async helper to spawn a submenu
-    async function spawnSubmenuAsync(item, index) {
-        return new Promise((resolve, reject) => {
-            const mesh = carousel.itemMeshes[index];
-            if (!mesh) {
-                console.warn('[Watermelon] No mesh found for submenu spawn:', item, index);
+    async function spawnSubmenuAsync(item, index) { // Check if the item has a submenu
+        return new Promise((resolve, reject) => { // Check if the item has a submenu
+            const mesh = carousel.itemMeshes[index]; // Get the mesh for the clicked item
+            if (!mesh) { // Check if the mesh exists for the clicked item
+                console.warn('[Watermelon] No mesh found for submenu spawn:', item, index); // Debug log
                 // If mesh isn't found, we should probably re-enable handlers here too
-                enableAllEventHandlers();
-                return reject(new Error(`Mesh not found for item ${item} at index ${index}`));
+                enableAllEventHandlers(); // Re-enable main carousel handlers if mesh is missing
+                return reject(new Error(`Mesh not found for item ${item} at index ${index}`)); // Reject the promise if mesh is missing
             }
 
             console.warn(`[Watermelon] Spawning submenu for: ${item}`); // Debug log
@@ -403,42 +403,42 @@ export function setupCarousel(container) {
 
             // Check if submenuItems is an array
             if (!Array.isArray(submenuItems)) {
-                console.warn(`[Watermelon] Expected an array of strings for submenu items, but got:`, typeof submenuItems, submenuItems);
+                console.warn(`[Watermelon] Expected an array of strings for submenu items, but got:`, typeof submenuItems, submenuItems); // Debug log
                 // Optionally reject or provide default empty array
                 // return reject(new Error(`Invalid submenu items for ${item}`));
                 // submenuItems = []; // Fallback to empty array
             }
 
             // Pass carousel instance in config
-            const submenuConfig = { ...currentTheme, carousel };
+            const submenuConfig = { ...currentTheme, carousel }; // Create a new submenu instance with the current theme and carousel reference
             const submenu = new Carousel3DSubmenu(mesh, submenuItems || [], submenuConfig); // Use fallback if needed
 
             // ---> INJECT SCENE AND CAMERA HERE <---
-            if (scene) {
-                submenu.scene = scene;
-                 console.log('[Watermelon] Injected scene into submenu.');
+            if (scene) { // Check if scene is defined
+                submenu.scene = scene; // Inject scene into submenu
+                 console.log('[Watermelon] Injected scene into submenu.'); // Debug log
             } else {
-                console.error('[Watermelon] CRITICAL: Scene is missing during submenu creation!');
+                console.error('[Watermelon] CRITICAL: Scene is missing during submenu creation!'); // Debug log
             }
-            if (camera) {
-                submenu.camera = camera;
-                 console.log('[Watermelon] Injected camera into submenu.');
+            if (camera) { // Check if camera is defined
+                submenu.camera = camera; // Inject camera into submenu
+                 console.log('[Watermelon] Injected camera into submenu.'); // Debug log
             } else {
-                console.error('[Watermelon] CRITICAL: Camera is missing during submenu creation!');
+                console.error('[Watermelon] CRITICAL: Camera is missing during submenu creation!'); // Debug log
             }
             // ---> END INJECTION <---
 
             activeSubmenu = submenu; // Set the new active submenu
-            scene.add(submenu);
+            scene.add(submenu); // Add the submenu to the scene
             scene.userData.activeSubmenu = activeSubmenu; // Update scene userData if needed
 
             // Show animation (assuming show is synchronous or starts an animation)
-            submenu.show?.();
+            submenu.show?.(); // Call the show method if it exists
 
             // Assuming 'show' starts an animation, we might need a slight delay
             // or a callback/promise from 'show' itself if it were async.
             // For now, resolve after a short delay assuming show animation starts.
-            const timeoutId = setTimeout(() => {
+            const timeoutId = setTimeout(() => { // Resolve after a short delay to allow show animation to start
                 console.warn(`[Watermelon] Submenu for ${item} spawned and shown.`); // Debug log
                 // Remove this ID from the tracking array once executed
                 const index = timeoutIds.indexOf(timeoutId);
@@ -456,96 +456,96 @@ export function setupCarousel(container) {
     }
     */
 
-    const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
-    const directionalLight = new THREE.DirectionalLight(0xffffff, 1);
-    directionalLight.position.set(5, 5, 5);
+    const ambientLight = new THREE.AmbientLight(0xffffff, 0.5); // Create ambient light
+    const directionalLight = new THREE.DirectionalLight(0xffffff, 1); // Create directional light
+    directionalLight.position.set(5, 5, 5); // Set light position
 
-    scene.add(carousel, ambientLight, directionalLight);
+    scene.add(carousel, ambientLight, directionalLight); // Add carousel and lights to the scene
 
     // Define resize handler
-    const resizeHandler = () => {
-        camera.aspect = window.innerWidth / window.innerHeight;
-        camera.updateProjectionMatrix();
-        renderer.setSize(window.innerWidth, window.innerHeight);
-        carousel.resize?.(window.innerWidth, window.innerHeight);
+    const resizeHandler = () => { 
+        camera.aspect = window.innerWidth / window.innerHeight; // Update camera aspect ratio
+        camera.updateProjectionMatrix(); // Update camera projection matrix
+        renderer.setSize(window.innerWidth, window.innerHeight); // Update renderer size
+        carousel.resize?.(window.innerWidth, window.innerHeight); // Call resize method on carousel if it exists
     };
-    window.addEventListener('resize', resizeHandler);
+    window.addEventListener('resize', resizeHandler); // Attach resize event listener
 
     // Keep the existing closeSubmenu function for manual closing (e.g., close button)
     // It might need adjustments later if it conflicts with the async flow,
     // but for now, we leave it for the close button functionality.
-    function closeSubmenu(immediate = false) {
+    function closeSubmenu(immediate = false) { // Check if a submenu is active
       // Check the *new* transition flag as well
-      if (!activeSubmenu || isTransitioning) return;
+      if (!activeSubmenu || isTransitioning) return; // Nothing to close or already transitioning
       // Set the transition flag when manually closing too
-      isTransitioning = true;
+      isTransitioning = true; // Set the transition flag to true
       console.warn('[Watermelon] Manual closeSubmenu called.'); // Debug log
 
-      if (activeSubmenu.floatingPreview) {
-          activeSubmenu.stopFloatingPreviewSpin();
-          gsap.to(activeSubmenu.floatingPreview.scale, {
-              x: 0,
-              y: 0,
-              z: 0,
-              duration: 0.2,
-              ease: 'back.in',
+      if (activeSubmenu.floatingPreview) { // Check if the submenu has a floating preview
+          activeSubmenu.stopFloatingPreviewSpin(); // Stop any spinning animation on the floating preview
+          gsap.to(activeSubmenu.floatingPreview.scale, { // Animate the scale of the floating preview to zero
+              x: 0, 
+              y: 0,  
+              z: 0, 
+              duration: 0.2, // Duration of the scale animation
+              ease: 'back.in', // Easing function for the animation
           });
       }
   
-      if (activeSubmenu.closeButton) {
-          activeSubmenu.closeButton.material.color.set(0xff0000);
+      if (activeSubmenu.closeButton) { // Check if the submenu has a close button
+          activeSubmenu.closeButton.material.color.set(0xff0000); // Change the close button color to red
       }
   
-      if (activeSubmenu.parentItem?.material) {
-          gsap.to(activeSubmenu.parentItem.material, {
-              opacity: 1.0,
-              duration: 0.5,
+      if (activeSubmenu.parentItem?.material) { // Check if the parent item has a material
+          gsap.to(activeSubmenu.parentItem.material, { // Animate the opacity of the parent item material to 1.0
+              opacity: 1.0, // Set opacity to fully opaque
+              duration: 0.5, // Duration of the opacity animation
           });
       }
   
-      const remove = () => {
-          scene.remove(activeSubmenu);
-          scene.userData.activeSubmenu = null;
-          if (carousel && carousel.parent && carousel.parent.userData) {
-              carousel.parent.userData.activeSubmenu = null;
+      const remove = () => { // Remove the submenu from the scene
+          scene.remove(activeSubmenu); // Remove the submenu from the scene
+          scene.userData.activeSubmenu = null; // Clear the active submenu reference in scene userData
+          if (carousel && carousel.parent && carousel.parent.userData) { // Check if carousel has a parent with userData
+              carousel.parent.userData.activeSubmenu = null; // Clear the active submenu reference in carousel parent userData
           }
           
           // IMPORTANT: Clear this BEFORE enabling handlers
           const closedSubmenu = activeSubmenu; // Keep ref for dispose check
-          activeSubmenu = null;
+          activeSubmenu = null; // Clear the active submenu reference
 
           // Dispose if the submenu has a dispose method
-          closedSubmenu?.dispose?.();
+          closedSubmenu?.dispose?.(); // Call the dispose method if it exists
           console.warn('[Watermelon] Manual closeSubmenu disposed.'); // Debug log
 
           // Re-enable main carousel handlers
-          enableAllEventHandlers();
+          enableAllEventHandlers(); // Re-enable main carousel handlers after closing submenu
 
           // Reset any active animations
-          if (carousel) {
-              carousel.isAnimating = false;
+          if (carousel) { // Reset carousel animation state
+              carousel.isAnimating = false; // Reset carousel animation flag
           }
 
           // Finally clear transitioning flag after a buffer
-          setTimeout(() => {
-              isTransitioning = false;
+          setTimeout(() => { // Reset the transition flag after a short delay
+              isTransitioning = false; // Reset transition flag to allow future transitions
               console.warn('[Watermelon] Manual closeSubmenu complete.'); // Debug log
-          }, 50);
+          }, 50); // Adjust this delay as needed based on your animation timing
 
           // Optional: Force a wheel event to test functionality
           // console.warn('Submenu closed, wheel handler reactivated:', isWheelHandlerActive);
       };
 
-      if (immediate) {
-          remove();
-      } else {
-          activeSubmenu.hide();
-          const timeoutId = setTimeout(() => {
-              remove();
+      if (immediate) { // If immediate is true, close immediately without animation
+          remove(); // Remove the submenu immediately
+      } else { // If immediate is false, animate the close
+          activeSubmenu.hide(); // Call the hide method if it exists
+          const timeoutId = setTimeout(() => { // Reset the animation flag after a delay
+              remove(); // Remove the submenu from the scene
               // Remove this ID from the tracking array once executed
-              const index = timeoutIds.indexOf(timeoutId);
-              if (index > -1) timeoutIds.splice(index, 1);
-          }, 300);
+              const index = timeoutIds.indexOf(timeoutId); // Find the index of the timeout ID
+              if (index > -1) timeoutIds.splice(index, 1); // Remove the timeout ID from the tracking array
+          }, 300); // Match your existing submenu close timing
           timeoutIds.push(timeoutId); // Store the timeout ID
       }
 
@@ -553,38 +553,44 @@ export function setupCarousel(container) {
     }
 
     // Define click handler
-    function handleCarouselClick(event) {
+    function handleCarouselClick(event) { 
         // Use the new transition flag
-        if (isTransitioning) {
-            console.warn('[Watermelon] Click ignored during transition.');
-            return;
+        if (isTransitioning) { // Check if a transition is already in progress
+            console.warn('[Watermelon] Click ignored during transition.'); // Debug log
+            return; // Prevent click handling during transitions
         }
 
-        const mouse = new THREE.Vector2(
-            (event.clientX / window.innerWidth) * 2 - 1,
-            -(event.clientY / window.innerHeight) * 2 + 1
+        const mouse = new THREE.Vector2( // Calculate mouse position in normalized device coordinates
+            (event.clientX / window.innerWidth) * 2 - 1, 
+            -(event.clientY / window.innerHeight) * 2 + 1 
         );
-        const raycaster = new THREE.Raycaster();
-        raycaster.setFromCamera(mouse, camera);
+        const raycaster = new THREE.Raycaster(); // Create a new Raycaster instance
+        raycaster.setFromCamera(mouse, camera); // Set the raycaster from the camera and mouse position
 
-        if (activeSubmenu) {
-            const hits = raycaster.intersectObject(activeSubmenu, true);
-            if (hits.length > 0) {
-                const obj = hits[0].object;
+        if (activeSubmenu) { // If a submenu is active, check for clicks within it
+            const hits = raycaster.intersectObject(activeSubmenu, true); // Check for intersections with the active submenu
+            if (hits.length > 0) { // If there are hits, handle the click within the submenu
+                const obj = hits[0].object; // Check the first hit object
                 // Check if the clicked object or its parent is a submenu item
-                let submenuItemData = null;
-                if (obj.userData?.isSubmenuItem) {
-                    submenuItemData = obj.userData;
-                } else if (obj.parent?.userData?.isSubmenuItem) {
-                    submenuItemData = obj.parent.userData;
+                let submenuItemData = null; // Initialize submenuItemData to null
+                if (obj.userData?.isSubmenuItem) { // Check if the clicked object is a submenu item
+                    submenuItemData = obj.userData; // Assign the userData of the clicked object to submenuItemData
+                } else if (obj.parent?.userData?.isSubmenuItem) { // Check if the parent of the clicked object is a submenu item
+                    submenuItemData = obj.parent.userData; // Assign the userData of the parent object to submenuItemData
                 }
 
-                if (submenuItemData && typeof submenuItemData.index === 'number') {
-                    const index = submenuItemData.index;
-                    const item = activeSubmenu.items?.[index];
+                if (submenuItemData && typeof submenuItemData.index === 'number') { // Check if submenuItemData is valid and has a numeric index
+                    const index = submenuItemData.index; // Get the index of the clicked submenu item
+                    console.log(`🖱️ [main.js] Clicked submenu index=${index}, name=${submenuItemData.name || "Unknown"}`);
+                    console.log(`🖱️ [main.js] About to call activeSubmenu.selectItem(${index})`);
+                    const item = activeSubmenu.items?.[index]; // Get the item corresponding to the clicked index
+                    if (!item) {
+                        console.warn('[Watermelon] No item found for submenu index:', index); // Debug log
+                        return; // Exit if no item is found
+                    }
 
                     // Force index sync
-                    activeSubmenu.currentIndex = index;
+                    activeSubmenu.currentIndex = index; // Sync the current index of the submenu to the clicked index
 
                     // Handle specific items to trigger floating content
                     // Check for specific items FIRST
@@ -595,186 +601,221 @@ export function setupCarousel(container) {
                         activeSubmenu.selectItem(index, true, true); // Show preview
 
                         // Replace the direct call with the waitForWindowWM function
-                        waitForWindowWM(id);
-                        console.warn(`🍉 Attempting to trigger floating panel: ${id}`);
+                        waitForWindowWM(id); // Wait for window.__wm__ to be ready before triggering content
+                        console.warn(`🍉 Attempting to trigger floating panel: ${id}`); 
                         // Optionally close the submenu after triggering content
                         // closeSubmenu();
                     } else {
                         // Fallback/default behavior for other submenu items
                         activeSubmenu.selectItem(index, true, true); // <- preview true
                     }
-                } else if (obj.userData?.isCloseButton || obj.parent?.userData?.isCloseButton) {
+                } else if (obj.userData?.isCloseButton || obj.parent?.userData?.isCloseButton) { // Check if the clicked object or its parent is the close button
                     // Handle close button click
-                    closeSubmenu();
+                    closeSubmenu(); // Call the closeSubmenu function to close the active submenu
                 }
+                if (activeSubmenu) {
+  const hits = raycaster.intersectObject(activeSubmenu, true);
+  if (hits.length > 0) {
+    const obj = hits[0].object;
+    let submenuItemData = null;
+    if (obj.userData?.isSubmenuItem) {
+      submenuItemData = obj.userData;
+    } else if (obj.parent?.userData?.isSubmenuItem) {
+      submenuItemData = obj.parent.userData;
+    }
+
+    if (submenuItemData && typeof submenuItemData.index === 'number') {
+      const index = submenuItemData.index;
+      console.log(`🖱️ [main.js] Clicked submenu index=${index}, name=${submenuItemData.name || "Unknown"}`);
+      console.log(`🖱️ [main.js] About to call activeSubmenu.selectItem(${index})`);
+      activeSubmenu.selectItem(index, true, true); 
+    } else if (obj.userData?.isCloseButton || obj.parent?.userData?.isCloseButton) {
+      console.log('🖱️ [main.js] Close button clicked.');
+      closeSubmenu();
+    }
+    return;
+  }
+}
                 return; // Exit after handling submenu click or close button
             }
         }
 
         // ...existing code for handling main carousel item clicks...
-        const itemsHit = raycaster.intersectObjects(carousel.itemGroup.children, true);
-        for (const hit of itemsHit) {
-            let current = hit.object;
-            while (current && current.parent !== carousel.itemGroup) current = current.parent;
-            if (current && current.userData.index !== undefined) {
-                const i = current.userData.index;
-                carousel.onItemClick?.(i, items[i]);
-                carousel.selectItem(i, true);
-                break;
+        const itemsHit = raycaster.intersectObjects(carousel.itemGroup.children, true); // Check for intersections with carousel items
+        for (const hit of itemsHit) { // Loop through all hits on carousel items
+            let current = hit.object; // Start with the hit object
+            while (current && current.parent !== carousel.itemGroup) current = current.parent; // Traverse up the hierarchy to find the parent item group
+            if (current && current.userData.index !== undefined) { // Check if the parent item has a valid index in userData
+                const i = current.userData.index; // Get the index of the clicked item
+                carousel.onItemClick?.(i, items[i]); // Call the onItemClick handler if it exists
+                carousel.selectItem(i, true); // Select the clicked item in the carousel
+                break; // Exit after handling the first valid item click
             }
         }
     }
 
-    window.addEventListener('click', handleCarouselClick);
+    window.addEventListener('click', handleCarouselClick); // Attach click event listener to the window
 
-    // Define keydown handler
-    const keydownHandler = (e) => {
-        if (e.key === 'ArrowRight') carousel.goToNext();
-        else if (e.key === 'ArrowLeft') carousel.goToPrev();
-    };
-    window.addEventListener('keydown', keydownHandler);
+    // Define keydown handler 
+    const keydownHandler = (e) => { // Check if a submenu is active
+        if (e.key === 'ArrowRight') carousel.goToNext(); // Check if the right arrow key is pressed
+        else if (e.key === 'ArrowLeft') carousel.goToPrev(); // Check if the left arrow key is pressed
+    }; 
+    window.addEventListener('keydown', keydownHandler); // Attach keydown event listener to the window
 
-    const themes = [defaultCarouselStyle, darkTheme, cyberpunkTheme, lightTheme];
-    let themeIndex = 0;
+    const themes = [defaultCarouselStyle, darkTheme, cyberpunkTheme, lightTheme]; // Define available themes
+    let themeIndex = 0; // Initialize theme index to 0
+ 
+    const toggleTheme = () => { // Cycle through themes
+        themeIndex = (themeIndex + 1) % themes.length; // Update theme index to cycle through available themes
+        currentTheme = themes[themeIndex]; // Update current theme to the next theme in the array
 
-    const toggleTheme = () => {
-        themeIndex = (themeIndex + 1) % themes.length;
-        currentTheme = themes[themeIndex];
+        closeSubmenu(true); // Close any active submenu immediately
 
-        closeSubmenu(true);
+        scene.background = new THREE.Color(currentTheme.backgroundColor); // Update scene background color to match the new theme
+        scene.remove(carousel); // Remove the old carousel from the scene
 
-        scene.background = new THREE.Color(currentTheme.backgroundColor);
-        scene.remove(carousel);
+        const newCarousel = new Carousel3DPro(items, currentTheme); // Create a new carousel instance with the updated theme
+        newCarousel.userData = { camera }; // Store camera reference in userData for later access
+        newCarousel.onItemClick = carousel.onItemClick; // Reassign the onItemClick handler to the new carousel
 
-        const newCarousel = new Carousel3DPro(items, currentTheme);
-        newCarousel.userData = { camera };
-        newCarousel.onItemClick = carousel.onItemClick;
-
-        scene.add(newCarousel);
-        if (carousel.dispose) carousel.dispose();
-        Object.assign(carousel, newCarousel);
-    };
-
-    const animate = () => {
-        animationFrameId = requestAnimationFrame(animate); // Store the animation frame ID
-        carousel.update();
-        activeSubmenu?.update?.();
-        controls.update();
-        renderer.render(scene, camera);
+        scene.add(newCarousel); //  Add the new carousel to the scene
+        if (carousel.dispose) carousel.dispose(); // Dispose the old carousel if it has a dispose method
+        Object.assign(carousel, newCarousel); // Copy properties from the new carousel to the old one
     };
 
-    animate();
+    const animate = () => { // Animation loop function
+        animationFrameId = requestAnimationFrame(animate); // Schedule next frame first
+        
+        // Skip heavy updates during transitions to improve performance
+        if (!isTransitioning) {
+            // Wrap in try-catch to prevent animation loop from breaking if an update fails
+            try {
+                carousel.update(); // Update the carousel state
+                activeSubmenu?.update?.(); // Update the active submenu if it exists
+                controls.update(); // Update the controls state
+                renderer.render(scene, camera); // Render the scene using the camera
+            } catch (error) {
+                console.error('Error in animation loop:', error);
+            }
+        } else {
+            // During transitions, only render without heavy updates
+            renderer.render(scene, camera);
+        }
+    };
+
+    animate(); // Start the animation loop
 
     // Create the dispose function
-    const dispose = () => {
+    const dispose = () => { 
         // eslint-disable-next-line no-console
         console.groupCollapsed('[🍉 Carousel3DPro Cleanup]'); // Start collapsed group
-        console.warn("Disposing carousel resources...");
+        console.warn("Disposing carousel resources..."); // Debug log
         // Phase 1: Stop the Animation Loop
-        if (animationFrameId !== null) {
-            cancelAnimationFrame(animationFrameId);
+        if (animationFrameId !== null) { // Check if an animation frame is currently running
+            cancelAnimationFrame(animationFrameId); // Cancel the animation frame request
             animationFrameId = null; // Reset the ID
-            console.warn("Animation loop stopped.");
+            console.warn("Animation loop stopped."); // Debug log
         }
 
         // Phase 1.5: Clear Timeouts and Intervals
-        console.warn("Clearing active timeouts and intervals...");
-        timeoutIds.forEach(clearTimeout);
+        console.warn("Clearing active timeouts and intervals..."); // Debug log
+        timeoutIds.forEach(clearTimeout); // Clear all active timeouts
         timeoutIds.length = 0; // Clear the array
-        if (wmCheckIntervalId) {
-            clearInterval(wmCheckIntervalId);
-            wmCheckIntervalId = null;
-            console.warn("Cleared waitForWindowWM interval.");
+        if (wmCheckIntervalId) {    // Check if the interval is currently running
+            clearInterval(wmCheckIntervalId); // Clear the interval
+            wmCheckIntervalId = null; // Reset the ID
+            console.warn("Cleared waitForWindowWM interval."); // Debug log
         }
-        console.warn("Timeouts and intervals cleared.");
+        console.warn("Timeouts and intervals cleared."); // Debug log
 
         // Phase 2: Remove Global Event Listeners
-        console.warn("Removing global event listeners...");
-        window.removeEventListener('resize', resizeHandler);
+        console.warn("Removing global event listeners..."); // Debug log
+        window.removeEventListener('resize', resizeHandler); // Remove resize event listener
         window.removeEventListener('wheel', wheelEventHandler, { capture: true }); // Ensure capture matches addEventListener
-        window.removeEventListener('click', handleCarouselClick);
-        window.removeEventListener('keydown', keydownHandler);
+        window.removeEventListener('click', handleCarouselClick); // Remove click event listener 
+        window.removeEventListener('keydown', keydownHandler); // Remove keydown event listener
         window.removeEventListener('touchstart', touchStartHandler, { passive: false }); // Ensure options match
         window.removeEventListener('touchmove', touchMoveHandler, { passive: false }); // Ensure options match
         window.removeEventListener('touchend', touchEndHandler, { passive: false }); // Ensure options match
-        console.warn("Global event listeners removed.");
+        console.warn("Global event listeners removed."); // Debug log
 
         // Phase 3: Kill Active GSAP Animations
-        console.warn("Killing GSAP animations...");
-        if (carousel?.itemGroup) {
-            gsap.killTweensOf(carousel.itemGroup);
+        console.warn("Killing GSAP animations..."); // Debug log
+        if (carousel?.itemGroup) { // Check if carousel.itemGroup exists
+            gsap.killTweensOf(carousel.itemGroup); // 
         }
         if (activeSubmenu) {
             gsap.killTweensOf(activeSubmenu); // Kill tweens targeting the submenu object itself
             // Also kill tweens targeting children if necessary (e.g., items, close button)
-            activeSubmenu.children.forEach(child => gsap.killTweensOf(child));
+            activeSubmenu.children.forEach(child => gsap.killTweensOf(child)); // 
             if (activeSubmenu.floatingPreview) {
                 gsap.killTweensOf(activeSubmenu.floatingPreview);
                 gsap.killTweensOf(activeSubmenu.floatingPreview.scale); // Kill specific property tweens if needed
             }
             if (activeSubmenu.closeButton) {
                  gsap.killTweensOf(activeSubmenu.closeButton.material); // Kill material tweens
-                 gsap.killTweensOf(activeSubmenu.closeButton.scale);
+                 gsap.killTweensOf(activeSubmenu.closeButton.scale); // Kill scale
             }
         }
         // Optional: Blanket kill for all scene children - use with caution
         // gsap.killTweensOf(scene.children); 
-        console.warn("GSAP animations killed.");
+        console.warn("GSAP animations killed."); // Debug log
 
         // Phase 4: Dispose Submenu and Carousel
-        console.warn("Disposing Three.js objects...");
-        if (activeSubmenu) {
+        console.warn("Disposing Three.js objects..."); // Debug log
+        if (activeSubmenu) { 
             // Ensure GSAP tweens targeting the submenu are killed *before* disposal
-            gsap.killTweensOf(activeSubmenu);
+            gsap.killTweensOf(activeSubmenu); 
             activeSubmenu.children.forEach(child => gsap.killTweensOf(child)); // Kill children tweens too
-            if (activeSubmenu.floatingPreview) gsap.killTweensOf(activeSubmenu.floatingPreview);
-            if (activeSubmenu.closeButton) gsap.killTweensOf(activeSubmenu.closeButton.material);
+            if (activeSubmenu.floatingPreview) gsap.killTweensOf(activeSubmenu.floatingPreview); // Kill floating
+            if (activeSubmenu.closeButton) gsap.killTweensOf(activeSubmenu.closeButton.material); 
 
-            activeSubmenu.dispose?.();
-            scene.remove(activeSubmenu);
+            activeSubmenu.dispose?.(); // Call the dispose method if it exists
+            scene.remove(activeSubmenu); // Remove the submenu from the scene
             activeSubmenu = null; // Clear reference
-            console.warn("Active submenu disposed and removed during main dispose.");
+            console.warn("Active submenu disposed and removed during main dispose."); // Debug log
         }
-        if (carousel) {
+        if (carousel) { // Check if carousel exists
             // Assuming Carousel3DPro will have a dispose method
-            carousel.dispose?.(); 
-            scene.remove(carousel);
+            carousel.dispose?.(); // Call the dispose method if it exists
+            scene.remove(carousel); // Remove the carousel from the scene
             // carousel = null; // Don't nullify if it's returned
-            console.warn("Main carousel disposed and removed.");
+            console.warn("Main carousel disposed and removed."); // Debug log
         }
 
         // Dispose OrbitControls
-        if (controls) {
-            controls.dispose();
+        if (controls) { // Check if controls exist
+            controls.dispose(); // Call the dispose method if it exists
             // controls = null; // Don't nullify if needed elsewhere, but good practice if not
-            console.warn("OrbitControls disposed.");
+            console.warn("OrbitControls disposed."); // Debug log
         }
 
         // Dispose Renderer and remove canvas
-        if (renderer) {
-            renderer.dispose();
-            if (renderer.domElement.parentNode) {
-                renderer.domElement.parentNode.removeChild(renderer.domElement);
+        if (renderer) { // Check if renderer exists
+            renderer.dispose(); // Call the dispose method if it exists
+            if (renderer.domElement.parentNode) { // Check if the renderer's canvas has a parent node
+                renderer.domElement.parentNode.removeChild(renderer.domElement); // Remove the canvas from the DOM
             }
             // renderer = null; // Don't nullify if needed elsewhere
-            console.warn("Renderer disposed and canvas removed.");
+            console.warn("Renderer disposed and canvas removed."); // Debug log
         }
 
         // Dispose Scene resources (optional, depends on complexity)
-        console.warn("Traversing scene to dispose geometries, materials, and textures...");
-        scene.traverse((obj) => {
-          if (obj.geometry) {
-            obj.geometry.dispose();
+        console.warn("Traversing scene to dispose geometries, materials, and textures..."); // Debug log
+        scene.traverse((obj) => { // Traverse the scene graph to find objects
+          if (obj.geometry) { // Check if the object has a geometry
+            obj.geometry.dispose(); // Dispose the geometry if it exists
             // console.log("Disposed geometry for:", obj.name || obj.type);
           }
-          if (obj.material) {
-            if (Array.isArray(obj.material)) {
-              obj.material.forEach((m) => {
-                  m.dispose();
+          if (obj.material) { // Check if the object has a material
+            if (Array.isArray(obj.material)) { // Check if the material is an array (multiple materials)
+              obj.material.forEach((m) => { // Traverse the array of materials
+                  m.dispose(); // Dispose each material in the array
                   // console.log("Disposed material (array) for:", obj.name || obj.type);
               });
             } else {
-              obj.material.dispose();
+              obj.material.dispose(); // Dispose the single material if it exists
               // console.log("Disposed material for:", obj.name || obj.type);
             }
           }
@@ -784,22 +825,22 @@ export function setupCarousel(container) {
           //   obj.texture.dispose();
           // }
         });
-        console.warn("Scene traversal and disposal complete.");
+        console.warn("Scene traversal and disposal complete."); // Debug log
         // scene = null; // Don't nullify if needed elsewhere
 
-        console.warn("Carousel disposal complete.");
+        console.warn("Carousel disposal complete."); // Debug log
         // eslint-disable-next-line no-console
         console.groupEnd(); // End collapsed group
     };
 
     return {
-        carousel,
-        scene,
-        camera,
-        renderer,
-        nextItem: () => carousel.goToNext(),
-        prevItem: () => carousel.goToPrev(),
-        toggleTheme,
+        carousel, // Return the carousel instance
+        scene, // Return the scene instance
+        camera, // Return the camera instance
+        renderer, // Return the renderer instance
+        nextItem: () => carousel.goToNext(), // Return a function to go to the next item
+        prevItem: () => carousel.goToPrev(), // Return a function to go to the previous item
+        toggleTheme, // Return the function to toggle themes
         closeSubmenu, // Keep returning the manual close function
         dispose, // Return the dispose function
     };
