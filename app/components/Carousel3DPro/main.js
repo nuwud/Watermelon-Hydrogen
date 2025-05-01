@@ -18,7 +18,7 @@ import gsap from 'gsap';
  * @returns {Object} - carousel controls and diagnostics
  */
 export function setupCarousel(container) {
-    
+
     if (typeof window === 'undefined') return null; // Ensure we're in a browser environment
 
     let animationFrameId = null; // Declare animationFrameId
@@ -34,26 +34,26 @@ export function setupCarousel(container) {
 
     // Add the waitForWindowWM helper function here
     function waitForWindowWM(id, maxRetries = 30) { // Function to wait for window.__wm__ to be ready
-      let retries = 0; // Initialize retry count
-      // Clear any existing interval before starting a new one
-      if (wmCheckIntervalId) {   
-          clearInterval(wmCheckIntervalId); // Reset the ID
-      }
-      wmCheckIntervalId = setInterval(() => { // Check if window.__wm__ is ready
-        if (window.__wm__?.showContent) { // Check if window.__wm__ is defined and has showContent method
-          window.__wm__.showContent(id); // Call the showContent method with the provided id
-          clearInterval(wmCheckIntervalId); // Clear the interval once ready
-          wmCheckIntervalId = null; // Reset the ID
-          console.warn(`✅ window.__wm__ ready, showing content '${id}'`); // Log success
-        } else {
-          retries++; // Increment retry count
-          if (retries >= maxRetries) { // If max retries reached, log failure and clear interval
-            console.warn(`❌ Failed to show content '${id}' — window.__wm__ not ready after ${maxRetries} retries.`);
-            clearInterval(wmCheckIntervalId); // Clear the interval
-            wmCheckIntervalId = null; // Reset the ID
-          }
+        let retries = 0; // Initialize retry count
+        // Clear any existing interval before starting a new one
+        if (wmCheckIntervalId) {
+            clearInterval(wmCheckIntervalId); // Reset the ID
         }
-      }, 100); // check every 100ms 
+        wmCheckIntervalId = setInterval(() => { // Check if window.__wm__ is ready
+            if (window.__wm__?.showContent) { // Check if window.__wm__ is defined and has showContent method
+                window.__wm__.showContent(id); // Call the showContent method with the provided id
+                clearInterval(wmCheckIntervalId); // Clear the interval once ready
+                wmCheckIntervalId = null; // Reset the ID
+                console.warn(`✅ window.__wm__ ready, showing content '${id}'`); // Log success
+            } else {
+                retries++; // Increment retry count
+                if (retries >= maxRetries) { // If max retries reached, log failure and clear interval
+                    console.warn(`❌ Failed to show content '${id}' — window.__wm__ not ready after ${maxRetries} retries.`);
+                    clearInterval(wmCheckIntervalId); // Clear the interval
+                    wmCheckIntervalId = null; // Reset the ID
+                }
+            }
+        }, 100); // check every 100ms 
     }
 
     const scene = new THREE.Scene();
@@ -90,13 +90,13 @@ export function setupCarousel(container) {
     controls.touches.TWO = null; // Disable pinch-to-zoom gesture on touch devices
 
     // Tracking wheel handler state - MUST initially be true
-    let isWheelHandlerActive = true; 
-    
+    let isWheelHandlerActive = true;
+
     // Store the wheel event listener so we can remove/add it properly
     //let wheelHandlerActive = true;
 
     // Create the wheel event handler as a named function
-    const wheelEventHandler = function(event) { // Check if the wheel handler is active
+    const wheelEventHandler = function (event) { // Check if the wheel handler is active
         // Check middle mouse button first - this is the zoom case
         if (event.buttons === 4) { // Middle mouse button pressed
             // Let OrbitControls handle zooming - do not stop propagation
@@ -125,7 +125,7 @@ export function setupCarousel(container) {
 
     // FIX 3: Override OrbitControls wheel handler to only work with middle mouse
     const originalOnWheel = controls.onMouseWheel; // Store the original onMouseWheel method
-    controls.onMouseWheel = function(event) { // Override the onMouseWheel method
+    controls.onMouseWheel = function (event) { // Override the onMouseWheel method
         if (event.buttons !== 4) {
             // Block all wheel events that don't have middle mouse pressed
             return;
@@ -203,14 +203,14 @@ export function setupCarousel(container) {
         // Apply momentum based on final velocity
         if (touchVelocity > 0.5) { // Check if the velocity exceeds a threshold
             if (activeSubmenu) { // If a submenu is active
-                const direction = touchStartY < event.changedTouches[0].clientY ? -1 : 1; 
+                const direction = touchStartY < event.changedTouches[0].clientY ? -1 : 1;
                 // Apply momentum scrolling to submenu
-                activeSubmenu.scrollSubmenu(direction); 
+                activeSubmenu.scrollSubmenu(direction);
             } else {
-                const direction = touchStartX < event.changedTouches[0].clientX ? 1 : -1; 
+                const direction = touchStartX < event.changedTouches[0].clientX ? 1 : -1;
                 // Apply momentum to carousel
                 const angleStep = (2 * Math.PI) / items.length; // Calculate angle step based on number of items    
-                carousel.spin(direction * angleStep); 
+                carousel.spin(direction * angleStep);
             }
         }
     };
@@ -225,13 +225,13 @@ export function setupCarousel(container) {
     function disableMainCarouselHandlers() { // Detach touch event listeners
         // Do not actually remove the touch handlers - keep them active
         // but they will check for activeSubmenu internally
-        
+
         // Set the wheel handler flag to false to disable it for main carousel
         isWheelHandlerActive = false; // Disable wheel handler for main carousel
     }
-    
+
     // Function to enable touch events
-    function enableTouchEvents() { 
+    function enableTouchEvents() {
         // Reset touch variables
         touchStartX = 0; // Reset initial touch X position
         touchStartY = 0; // Reset initial touch Y position
@@ -242,18 +242,18 @@ export function setupCarousel(container) {
         window.removeEventListener('touchstart', touchStartHandler, { passive: false }); // Remove existing touchstart listener
         window.removeEventListener('touchmove', touchMoveHandler, { passive: false }); // Remove existing touchmove listener
         window.removeEventListener('touchend', touchEndHandler, { passive: false }); // Remove existing touchend listener
-        
+
         window.addEventListener('touchstart', touchStartHandler, { passive: false }); // Attach touchstart event listener
         window.addEventListener('touchmove', touchMoveHandler, { passive: false }); // Attach touchmove event listener
         window.addEventListener('touchend', touchEndHandler, { passive: false }); // Attach touchend event listener
     }
-    
+
     // Function to enable wheel handler
     function enableWheelHandler() { // Re-attach wheel event listener
         // Set the wheel handler active flag
         isWheelHandlerActive = true; // Enable wheel handler for main carousel
     }
-    
+
     // Initial setup: attach event listeners
     enableAllEventHandlers(); // Attach all event listeners initially
 
@@ -277,7 +277,7 @@ export function setupCarousel(container) {
 
     // Wrap the original methods to track animation state
     const originalGoToNext = carousel.goToNext; // Store original goToNext method
-    carousel.goToNext = function() { 
+    carousel.goToNext = function () {
         if (carousel.isAnimating) return; // Prevent multiple animations from running simultaneously
         carousel.isAnimating = true; // Set animation flag to true
 
@@ -298,7 +298,7 @@ export function setupCarousel(container) {
     };
 
     const originalGoToPrev = carousel.goToPrev; // Store original goToPrev method
-    carousel.goToPrev = function() { // 
+    carousel.goToPrev = function () { // 
         if (carousel.isAnimating) return; // Prevent multiple animations from running simultaneously
         carousel.isAnimating = true; // Set animation flag to true
 
@@ -312,14 +312,14 @@ export function setupCarousel(container) {
                 if (index > -1) timeoutIds.splice(index, 1); // Remove the timeout ID from the tracking array
             }, 500); // Match this delay to your animation duration
             timeoutIds.push(timeoutId); // Store the timeout ID
-        } catch (error) { 
+        } catch (error) {
             console.error('Error in goToPrev:', error); // Log the error to the console
             carousel.isAnimating = false; // Reset animation flag on error
         }
     };
 
     // Refactored onItemClick using async/await
-    carousel.onItemClick = async (index, item) => { 
+    carousel.onItemClick = async (index, item) => {
         if (!submenus[item]) return; // Ignore items without submenus
 
         if (isTransitioning) { // Check if a transition is already in progress
@@ -416,13 +416,13 @@ export function setupCarousel(container) {
             // ---> INJECT SCENE AND CAMERA HERE <---
             if (scene) { // Check if scene is defined
                 submenu.scene = scene; // Inject scene into submenu
-                 console.log('[Watermelon] Injected scene into submenu.'); // Debug log
+                console.log('[Watermelon] Injected scene into submenu.'); // Debug log
             } else {
                 console.error('[Watermelon] CRITICAL: Scene is missing during submenu creation!'); // Debug log
             }
             if (camera) { // Check if camera is defined
                 submenu.camera = camera; // Inject camera into submenu
-                 console.log('[Watermelon] Injected camera into submenu.'); // Debug log
+                console.log('[Watermelon] Injected camera into submenu.'); // Debug log
             } else {
                 console.error('[Watermelon] CRITICAL: Camera is missing during submenu creation!'); // Debug log
             }
@@ -463,7 +463,7 @@ export function setupCarousel(container) {
     scene.add(carousel, ambientLight, directionalLight); // Add carousel and lights to the scene
 
     // Define resize handler
-    const resizeHandler = () => { 
+    const resizeHandler = () => {
         camera.aspect = window.innerWidth / window.innerHeight; // Update camera aspect ratio
         camera.updateProjectionMatrix(); // Update camera projection matrix
         renderer.setSize(window.innerWidth, window.innerHeight); // Update renderer size
@@ -475,85 +475,85 @@ export function setupCarousel(container) {
     // It might need adjustments later if it conflicts with the async flow,
     // but for now, we leave it for the close button functionality.
     function closeSubmenu(immediate = false) { // Check if a submenu is active
-      // Check the *new* transition flag as well
-      if (!activeSubmenu || isTransitioning) return; // Nothing to close or already transitioning
-      // Set the transition flag when manually closing too
-      isTransitioning = true; // Set the transition flag to true
-      console.warn('[Watermelon] Manual closeSubmenu called.'); // Debug log
+        // Check the *new* transition flag as well
+        if (!activeSubmenu || isTransitioning) return; // Nothing to close or already transitioning
+        // Set the transition flag when manually closing too
+        isTransitioning = true; // Set the transition flag to true
+        console.warn('[Watermelon] Manual closeSubmenu called.'); // Debug log
 
-      if (activeSubmenu.floatingPreview) { // Check if the submenu has a floating preview
-          activeSubmenu.stopFloatingPreviewSpin(); // Stop any spinning animation on the floating preview
-          gsap.to(activeSubmenu.floatingPreview.scale, { // Animate the scale of the floating preview to zero
-              x: 0, 
-              y: 0,  
-              z: 0, 
-              duration: 0.2, // Duration of the scale animation
-              ease: 'back.in', // Easing function for the animation
-          });
-      }
-  
-      if (activeSubmenu.closeButton) { // Check if the submenu has a close button
-          activeSubmenu.closeButton.material.color.set(0xff0000); // Change the close button color to red
-      }
-  
-      if (activeSubmenu.parentItem?.material) { // Check if the parent item has a material
-          gsap.to(activeSubmenu.parentItem.material, { // Animate the opacity of the parent item material to 1.0
-              opacity: 1.0, // Set opacity to fully opaque
-              duration: 0.5, // Duration of the opacity animation
-          });
-      }
-  
-      const remove = () => { // Remove the submenu from the scene
-          scene.remove(activeSubmenu); // Remove the submenu from the scene
-          scene.userData.activeSubmenu = null; // Clear the active submenu reference in scene userData
-          if (carousel && carousel.parent && carousel.parent.userData) { // Check if carousel has a parent with userData
-              carousel.parent.userData.activeSubmenu = null; // Clear the active submenu reference in carousel parent userData
-          }
-          
-          // IMPORTANT: Clear this BEFORE enabling handlers
-          const closedSubmenu = activeSubmenu; // Keep ref for dispose check
-          activeSubmenu = null; // Clear the active submenu reference
+        if (activeSubmenu.floatingPreview) { // Check if the submenu has a floating preview
+            activeSubmenu.stopFloatingPreviewSpin(); // Stop any spinning animation on the floating preview
+            gsap.to(activeSubmenu.floatingPreview.scale, { // Animate the scale of the floating preview to zero
+                x: 0,
+                y: 0,
+                z: 0,
+                duration: 0.2, // Duration of the scale animation
+                ease: 'back.in', // Easing function for the animation
+            });
+        }
 
-          // Dispose if the submenu has a dispose method
-          closedSubmenu?.dispose?.(); // Call the dispose method if it exists
-          console.warn('[Watermelon] Manual closeSubmenu disposed.'); // Debug log
+        if (activeSubmenu.closeButton) { // Check if the submenu has a close button
+            activeSubmenu.closeButton.material.color.set(0xff0000); // Change the close button color to red
+        }
 
-          // Re-enable main carousel handlers
-          enableAllEventHandlers(); // Re-enable main carousel handlers after closing submenu
+        if (activeSubmenu.parentItem?.material) { // Check if the parent item has a material
+            gsap.to(activeSubmenu.parentItem.material, { // Animate the opacity of the parent item material to 1.0
+                opacity: 1.0, // Set opacity to fully opaque
+                duration: 0.5, // Duration of the opacity animation
+            });
+        }
 
-          // Reset any active animations
-          if (carousel) { // Reset carousel animation state
-              carousel.isAnimating = false; // Reset carousel animation flag
-          }
+        const remove = () => { // Remove the submenu from the scene
+            scene.remove(activeSubmenu); // Remove the submenu from the scene
+            scene.userData.activeSubmenu = null; // Clear the active submenu reference in scene userData
+            if (carousel && carousel.parent && carousel.parent.userData) { // Check if carousel has a parent with userData
+                carousel.parent.userData.activeSubmenu = null; // Clear the active submenu reference in carousel parent userData
+            }
 
-          // Finally clear transitioning flag after a buffer
-          setTimeout(() => { // Reset the transition flag after a short delay
-              isTransitioning = false; // Reset transition flag to allow future transitions
-              console.warn('[Watermelon] Manual closeSubmenu complete.'); // Debug log
-          }, 50); // Adjust this delay as needed based on your animation timing
+            // IMPORTANT: Clear this BEFORE enabling handlers
+            const closedSubmenu = activeSubmenu; // Keep ref for dispose check
+            activeSubmenu = null; // Clear the active submenu reference
 
-          // Optional: Force a wheel event to test functionality
-          // console.warn('Submenu closed, wheel handler reactivated:', isWheelHandlerActive);
-      };
+            // Dispose if the submenu has a dispose method
+            closedSubmenu?.dispose?.(); // Call the dispose method if it exists
+            console.warn('[Watermelon] Manual closeSubmenu disposed.'); // Debug log
 
-      if (immediate) { // If immediate is true, close immediately without animation
-          remove(); // Remove the submenu immediately
-      } else { // If immediate is false, animate the close
-          activeSubmenu.hide(); // Call the hide method if it exists
-          const timeoutId = setTimeout(() => { // Reset the animation flag after a delay
-              remove(); // Remove the submenu from the scene
-              // Remove this ID from the tracking array once executed
-              const index = timeoutIds.indexOf(timeoutId); // Find the index of the timeout ID
-              if (index > -1) timeoutIds.splice(index, 1); // Remove the timeout ID from the tracking array
-          }, 300); // Match your existing submenu close timing
-          timeoutIds.push(timeoutId); // Store the timeout ID
-      }
+            // Re-enable main carousel handlers
+            enableAllEventHandlers(); // Re-enable main carousel handlers after closing submenu
 
-      // controls.enabled = true; // This might interfere, review if needed
+            // Reset any active animations
+            if (carousel) { // Reset carousel animation state
+                carousel.isAnimating = false; // Reset carousel animation flag
+            }
+
+            // Finally clear transitioning flag after a buffer
+            setTimeout(() => { // Reset the transition flag after a short delay
+                isTransitioning = false; // Reset transition flag to allow future transitions
+                console.warn('[Watermelon] Manual closeSubmenu complete.'); // Debug log
+            }, 50); // Adjust this delay as needed based on your animation timing
+
+            // Optional: Force a wheel event to test functionality
+            // console.warn('Submenu closed, wheel handler reactivated:', isWheelHandlerActive);
+        };
+
+        if (immediate) { // If immediate is true, close immediately without animation
+            remove(); // Remove the submenu immediately
+        } else { // If immediate is false, animate the close
+            activeSubmenu.hide(); // Call the hide method if it exists
+            const timeoutId = setTimeout(() => { // Reset the animation flag after a delay
+                remove(); // Remove the submenu from the scene
+                // Remove this ID from the tracking array once executed
+                const index = timeoutIds.indexOf(timeoutId); // Find the index of the timeout ID
+                if (index > -1) timeoutIds.splice(index, 1); // Remove the timeout ID from the tracking array
+            }, 300); // Match your existing submenu close timing
+            timeoutIds.push(timeoutId); // Store the timeout ID
+        }
+
+        // controls.enabled = true; // This might interfere, review if needed
     }
 
     // Define click handler
-    function handleCarouselClick(event) { 
+    function handleCarouselClick(event) {
         // Use the new transition flag
         if (isTransitioning) { // Check if a transition is already in progress
             console.warn('[Watermelon] Click ignored during transition.'); // Debug log
@@ -561,11 +561,15 @@ export function setupCarousel(container) {
         }
 
         const mouse = new THREE.Vector2( // Calculate mouse position in normalized device coordinates
-            (event.clientX / window.innerWidth) * 2 - 1, 
-            -(event.clientY / window.innerHeight) * 2 + 1 
+            (event.clientX / window.innerWidth) * 2 - 1,
+            -(event.clientY / window.innerHeight) * 2 + 1
         );
         const raycaster = new THREE.Raycaster(); // Create a new Raycaster instance
         raycaster.setFromCamera(mouse, camera); // Set the raycaster from the camera and mouse position
+
+        const rect = renderer.domElement.getBoundingClientRect();
+        mouse.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+        mouse.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
 
         if (activeSubmenu) { // If a submenu is active, check for clicks within it
             const hits = raycaster.intersectObject(activeSubmenu, true); // Check for intersections with the active submenu
@@ -602,7 +606,7 @@ export function setupCarousel(container) {
 
                         // Replace the direct call with the waitForWindowWM function
                         waitForWindowWM(id); // Wait for window.__wm__ to be ready before triggering content
-                        console.warn(`🍉 Attempting to trigger floating panel: ${id}`); 
+                        console.warn(`🍉 Attempting to trigger floating panel: ${id}`);
                         // Optionally close the submenu after triggering content
                         // closeSubmenu();
                     } else {
@@ -613,29 +617,31 @@ export function setupCarousel(container) {
                     // Handle close button click
                     closeSubmenu(); // Call the closeSubmenu function to close the active submenu
                 }
-                if (activeSubmenu) {
-  const hits = raycaster.intersectObject(activeSubmenu, true);
-  if (hits.length > 0) {
-    const obj = hits[0].object;
-    let submenuItemData = null;
-    if (obj.userData?.isSubmenuItem) {
-      submenuItemData = obj.userData;
-    } else if (obj.parent?.userData?.isSubmenuItem) {
-      submenuItemData = obj.parent.userData;
-    }
 
-    if (submenuItemData && typeof submenuItemData.index === 'number') {
-      const index = submenuItemData.index;
-      console.log(`🖱️ [main.js] Clicked submenu index=${index}, name=${submenuItemData.name || "Unknown"}`);
-      console.log(`🖱️ [main.js] About to call activeSubmenu.selectItem(${index})`);
-      activeSubmenu.selectItem(index, true, true); 
-    } else if (obj.userData?.isCloseButton || obj.parent?.userData?.isCloseButton) {
-      console.log('🖱️ [main.js] Close button clicked.');
-      closeSubmenu();
-    }
-    return;
-  }
-}
+                if (activeSubmenu) {
+                    const hits = raycaster.intersectObject(activeSubmenu, true); // Check for intersections with the active submenu
+                    if (hits.length > 0) { // If there are hits, handle the click within the submenu
+                        const obj = hits[0].object; // Check the first hit object
+                        let submenuItemData = null; // Initialize submenuItemData to null
+                        if (obj.userData?.isSubmenuItem) { // Check if the clicked object is a submenu item
+                            submenuItemData = obj.userData; // Assign the userData of the clicked object to submenuItemData
+                        } else if (obj.parent?.userData?.isSubmenuItem) { // Check if the parent of the clicked object is a submenu item
+                            submenuItemData = obj.parent.userData; // Assign the userData of the parent object to submenuItemData
+                        }
+
+                        if (submenuItemData && typeof submenuItemData.index === 'number') { // Check if submenuItemData is valid and has a numeric index
+                            const index = submenuItemData.index; // Get the index of the clicked submenu item
+                            console.log(`🖱️ [main.js] Clicked submenu index=${index}, name=${submenuItemData.name || "Unknown"}`); 
+                            console.log(`🖱️ [main.js] About to call activeSubmenu.selectItem(${index})`);
+                            activeSubmenu.intendedClickIndex = index; // Preserve the clicked index
+                            activeSubmenu.selectItem(index, true, true); // Show preview
+                        } else if (obj.userData?.isCloseButton || obj.parent?.userData?.isCloseButton) { // Check if the clicked object or its parent is the close button
+                            console.log('🖱️ [main.js] Close button clicked.');
+                            closeSubmenu(); // Call the closeSubmenu function to close the active submenu
+                        }
+                        return; // Exit after handling submenu click or close button
+                    }
+                }
                 return; // Exit after handling submenu click or close button
             }
         }
@@ -660,12 +666,12 @@ export function setupCarousel(container) {
     const keydownHandler = (e) => { // Check if a submenu is active
         if (e.key === 'ArrowRight') carousel.goToNext(); // Check if the right arrow key is pressed
         else if (e.key === 'ArrowLeft') carousel.goToPrev(); // Check if the left arrow key is pressed
-    }; 
+    };
     window.addEventListener('keydown', keydownHandler); // Attach keydown event listener to the window
 
     const themes = [defaultCarouselStyle, darkTheme, cyberpunkTheme, lightTheme]; // Define available themes
     let themeIndex = 0; // Initialize theme index to 0
- 
+
     const toggleTheme = () => { // Cycle through themes
         themeIndex = (themeIndex + 1) % themes.length; // Update theme index to cycle through available themes
         currentTheme = themes[themeIndex]; // Update current theme to the next theme in the array
@@ -686,7 +692,7 @@ export function setupCarousel(container) {
 
     const animate = () => { // Animation loop function
         animationFrameId = requestAnimationFrame(animate); // Schedule next frame first
-        
+
         // Skip heavy updates during transitions to improve performance
         if (!isTransitioning) {
             // Wrap in try-catch to prevent animation loop from breaking if an update fails
@@ -706,8 +712,43 @@ export function setupCarousel(container) {
 
     animate(); // Start the animation loop
 
+    // Add debug logging to track submenu front-facing logic
+    function debugSubmenuFrontFacing(submenu) {
+        if (!submenu || !submenu.itemMeshes) return;
+
+        console.group('🔍 Submenu Front-Facing Debugging');
+        submenu.itemMeshes.forEach((container, index) => {
+            if (!container || !container.userData) return;
+
+            const originalAngle = container.userData.originalAngle;
+            const currentRotation = submenu.itemGroup.rotation.x;
+
+            // Calculate effective angle
+            let effectiveAngle = (originalAngle + currentRotation) % (Math.PI * 2);
+            if (effectiveAngle < 0) effectiveAngle += Math.PI * 2;
+
+            // Calculate distance to front (0 radians)
+            const angleDiff = Math.min(
+                effectiveAngle,
+                Math.abs(Math.PI * 2 - effectiveAngle)
+            );
+
+            console.log(`Item ${index}: originalAngle=${originalAngle.toFixed(2)}, effectiveAngle=${effectiveAngle.toFixed(2)}, angleDiff=${angleDiff.toFixed(2)}`);
+        });
+        console.groupEnd();
+    }
+
+    // Call debugSubmenuFrontFacing after submenu updates
+    const originalSubmenuUpdate = activeSubmenu?.update;
+    if (originalSubmenuUpdate) {
+        activeSubmenu.update = function () {
+            originalSubmenuUpdate.call(this);
+            debugSubmenuFrontFacing(this);
+        };
+    }
+
     // Create the dispose function
-    const dispose = () => { 
+    const dispose = () => {
         // eslint-disable-next-line no-console
         console.groupCollapsed('[🍉 Carousel3DPro Cleanup]'); // Start collapsed group
         console.warn("Disposing carousel resources..."); // Debug log
@@ -754,8 +795,8 @@ export function setupCarousel(container) {
                 gsap.killTweensOf(activeSubmenu.floatingPreview.scale); // Kill specific property tweens if needed
             }
             if (activeSubmenu.closeButton) {
-                 gsap.killTweensOf(activeSubmenu.closeButton.material); // Kill material tweens
-                 gsap.killTweensOf(activeSubmenu.closeButton.scale); // Kill scale
+                gsap.killTweensOf(activeSubmenu.closeButton.material); // Kill material tweens
+                gsap.killTweensOf(activeSubmenu.closeButton.scale); // Kill scale
             }
         }
         // Optional: Blanket kill for all scene children - use with caution
@@ -764,12 +805,12 @@ export function setupCarousel(container) {
 
         // Phase 4: Dispose Submenu and Carousel
         console.warn("Disposing Three.js objects..."); // Debug log
-        if (activeSubmenu) { 
+        if (activeSubmenu) {
             // Ensure GSAP tweens targeting the submenu are killed *before* disposal
-            gsap.killTweensOf(activeSubmenu); 
+            gsap.killTweensOf(activeSubmenu);
             activeSubmenu.children.forEach(child => gsap.killTweensOf(child)); // Kill children tweens too
             if (activeSubmenu.floatingPreview) gsap.killTweensOf(activeSubmenu.floatingPreview); // Kill floating
-            if (activeSubmenu.closeButton) gsap.killTweensOf(activeSubmenu.closeButton.material); 
+            if (activeSubmenu.closeButton) gsap.killTweensOf(activeSubmenu.closeButton.material);
 
             activeSubmenu.dispose?.(); // Call the dispose method if it exists
             scene.remove(activeSubmenu); // Remove the submenu from the scene
@@ -804,26 +845,26 @@ export function setupCarousel(container) {
         // Dispose Scene resources (optional, depends on complexity)
         console.warn("Traversing scene to dispose geometries, materials, and textures..."); // Debug log
         scene.traverse((obj) => { // Traverse the scene graph to find objects
-          if (obj.geometry) { // Check if the object has a geometry
-            obj.geometry.dispose(); // Dispose the geometry if it exists
-            // console.log("Disposed geometry for:", obj.name || obj.type);
-          }
-          if (obj.material) { // Check if the object has a material
-            if (Array.isArray(obj.material)) { // Check if the material is an array (multiple materials)
-              obj.material.forEach((m) => { // Traverse the array of materials
-                  m.dispose(); // Dispose each material in the array
-                  // console.log("Disposed material (array) for:", obj.name || obj.type);
-              });
-            } else {
-              obj.material.dispose(); // Dispose the single material if it exists
-              // console.log("Disposed material for:", obj.name || obj.type);
+            if (obj.geometry) { // Check if the object has a geometry
+                obj.geometry.dispose(); // Dispose the geometry if it exists
+                // console.log("Disposed geometry for:", obj.name || obj.type);
             }
-          }
-          // Note: Textures are usually part of materials and disposed when the material is disposed.
-          // Explicit texture disposal might be needed if textures are managed separately.
-          // if (obj.texture) { // Less common to find textures directly on objects like this
-          //   obj.texture.dispose();
-          // }
+            if (obj.material) { // Check if the object has a material
+                if (Array.isArray(obj.material)) { // Check if the material is an array (multiple materials)
+                    obj.material.forEach((m) => { // Traverse the array of materials
+                        m.dispose(); // Dispose each material in the array
+                        // console.log("Disposed material (array) for:", obj.name || obj.type);
+                    });
+                } else {
+                    obj.material.dispose(); // Dispose the single material if it exists
+                    // console.log("Disposed material for:", obj.name || obj.type);
+                }
+            }
+            // Note: Textures are usually part of materials and disposed when the material is disposed.
+            // Explicit texture disposal might be needed if textures are managed separately.
+            // if (obj.texture) { // Less common to find textures directly on objects like this
+            //   obj.texture.dispose();
+            // }
         });
         console.warn("Scene traversal and disposal complete."); // Debug log
         // scene = null; // Don't nullify if needed elsewhere

@@ -13,6 +13,8 @@ import { TextGeometry } from 'three/examples/jsm/geometries/TextGeometry.js';
 import { FontLoader } from 'three/examples/jsm/loaders/FontLoader.js';
 import { getGlowShaderMaterial } from './CarouselShaderFX.js';
 import { defaultCarouselStyle } from './CarouselStyleConfig.js'
+//import { raycaster, camera, scene } from 'three';
+
 //import { gsap } from 'gsap';
 
 // Access GSAP from the global scope
@@ -65,6 +67,9 @@ export class Carousel3DPro extends Group {
 
     this.levelingSpeed = 0.1; // Controls how quickly items level out
     this.maxTilt = Math.PI / 24; // Limits maximum tilt (about 7.5 degrees)
+
+    // Define a state machine for carousel states
+    this.state = 'idle'; // Possible states: 'idle', 'transitioning', 'selecting'
   }
 
   async loadFont() {
@@ -90,12 +95,12 @@ export class Carousel3DPro extends Group {
       console.error('Failed to load font:', error);
     }
   }
-  
+
   createItems() {
     if (!this.font) return;
-    
+
     const angleStep = (2 * Math.PI) / this.items.length;
-    
+
     this.items.forEach((item, index) => {
       // Create text geometry
       const geometry = new TextGeometry(item.toString(), {
@@ -110,17 +115,17 @@ export class Carousel3DPro extends Group {
         bevelOffset: 0,
         bevelSegments: 5
       });
-      
+
       geometry.computeBoundingBox();
       geometry.center();
-      
+
       // Create material for the text
-      const material = new THREE.MeshStandardMaterial({ 
+      const material = new THREE.MeshStandardMaterial({
         color: this.config.textColor,
         transparent: true,
         opacity: this.config.opacity
       });
-      
+
       const mesh = new THREE.Mesh(geometry, material);
       mesh.name = item.toString();
       // Calculate or assign default values for x, y, and z
@@ -129,7 +134,7 @@ export class Carousel3DPro extends Group {
       const z = 0; // Default or calculated z-coordinate
       mesh.position.set(x, y, z);
       this.itemGroup.add(mesh);
-      
+
       // Position in cylinder arrangement
       const angle = angleStep * index;
       mesh.position.x = this.cylinderRadius * Math.sin(angle);
@@ -137,10 +142,10 @@ export class Carousel3DPro extends Group {
 
       // Make each item face outward
       mesh.rotation.y = Math.atan2(mesh.position.x, mesh.position.z);
-      
+
       // Store original scale in userData
       mesh.userData.originalScale = new THREE.Vector3().copy(mesh.scale);
-      
+
       // Add hit area for better click detection
       const textWidth = geometry.boundingBox.max.x - geometry.boundingBox.min.x;
       const textHeight = geometry.boundingBox.max.y - geometry.boundingBox.min.y;
@@ -150,7 +155,7 @@ export class Carousel3DPro extends Group {
       const hitAreaDepth = 0.5; // Deeper for better 3D hit detection
 
       const hitAreaGeometry = new THREE.BoxGeometry(hitAreaWidth, hitAreaHeight, hitAreaDepth);
-      const hitAreaMaterial = new THREE.MeshBasicMaterial({ 
+      const hitAreaMaterial = new THREE.MeshBasicMaterial({
         color: 0x00ff00, // Use a visible color for debugging, then set to transparent
         transparent: true,
         opacity: 0.01 // Nearly invisible in production
@@ -170,30 +175,33 @@ export class Carousel3DPro extends Group {
       this.itemMeshes.push(mesh);
       this.itemGroup.add(mesh);
     });
-    
+
+    // Maintain a flat array of clickable objects
+    this.clickableObjects = this.itemMeshes.map(mesh => mesh.userData.hitArea).filter(Boolean);
+
     if (this.itemMeshes.length > 0) {
       this.selectItem(0, false); // Select first item without animation or preview
       // Don't create floating preview automatically
     }
   }
-  
+
   selectItem(index, animate = true) {
     if (index < 0 || index >= this.itemMeshes.length || this.isAnimating) return;
-    
+
     this.isAnimating = animate;
     this.currentIndex = index;
-    
+
     // Remove selection from all items
     this.itemMeshes.forEach(mesh => {
       mesh.userData.isSelected = false;
-      mesh.material = new THREE.MeshStandardMaterial({ 
+      mesh.material = new THREE.MeshStandardMaterial({
         color: this.config.textColor,
         transparent: true,
         opacity: this.config.opacity
       });
-      
+
       if (animate) {
-        gsap.to(mesh.scale, { 
+        gsap.to(mesh.scale, {
           x: mesh.userData.originalScale.x,
           y: mesh.userData.originalScale.y,
           z: mesh.userData.originalScale.z,
@@ -203,29 +211,29 @@ export class Carousel3DPro extends Group {
         mesh.scale.copy(mesh.userData.originalScale);
       }
     });
-    
+
     // Apply selection to current item
     const selectedMesh = this.itemMeshes[index];
     selectedMesh.userData.isSelected = true;
-    
+
     // Apply glow material
     const glowMaterial = getGlowShaderMaterial();
     glowMaterial.uniforms.glowColor.value = new THREE.Color(this.config.glowColor);
     selectedMesh.material = glowMaterial;
-    
+
     if (animate) {
-      gsap.to(selectedMesh.scale, { 
+      gsap.to(selectedMesh.scale, {
         x: selectedMesh.userData.originalScale.x * 1.2,
         y: selectedMesh.userData.originalScale.y * 1.2,
         z: selectedMesh.userData.originalScale.z * 1.2,
         duration: 0.3,
         onComplete: () => { this.isAnimating = false; }
       });
-      
+
       // Rotate carousel to face the selected item
       const angleStep = (2 * Math.PI) / this.items.length;
       this.targetRotation = index * angleStep;
-      
+
       gsap.to(this.itemGroup.rotation, {
         y: this.targetRotation,
         duration: 0.8,
@@ -240,38 +248,54 @@ export class Carousel3DPro extends Group {
       this.isAnimating = false;
     }
   }
-  
+
   setupEventListeners() {
     if (typeof window === 'undefined') return;
-    
+
+    // Add detailed raycaster logging and force selection of clicked item
     const handleClick = (event) => {
+      if (!this.parent?.userData?.camera) return;
+
       const mouse = new THREE.Vector2(
         (event.clientX / window.innerWidth) * 2 - 1,
         -(event.clientY / window.innerHeight) * 2 + 1
       );
 
-      // Safety check for camera
-      if (this.parent?.userData?.camera) {
-        this.raycaster.setFromCamera(mouse, this.parent.userData.camera);
-        const intersects = this.raycaster.intersectObjects(this.itemMeshes, true);
-        
-        if (intersects.length > 0) {
-          const clickedObject = intersects[0].object;
-          const index = this.itemMeshes.indexOf(clickedObject);
-          if (index !== -1) {
-            this.selectItem(index);
-            
-            // Call the onItemClick callback if defined
-            if (typeof this.onItemClick === 'function') {
-              this.onItemClick(index, this.items[index]);
-            }
-          }
+      this.raycaster.setFromCamera(mouse, this.parent.userData.camera);
+
+      // Use this array for raycasting
+      const intersects = this.raycaster.intersectObjects(this.clickableObjects, false);
+
+      console.group('🔍 Raycaster Debugging');
+      console.log('Mouse Position:', mouse);
+      console.log('Intersected Objects:', intersects);
+
+      if (intersects.length > 0) {
+        const hitObject = intersects[0].object;
+        const hitData = hitObject.userData;
+
+        console.log('Hit Object:', hitObject);
+        console.log('Hit Data:', hitData);
+
+        if (hitData && typeof hitData.index === 'number') {
+          console.log(`🎯 Selecting clicked item at index ${hitData.index}`);
+          this.selectItem(hitData.index, true);
+          this.userData.intendedClickIndex = hitData.index;
+        } else {
+          console.warn('⚠️ Hit object does not have valid userData or index.');
         }
+      } else {
+        console.warn('⚠️ No objects intersected by raycaster.');
       }
+
+      console.groupEnd();
     };
 
     window.addEventListener('click', handleClick);
-    
+
+    // Add wheel event listener
+    window.addEventListener('wheel', this.handleWheel.bind(this), { passive: false });
+
     // Add custom event listener for mainmenu-scroll
     window.addEventListener('mainmenu-scroll', (e) => {
       const delta = e.detail.delta;
@@ -282,16 +306,16 @@ export class Carousel3DPro extends Group {
       }
     });
   }
-  
+
   handleWheel(event) {
     // Prevent default scroll behavior (i.e., page scroll)
     event.preventDefault();
 
     // Skip processing if animation is in progress
     if (this.isAnimating) return;
-    
+
     const scrollAmount = event.deltaY > 0 ? 1 : -1;
-    
+
     // Use scrollAmount to rotate or navigate
     if (scrollAmount > 0) {
       this.goToNext();
@@ -299,7 +323,7 @@ export class Carousel3DPro extends Group {
       this.goToPrev();
     }
   }
-  
+
   update() {
     // Smooth rotation of the carousel with more inertia feel
     if (!this.isAnimating) {
@@ -315,139 +339,148 @@ export class Carousel3DPro extends Group {
         this.itemGroup.rotation.y = this.targetRotation;
       }
     }
-    
+
     // Update glow effects if needed
     this.itemMeshes.forEach(mesh => {
       if (mesh.userData.isSelected && mesh.material.uniforms) {
         mesh.material.uniforms.time.value = performance.now() * 0.001;
       }
     });
+
+    // Example state transition
+    if (this.state === 'idle') {
+      this.state = 'transitioning';
+      // Perform transition logic
+      setTimeout(() => {
+        this.state = 'idle';
+      }, 300); // Transition duration
+    }
   }
-  
+
   // Add a new method to handle continuous spinning via mouse wheel
   spin(deltaAngle) {
     if (this.isAnimating) return;
-    
+
     // Add the rotation directly to the target
     this.targetRotation += deltaAngle;
-    
+
     // Don't set isAnimating flag to allow smooth continuous spinning
   }
-  
+
   // Add a method to figure out which item is at the front based on rotation
   updateCurrentItemFromRotation() {
     if (!this.itemMeshes.length) return;
-    
+
     const angleStep = (2 * Math.PI) / this.items.length;
     const currentRotation = this.itemGroup.rotation.y;
-    
+
     // Normalize rotation to get a value between 0 and 2π
     let normalizedRotation = currentRotation % (2 * Math.PI);
     if (normalizedRotation < 0) normalizedRotation += 2 * Math.PI;
-    
+
     // Calculate which index is at the front (3 o'clock position)
     // First get the raw index based on rotation
     const rawIndex = Math.round(normalizedRotation / angleStep);
-    
+
     // REVERSE THE ORDER: Subtract from total items to reverse the direction
     // This makes the highlight move in the opposite direction of the wheel rotation
     const indexFromRotation = (this.items.length - rawIndex) % this.items.length;
-    
+
     // If we have a new front item, update it
     if (indexFromRotation !== this.currentIndex) {
       // Deselect the current item
       this.itemMeshes.forEach(mesh => {
         if (mesh.userData.isSelected) {
           mesh.userData.isSelected = false;
-          
+
           // Reset material
           mesh.material = new THREE.MeshStandardMaterial({
             color: this.config.textColor,
             transparent: true,
             opacity: this.config.opacity
           });
-          
+
           // Reset scale
           mesh.scale.copy(mesh.userData.originalScale);
         }
       });
-      
+
       // Select the new item
       const newSelectedMesh = this.itemMeshes[indexFromRotation];
       newSelectedMesh.userData.isSelected = true;
-      
+
       // Apply glow material
       const glowMaterial = getGlowShaderMaterial();
       glowMaterial.uniforms.glowColor.value = new THREE.Color(this.config.glowColor);
       newSelectedMesh.material = glowMaterial;
-      
+
       // Scale up
       newSelectedMesh.scale.set(
         newSelectedMesh.userData.originalScale.x * 1.2,
         newSelectedMesh.userData.originalScale.y * 1.2,
         newSelectedMesh.userData.originalScale.z * 1.2
       );
-      
+
       // Update current index
       this.currentIndex = indexFromRotation;
     }
   }
-  
+
   // Public API methods
   goToNext() {
     if (this.isAnimating) return;
-    
+
     this.isAnimating = true;
     const nextIndex = (this.currentIndex + 1) % this.items.length;
-    
+
     // Calculate rotation amount - smooth transition
     const segmentAngle = (2 * Math.PI) / this.items.length;
     this.targetRotation = this.itemGroup.rotation.y - segmentAngle;
-    
+
     // Animate with smoother, more controlled motion and gentle snap
     gsap.to(this.itemGroup.rotation, {
       y: this.targetRotation,
-      duration: 0.5, 
+      duration: 0.5,
       ease: "back.out(1.2)", // Add gentle snap-to effect
       onComplete: () => {
         this.currentIndex = nextIndex;
         this.isAnimating = false;
       }
     });
-    
+
     // Highlight new item
     this.selectItem(nextIndex, true);
   }
-  
+
   goToPrev() {
     if (this.isAnimating) return;
-    
+
     this.isAnimating = true;
     const prevIndex = (this.currentIndex - 1 + this.items.length) % this.items.length;
-    
+
     // Calculate rotation amount - smooth transition
     const segmentAngle = (2 * Math.PI) / this.items.length;
     this.targetRotation = this.itemGroup.rotation.y + segmentAngle;
-    
+
     // Animate with smoother, more controlled motion and gentle snap
     gsap.to(this.itemGroup.rotation, {
       y: this.targetRotation,
-      duration: 0.5, 
+      duration: 0.5,
       ease: "back.out(1.2)", // Add gentle snap-to effect
       onComplete: () => {
         this.currentIndex = prevIndex;
         this.isAnimating = false;
       }
     });
-    
+
     // Highlight new item
     this.selectItem(prevIndex, true);
   }
-  
+
   getCurrentItem() {
     return this.items[this.currentIndex];
   }
-  
+
   resize() {
     // Update for responsive layout
     // This would be called by the parent component when window resizes
