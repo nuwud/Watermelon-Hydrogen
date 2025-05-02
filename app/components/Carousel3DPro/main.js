@@ -11,6 +11,7 @@ import {
     lightTheme,
 } from './CarouselStyleConfig.js';
 import gsap from 'gsap';
+import { getItemAngles } from '../../utils/carouselAngleUtils.js';
 
 /**
  * Sets up a 3D carousel instance and mounts it to the provided container
@@ -410,8 +411,15 @@ export function setupCarousel(container) {
             }
 
             // Pass carousel instance in config
-            const submenuConfig = { ...currentTheme, carousel }; // Create a new submenu instance with the current theme and carousel reference
-            const submenu = new Carousel3DSubmenu(mesh, submenuItems || [], submenuConfig); // Use fallback if needed
+            // const submenuConfig = { ...currentTheme, carousel }; // Create a new submenu instance with the current theme and carousel reference
+            // const submenu = new Carousel3DSubmenu(mesh, submenuItems || [], submenuConfig); // Use fallback if needed
+
+            const angles = getItemAngles((submenuItems || []).length);
+            const submenu = new Carousel3DSubmenu(mesh, submenuItems || [], {
+              ...currentTheme,
+              carousel,
+              angles, // 👈 pass angle list
+            });
 
             // ---> INJECT SCENE AND CAMERA HERE <---
             if (scene) { // Check if scene is defined
