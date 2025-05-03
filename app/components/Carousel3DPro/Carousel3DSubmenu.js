@@ -974,6 +974,9 @@ export class Carousel3DSubmenu extends THREE.Group { // Class definition for Car
       }
     }
 
+    const angleOffsetFromParent = this.parentItem?.parent?.rotation?.y || 0;
+    this.targetAngle = -this.itemAngles[index] + angleOffsetFromParent;
+
     // Select new
     const selectedContainer = this.itemMeshes[index]; // Get the container for the newly selected item
     const selectedMesh = selectedContainer.userData.mesh; // Get the mesh for the newly selected item
@@ -1025,13 +1028,16 @@ export class Carousel3DSubmenu extends THREE.Group { // Class definition for Car
       }
 
       // Position the item at the front (3 o'clock position)
+      // Adjust rotation so selected item faces 3 o'clock, assuming front is offset by π/2
+      const outwardOffset = Math.PI / 2; // tweak this based on visual testing
       // The value 0 corresponds to the 3 o'clock position
-      this.targetRotation = -selectedContainer.userData.angle + 0;
+      this.targetRotation = -selectedContainer.userData.angle + outwardOffset; // Set target rotation to face the selected item at 3 o'clock position
       this.targetRotationLocked = true; // <<< BONUS FIX: Lock targetRotation
       this.isTransitioning = true; // <<< SET TRANSITION FLAG
       this.selectItemLock = true; // <<< FIX 1: Lock before animation starts
       this.forceSelectLock = true; // 2. Set lock before animation
       this.ignoreHighlightOverride = true; // prevent hijack during GSAP
+      
 
       gsap.to(this.itemGroup.rotation, { // Animate rotation to target position
         x: this.targetRotation, // Rotate to the target position
