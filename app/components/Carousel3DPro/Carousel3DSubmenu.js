@@ -1,5 +1,5 @@
 /**
- * Class that creates and manages a D submenu cylinder that spawns from a parent carousel item.
+ * Class that creates and manages a 3D submenu cylinder that spawns from a parent carousel item.
  * When a user selects an item in the parent Carousel3DPro, this component creates a submenu that
  * rotates its items in a cylindrical formation.
  * 
@@ -151,7 +151,6 @@ export class Carousel3DSubmenu extends THREE.Group { // Class definition for Car
     this.parentItem = parentItem; // Reference to the parent item this submenu is attached to
     this.items = items; // Array of items to display in the submenu
     this.config = config; // Configuration options for the submenu
-    this.itemAngles = config.angles; // Store the pre-calculated angles
     this.itemMeshes = []; // Array to hold THREE.Group containers for each item
     this.currentIndex = 0; // Currently selected item index
     this.watermillRadius = 1.2; // Radius of the submenu cylinder
@@ -186,10 +185,9 @@ export class Carousel3DSubmenu extends THREE.Group { // Class definition for Car
 
       // Position wheel so first item is at front
       if (this.itemMeshes.length > 0) { // Check if there are items created
-        // Position wheel so first item is at front (3 o'clock)
-        const firstItemAngle = this.itemAngles ? this.itemAngles[0] : 0; // Use pre-calculated angle or default to 0
-        this.itemGroup.rotation.x = -firstItemAngle + 0; // Position the item at the front (3 o'clock position)
-        this.targetRotation = this.itemGroup.rotation.x; // Set target rotation immediately
+        const firstItem = this.itemMeshes[0]; // Get the first item mesh
+        this.itemGroup.rotation.x = -firstItem.userData.angle + 0; // Set rotation to position first item at front
+        this.targetRotation = this.itemGroup.rotation.x; // Set target rotation to match
       }
     } else {
       // Load font if not cached
@@ -201,10 +199,9 @@ export class Carousel3DSubmenu extends THREE.Group { // Class definition for Car
 
         // Position wheel
         if (this.itemMeshes.length > 0) { // Check if there are items created
-          // Position wheel so first item is at front (3 o'clock)
-          const firstItemAngle = this.itemAngles ? this.itemAngles[0] : 0; // Use pre-calculated angle or default to 0
-          this.itemGroup.rotation.x = -firstItemAngle + 0; // Position the item at the front (3 o'clock position)
-          this.targetRotation = this.itemGroup.rotation.x; // Set target rotation immediately
+          const firstItem = this.itemMeshes[0]; // Get the first item mesh
+          this.itemGroup.rotation.x = -firstItem.userData.angle + 0; // Set rotation to position first item at front
+          this.targetRotation = this.itemGroup.rotation.x; // Set target rotation to match
         }
       });
     }
@@ -632,7 +629,7 @@ export class Carousel3DSubmenu extends THREE.Group { // Class definition for Car
 
       // Position around the parent
       //const angle = angleStep * index;
-      const angle = this.itemAngles ? this.itemAngles[index] : (index / this.items.length) * (Math.PI * 2); // Use pre-calculated angle or fallback
+      const angle = (index / this.items.length) * (Math.PI * 2); // Calculate angle for positioning
       //container.userData.angle = angle;
 
       // Position in a circle around the parent
@@ -644,10 +641,10 @@ export class Carousel3DSubmenu extends THREE.Group { // Class definition for Car
         index, // Store the index of the item
         isSubmenuItem: true, // Flag to identify submenu items
         item, // Store the item name
-        angle, // Use the determined angle
+        angle, // Store the calculated angle for positioning
         mesh, // Store the actual mesh for this item
         hitArea, // Store the hit area mesh for this item
-        originalAngle: angle, // Store the determined angle as originalAngle
+        originalAngle: angle, // Store the original angle for reference
         springVelocity: 0, // Store initial spring velocity
         springTarget: 0, // Store initial spring target
         springStrength: 0.1, // Store initial spring strength
@@ -974,9 +971,6 @@ export class Carousel3DSubmenu extends THREE.Group { // Class definition for Car
       }
     }
 
-    const angleOffsetFromParent = this.parentItem?.parent?.rotation?.y || 0;
-    this.targetAngle = -this.itemAngles[index] + angleOffsetFromParent;
-
     // Select new
     const selectedContainer = this.itemMeshes[index]; // Get the container for the newly selected item
     const selectedMesh = selectedContainer.userData.mesh; // Get the mesh for the newly selected item
@@ -1028,16 +1022,13 @@ export class Carousel3DSubmenu extends THREE.Group { // Class definition for Car
       }
 
       // Position the item at the front (3 o'clock position)
-      // Adjust rotation so selected item faces 3 o'clock, assuming front is offset by π/2
-      const outwardOffset = Math.PI / 2; // tweak this based on visual testing
       // The value 0 corresponds to the 3 o'clock position
-      this.targetRotation = -selectedContainer.userData.angle + outwardOffset; // Set target rotation to face the selected item at 3 o'clock position
+      this.targetRotation = -selectedContainer.userData.angle + 0;
       this.targetRotationLocked = true; // <<< BONUS FIX: Lock targetRotation
       this.isTransitioning = true; // <<< SET TRANSITION FLAG
       this.selectItemLock = true; // <<< FIX 1: Lock before animation starts
       this.forceSelectLock = true; // 2. Set lock before animation
       this.ignoreHighlightOverride = true; // prevent hijack during GSAP
-      
 
       gsap.to(this.itemGroup.rotation, { // Animate rotation to target position
         x: this.targetRotation, // Rotate to the target position
@@ -1535,7 +1526,7 @@ export class Carousel3DSubmenu extends THREE.Group { // Class definition for Car
                   y: Math.PI * 2, // One full rotation
                   x: Math.PI * 0.8, // Tilt for geodesic path
                   z: Math.PI * 0.5, // Roll for geodesic path
-                  duration: 1.0, // 
+                  duration: 1.0, // Exactly 1 second
                   ease: "power1.inOut" // Smooth acceleration and deceleration
                 })
                 .to(frontIcon.rotation, { 
