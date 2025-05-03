@@ -1,4 +1,112 @@
+/**
+ * Sets up an interactive 3D carousel with Three.js and mounts it to a DOM container.
+ * This creates a complete carousel system with main items and nested submenus.
+ * 
+ * @param {HTMLElement} container - DOM element to mount the Three.js canvas to
+ * @returns {Object} Control interface for the carousel
+ * @returns {Object} .carousel - Reference to the main Carousel3DPro instance
+ * @returns {THREE.Scene} .scene - Reference to the Three.js scene
+ * @returns {THREE.Camera} .camera - Reference to the Three.js camera
+ * @returns {THREE.WebGLRenderer} .renderer - Reference to the Three.js renderer
+ * @returns {Function} .nextItem - Function to navigate to the next carousel item
+ * @returns {Function} .prevItem - Function to navigate to the previous carousel item
+ * @returns {Function} .toggleTheme - Function to cycle through available themes
+ * @returns {Function} .closeSubmenu - Function to manually close any active submenu
+ * @returns {Function} .dispose - Function to clean up all resources and event listeners
+ * 
+ * @example
+ * const container = document.getElementById('carousel-container');
+ * const carouselControls = setupCarousel(container);
+ * 
+ * // Navigate carousel
+ * carouselControls.nextItem();
+ * 
+ * // Clean up when done
+ * carouselControls.dispose();
+ */
 // app/components/Carousel3DPro/main.js
+/**
+ * @AI-PROMPT
+ * This file manages the parent–submenu interaction flow.
+ * It listens for carousel clicks, spawns submenus, injects camera/scene, and calls `.selectItem()` on submenus.
+ *
+ * 🚨 IMPORTANT
+ * This file is critical for ensuring submenu state is managed correctly.
+ * It must:
+ * - Prevent submenu state hijacks by coordinating locked index setting and correct input propagation.
+ * 
+ * 🧠 ROLE:
+ * This file orchestrates the overall 3D interface:
+ * - Injects Three.js scene and camera into submenu instances.
+ * - Spawns and disposes submenus in response to user clicks.
+ * - Binds parent carousel (`Carousel3DPro`) to submenu logic.
+ *
+ * 🖱️ EVENT PIPELINE:
+ * 1. User clicks parent item → `handleCarouselClick()`
+ * 2. Spawns submenu → `spawnSubmenuAsync(parentItem)`
+ * 3. Sets submenu with scene, camera → `submenu.show()`
+ * 4. Calls `submenu.selectItem(index)` with clicked submenu index
+ *
+ * 🧩 SPECIAL NOTES:
+ * - Rotation bugs often originate here by miscalculating `index` or allowing menu override.
+ * - `handleCarouselClick()` is the main entry point for submenu interaction.
+ * - Avoid referencing submenuItems before they are defined.
+ *
+ * 🔍 DEPENDENCIES:
+ * - Carousel3DSubmenu.js → show(), selectItem(), dispose()
+ * - Carousel3DPro.js → provides parentItem, rotation
+ *
+ * ✅ GOAL:
+ * Prevent submenu state hijacks by coordinating locked index setting and correct input propagation.
+ * - When a carousel item is clicked, spawn a submenu with items centered around it.
+ * - Ensure the submenu always highlights the clicked index at the 3 o’clock position.
+ * 
+ * 🔧 KEY INTERACTIONS:
+ * - `spawnSubmenuAsync(index)` → creates and positions submenu based on parent item rotation
+ * - `handleCarouselClick()` → relays click index to submenu’s `.selectItem(index)`
+ *
+ * 🔁 RISK:
+ * - If the submenu overrides the `currentIndex` visually (e.g., via `update()`), the click highlight may be lost.
+ * - Ensure `forceLockedIndex` or similar guards are respected in submenu.
+ *
+ * ✅ CONTEXT:
+ * This file is part of a custom 3D menu system using Three.js for Shopify Hydrogen (WatermelonOS).
+ * The system includes a parent carousel (main ring), and nested submenus (submenu ring).
+ * Each submenu pops out of a selected parent item and must:
+ * - Always highlight the *clicked* item.
+ * - Rotate so that the clicked item lands at the 3 o’clock (front-facing) position.
+ * - Avoid flipping, skipping, or overriding state due to visual alignment mismatches.
+ *
+ * 🚨 IMPORTANT CONSIDERATIONS:
+ * - Do NOT override currentIndex during animations unless forceLockedIndex is null.
+ * - Items are laid out in clockwise rotation using angles from `carouselAngleUtils.js`.
+ * - Rotation logic must resolve based on index, not just angle.
+ * - Rotation direction may be counterclockwise but should result in correct alignment.
+ * - `selectItem()` is the only safe place to set `currentIndex` intentionally.
+ * - `update()` and `updateFrontItemHighlight()` may override state unintentionally — guard them!
+ *
+ * 🔁 WORK IN PROGRESS:
+ * - Replace all “angle-based guessing” with an index-based locking mechanism.
+ * - Visual snap-to-rotation must feel smooth, not teleporting.
+ * - Optional utility `getItemAngles(itemCount)` from `carouselAngleUtils.js` is available.
+ *
+ * 🧠 DEV STYLE:
+ * Patrick (Nuwud) prefers full function rewrites, strong guardrails, and traceable debug logs.
+ * The goal is stability, clarity, and modularity — this is a *real* production UI, not a demo.
+ *
+ * 🛠️ KEY METHODS INVOLVED:
+ * - selectItem(index, options)
+ * - getFrontItemIndex()
+ * - update()
+ * - updateFrontItemHighlight()
+ * - createItems()
+ *
+ * 🧩 Primary file interactions:
+ * - Carousel3DSubmenu.js (submenu logic)
+ * - main.js (instantiates submenus, injects camera/scene, handles clicks)
+ * - Carousel3DPro.js (handles parent carousel logic)
+ * - carouselAngleUtils.js (source of angle map or angle calculation per index)
+ */
 
 import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
@@ -18,7 +126,7 @@ import { getItemAngles } from '../../utils/carouselAngleUtils.js';
  * @param {HTMLElement} container - DOM element to mount the canvas to
  * @returns {Object} - carousel controls and diagnostics
  */
-export function setupCarousel(container) {
+export function setupCarousel(container) { 
 
     if (typeof window === 'undefined') return null; // Ensure we're in a browser environment
 
@@ -37,7 +145,7 @@ export function setupCarousel(container) {
     function waitForWindowWM(id, maxRetries = 30) { // Function to wait for window.__wm__ to be ready
         let retries = 0; // Initialize retry count
         // Clear any existing interval before starting a new one
-        if (wmCheckIntervalId) {
+        if (wmCheckIntervalId) { 
             clearInterval(wmCheckIntervalId); // Reset the ID
         }
         wmCheckIntervalId = setInterval(() => { // Check if window.__wm__ is ready
@@ -57,7 +165,7 @@ export function setupCarousel(container) {
         }, 100); // check every 100ms 
     }
 
-    const scene = new THREE.Scene();
+    const scene = new THREE.Scene(); // Create a new Three.js scene
     let currentTheme = defaultCarouselStyle; // Initialize with default theme
     scene.background = new THREE.Color(currentTheme.backgroundColor); // Set initial background color
 
@@ -206,12 +314,12 @@ export function setupCarousel(container) {
             if (activeSubmenu) { // If a submenu is active
                 const direction = touchStartY < event.changedTouches[0].clientY ? -1 : 1;
                 // Apply momentum scrolling to submenu
-                activeSubmenu.scrollSubmenu(direction);
-            } else {
+                activeSubmenu.scrollSubmenu(direction); // Invert for natural feel
+            } else { // If no submenu is active
                 const direction = touchStartX < event.changedTouches[0].clientX ? 1 : -1;
                 // Apply momentum to carousel
                 const angleStep = (2 * Math.PI) / items.length; // Calculate angle step based on number of items    
-                carousel.spin(direction * angleStep);
+                carousel.spin(direction * angleStep); // Direction feels natural
             }
         }
     };
@@ -721,37 +829,37 @@ export function setupCarousel(container) {
     animate(); // Start the animation loop
 
     // Add debug logging to track submenu front-facing logic
-    function debugSubmenuFrontFacing(submenu) {
-        if (!submenu || !submenu.itemMeshes) return;
+    function debugSubmenuFrontFacing(submenu) { // Check if submenu is defined and has itemMeshes
+        if (!submenu || !submenu.itemMeshes) return; // Check if submenu is defined and has itemMeshes
 
-        console.group('🔍 Submenu Front-Facing Debugging');
-        submenu.itemMeshes.forEach((container, index) => {
-            if (!container || !container.userData) return;
+        console.group('🔍 Submenu Front-Facing Debugging'); 
+        submenu.itemMeshes.forEach((container, index) => { // Loop through each item mesh in the submenu
+            if (!container || !container.userData) return; // Check if container is defined and has userData
 
-            const originalAngle = container.userData.originalAngle;
-            const currentRotation = submenu.itemGroup.rotation.x;
-
+            const originalAngle = container.userData.originalAngle; // Get the original angle from userData
+            const currentRotation = submenu.itemGroup.rotation.x; // Get the current rotation of the item group
+ 
             // Calculate effective angle
-            let effectiveAngle = (originalAngle + currentRotation) % (Math.PI * 2);
-            if (effectiveAngle < 0) effectiveAngle += Math.PI * 2;
+            let effectiveAngle = (originalAngle + currentRotation) % (Math.PI * 2); // Normalize the effective angle to be within [0, 2π)
+            if (effectiveAngle < 0) effectiveAngle += Math.PI * 2; // Ensure effectiveAngle is positive
 
             // Calculate distance to front (0 radians)
-            const angleDiff = Math.min(
-                effectiveAngle,
-                Math.abs(Math.PI * 2 - effectiveAngle)
+            const angleDiff = Math.min( 
+                effectiveAngle, // Distance to 0 radians
+                Math.abs(Math.PI * 2 - effectiveAngle) // Distance to 2π radians
             );
 
-            console.log(`Item ${index}: originalAngle=${originalAngle.toFixed(2)}, effectiveAngle=${effectiveAngle.toFixed(2)}, angleDiff=${angleDiff.toFixed(2)}`);
+            console.log(`Item ${index}: originalAngle=${originalAngle.toFixed(2)}, effectiveAngle=${effectiveAngle.toFixed(2)}, angleDiff=${angleDiff.toFixed(2)}`); // Debug log the angles and distance to front
         });
-        console.groupEnd();
+        console.groupEnd(); // End the debug group
     }
 
     // Call debugSubmenuFrontFacing after submenu updates
-    const originalSubmenuUpdate = activeSubmenu?.update;
-    if (originalSubmenuUpdate) {
-        activeSubmenu.update = function () {
-            originalSubmenuUpdate.call(this);
-            debugSubmenuFrontFacing(this);
+    const originalSubmenuUpdate = activeSubmenu?.update; // Store the original update method if it exists
+    if (originalSubmenuUpdate) { // Check if the original update method exists
+        activeSubmenu.update = function () { // Call the original update method if it exists
+            originalSubmenuUpdate.call(this); // Call the original update method
+            debugSubmenuFrontFacing(this); // Call the debug function after the original update
         };
     }
 
@@ -792,17 +900,17 @@ export function setupCarousel(container) {
         // Phase 3: Kill Active GSAP Animations
         console.warn("Killing GSAP animations..."); // Debug log
         if (carousel?.itemGroup) { // Check if carousel.itemGroup exists
-            gsap.killTweensOf(carousel.itemGroup); // 
+            gsap.killTweensOf(carousel.itemGroup);
         }
         if (activeSubmenu) {
             gsap.killTweensOf(activeSubmenu); // Kill tweens targeting the submenu object itself
             // Also kill tweens targeting children if necessary (e.g., items, close button)
-            activeSubmenu.children.forEach(child => gsap.killTweensOf(child)); // 
-            if (activeSubmenu.floatingPreview) {
-                gsap.killTweensOf(activeSubmenu.floatingPreview);
+            activeSubmenu.children.forEach(child => gsap.killTweensOf(child));
+            if (activeSubmenu.floatingPreview) { // Check if the submenu has a floating preview
+                gsap.killTweensOf(activeSubmenu.floatingPreview); // Kill floating
                 gsap.killTweensOf(activeSubmenu.floatingPreview.scale); // Kill specific property tweens if needed
             }
-            if (activeSubmenu.closeButton) {
+            if (activeSubmenu.closeButton) { // Check if the submenu has a close button
                 gsap.killTweensOf(activeSubmenu.closeButton.material); // Kill material tweens
                 gsap.killTweensOf(activeSubmenu.closeButton.scale); // Kill scale
             }
@@ -815,10 +923,10 @@ export function setupCarousel(container) {
         console.warn("Disposing Three.js objects..."); // Debug log
         if (activeSubmenu) {
             // Ensure GSAP tweens targeting the submenu are killed *before* disposal
-            gsap.killTweensOf(activeSubmenu);
+            gsap.killTweensOf(activeSubmenu); 
             activeSubmenu.children.forEach(child => gsap.killTweensOf(child)); // Kill children tweens too
             if (activeSubmenu.floatingPreview) gsap.killTweensOf(activeSubmenu.floatingPreview); // Kill floating
-            if (activeSubmenu.closeButton) gsap.killTweensOf(activeSubmenu.closeButton.material);
+            if (activeSubmenu.closeButton) gsap.killTweensOf(activeSubmenu.closeButton.material); // Kill close button material tweens
 
             activeSubmenu.dispose?.(); // Call the dispose method if it exists
             scene.remove(activeSubmenu); // Remove the submenu from the scene
