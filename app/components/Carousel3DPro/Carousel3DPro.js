@@ -74,10 +74,39 @@ import { defaultCarouselStyle } from './CarouselStyleConfig.js' // Import defaul
 // import { getHomeAngleRadians } from '@/utils/homePositionUtils';
 //import { raycaster, camera, scene } from 'three';
 //import { gsap } from 'gsap';
-// Access GSAP from the global scope
-const gsap = typeof window !== 'undefined' ? window.gsap : undefined; // Ensure GSAP is available in the browser context
+// Access GSAP from the global scope// Ensure GSAP is available in the browser context
+const gsap = typeof window !== 'undefined' && window.gsap ? window.gsap : null;
+console.log('GSAP availability check:', gsap ? 'Available' : 'Not available');
+// const gsap = typeof window !== 'undefined' ? window.gsap : undefined; // Ensure GSAP is available in the browser context
 // Core structure and update logic here
-export class Carousel3DPro extends Group { // Carousel3DPro class extends Three.js Group to create a 3D carousel
+export class Carousel3DPro extends Group { // Carousel3DPro class extends Three.js Group to create a 3D carousel 
+  /**
+   * @description Constructor for the Carousel3DPro class. Initializes the 3D carousel component,
+   *              setting up items, configuration, internal state, and event handling.
+   * @param {Array} [items=[]] - An array of items to be displayed in the carousel. Each item's structure
+   *                             depends on how `createItems` processes it.
+   * @param {object} [config={}] - Configuration object for the carousel. This object is merged with
+   *                               `defaultCarouselStyle` to customize appearance and behavior.
+   *                               Properties may include `debug`, styling options, etc.
+   * @property {Array} items - Stores the raw data for the items provided to the carousel.
+   * @property {object} config - The merged configuration object, combining defaults and user-provided settings.
+   * @property {Array<THREE.Mesh>} itemMeshes - An array holding the Three.js Mesh objects created for each item.
+   * @property {number} currentIndex - The index of the item currently considered "selected" or centered.
+   * @property {number} targetRotation - The target Y-axis rotation angle for the `itemGroup` during animations.
+   * @property {number} rotationSpeed - The speed factor controlling how quickly the carousel rotates towards `targetRotation`.
+   * @property {number} cylinderRadius - The radius of the imaginary cylinder around which the items are arranged.
+   * @property {boolean} isAnimating - A flag indicating whether the carousel is currently undergoing a rotation animation.
+   * @property {THREE.Group} itemGroup - A Three.js Group containing all the `itemMeshes`, used for collective rotation.
+   * @property {THREE.Object3D} carouselCenter - An invisible anchor point at the carousel's center (0,0,0 relative to the Carousel3DPro group),
+   *                                            used as a reference for positioning and potentially for debug visualization. Stored also in `userData`.
+   * @property {?function(object, number)} onItemClick - A callback function to be executed when an item mesh is clicked.
+   *                                                     Receives the clicked item data and its index as arguments. Initially null.
+   * @property {?object} font - Holds the loaded font resource, typically used for creating text geometry on items. Initially null, loaded asynchronously.
+   * @property {THREE.Raycaster} raycaster - A Three.js Raycaster instance used for detecting intersections (clicks) with item meshes.
+   * @property {number} levelingSpeed - Controls the speed at which tilted items return to their upright orientation.
+   * @property {number} maxTilt - The maximum angle (in radians) an item can tilt away from its upright orientation.
+   * @property {string} state - Represents the current operational state of the carousel (e.g., 'idle', 'transitioning', 'selecting').
+   */
   constructor(items = [], config = {}) {
     super(); // Call the parent constructor to initialize the Group
     this.items = items; // Array of items to display in the carousel
@@ -108,8 +137,19 @@ export class Carousel3DPro extends Group { // Carousel3DPro class extends Three.
     // Callback for item clicks
     this.onItemClick = null; // Callback function to handle item clicks
     this.font = null; // Initialize font to null
+
+    // --- New properties for controlled highlight update ---
+    this.updateCallCount = 0; // Track number of update calls
+    this.updatesBeforeHighlightSync = 3; // Number of update calls to wait before syncing highlight from rotation
+    this.highlightSyncInitialized = false; // Flag to indicate if the initial sync is done
+    this.allowHighlightUpdateFromRotation = false; // Start as false, enabled after initial settling
+    this.lastInteractionType = 'idle'; // Track interaction type ('click', 'scroll', 'idle')
+
+
     this.loadFont().then(() => { // Load the font asynchronously
       this.createItems(); // Create items after the font is loaded
+      // Note: We no longer need the setTimeout here for allowHighlightUpdateFromRotation
+      // The logic will be moved to the update loop.
     });
     // Event listeners
     this.raycaster = new THREE.Raycaster(); // Initialize raycaster for handling click interactions
@@ -123,7 +163,7 @@ export class Carousel3DPro extends Group { // Carousel3DPro class extends Three.
   /**
    * Asynchronously loads a font using THREE.FontLoader.
    * Fetches the font file from '/helvetiker_regular.typeface.json'.
-   * Upon successful loading, it assigns the loaded font object to `this.font`.
+   * Upon successful loading, it assigns the loaded font object to `this.font`. 
    * Logs an error to the console if the font fails to load.
    * @async
    * @function loadFont
@@ -191,102 +231,172 @@ export class Carousel3DPro extends Group { // Carousel3DPro class extends Three.
  * @modifies this.clickableObjects - Populates this array with the created hit area meshes.
  * @sideEffects Calls `this.selectItem` if items are created. Creates multiple THREE.js objects (Geometries, Materials, Meshes).
  */
+  
+  /**
+   * Creates and arranges 3D text items in a cylindrical carousel layout.
+   * This method generates THREE.TextGeometry for each item in the `this.items` array,
+   * applies materials based on `this.config`, and positions them in a circle using `this.cylinderRadius`.
+   * It also creates larger, nearly invisible hit areas (THREE.BoxGeometry) for each text item
+   * to improve click/interaction detection. Both the text mesh and its corresponding hit area
+   * are added to `this.itemGroup`. References between the mesh and hit area, along with the item's
+   * index and original visual properties (scale, color), are stored in their respective `userData`.
+   * Finally, it attempts to restore the previously selected item index from `localStorage`
+   * (defaulting to 0 if not found or invalid) and calls `this.selectItem` to set the
+   * initial state of the carousel instantly (without animation).
+   *
+   * Assumes `this.font` has been loaded and `this.items`, `this.config`, `this.cylinderRadius`,
+   * `this.itemGroup`, `this.itemMeshes`, and `this.clickableObjects` are accessible properties of the class instance.
+   * Populates `this.itemMeshes` and `this.clickableObjects`.
+   *
+   * @memberof Carousel3DPro
+   * @returns {void}
+   */
   createItems() { // Create 3D text items for the carousel
     if (!this.font) return; // Ensure the font is loaded before creating items
+
     const angleStep = (2 * Math.PI) / this.items.length; // Calculate the angle step based on the number of items
+
     this.items.forEach((item, index) => { // Iterate over each item in the items array
+      // ... (existing code to create text geometry, material, mesh, and hitArea) ...
+
       // Create text geometry
-      const geometry = new TextGeometry(item.toString(), { // Create a new TextGeometry instance for the item
-        font: this.font, // Use the loaded font
-        size: 0.5, // Size of the text
-        height: 0.1, // Height of the text extrusion
-        depth: 0.1, // Depth of the text extrusion
-        curveSegments: 12, // Number of segments for curved text
-        bevelEnabled: true, // Enable beveling for the text
-        bevelThickness: 0.03, // Thickness of the bevel
-        bevelSize: 0.02, // Size of the bevel
-        bevelOffset: 0, // Offset of the bevel
-        bevelSegments: 5 // Number of segments for the bevel
-      }); // Create the text geometry with specified parameters
-      geometry.computeBoundingBox(); // Compute the bounding box of the geometry to center it properly
-      geometry.center(); // Center the geometry so that it is positioned correctly in the scene
+      const geometry = new TextGeometry(item.toString(), {
+        font: this.font,
+        size: 0.5,
+        height: 0.1,
+        depth: 0.1,
+        curveSegments: 12,
+        bevelEnabled: true,
+        bevelThickness: 0.03,
+        bevelSize: 0.02,
+        bevelOffset: 0,
+        bevelSegments: 5
+      });
+
+      geometry.computeBoundingBox();
+      geometry.center();
+
       // Create material for the text
-      const material = new THREE.MeshStandardMaterial({ // Create a new MeshStandardMaterial for the text
-        color: this.config.textColor, // Color of the text
-        transparent: true, // Enable transparency for the material
-        opacity: this.config.opacity // Opacity of the text material
-      }); // Set the opacity of the material based on the configuration
-      const mesh = new THREE.Mesh(geometry, material); // Create a new Mesh using the geometry and material
-      mesh.name = item.toString(); // Set the name of the mesh to the item string for easier debugging
+      const material = new THREE.MeshStandardMaterial({
+        color: this.config.textColor,
+        transparent: true,
+        opacity: this.config.opacity
+      });
+
+      const mesh = new THREE.Mesh(geometry, material);
+      mesh.name = item.toString();
+
       // Calculate or assign default values for x, y, and z
-      const x = 0; // Default or calculated x-coordinate
-      const y = 0; // Default or calculated y-coordinate
-      const z = 0; // Default or calculated z-coordinate
-      mesh.position.set(x, y, z); // Set the position of the mesh to the calculated or default coordinates
-      this.itemGroup.add(mesh); // Add the mesh to the item group
+      const x = 0;
+      const y = 0;
+      const z = 0;
+      mesh.position.set(x, y, z);
+
+      this.itemGroup.add(mesh);
+
       // Position in cylinder arrangement
-      const angle = angleStep * index; // Calculate the angle for this item based on its index
-      mesh.position.x = this.cylinderRadius * Math.sin(angle); // Set the x position based on the angle and cylinder radius
-      mesh.position.z = this.cylinderRadius * Math.cos(angle); // Set the z position based on the angle and cylinder radius
+      const angle = angleStep * index;
+      mesh.position.x = this.cylinderRadius * Math.sin(angle);
+      mesh.position.z = this.cylinderRadius * Math.cos(angle);
+
       // Make each item face outward
-      mesh.rotation.y = Math.atan2(mesh.position.x, mesh.position.z); // Rotate the mesh to face outward based on its position
-      // Store original scale in userData
-      mesh.userData.originalScale = new THREE.Vector3().copy(mesh.scale); // Store the original scale of the mesh in userData for later use
+      mesh.rotation.y = Math.atan2(mesh.position.x, mesh.position.z);
+
+      // Store original scale and color in userData
+      mesh.userData.originalScale = new THREE.Vector3().copy(mesh.scale);
+      mesh.userData.originalColor = material.color.clone(); // Store original color
+
       // Add hit area for better click detection
-      const textWidth = geometry.boundingBox.max.x - geometry.boundingBox.min.x; // Calculate the width of the text bounding box
-      const textHeight = geometry.boundingBox.max.y - geometry.boundingBox.min.y; // Calculate the height of the text bounding box
+      const textWidth = geometry.boundingBox.max.x - geometry.boundingBox.min.x;
+      const textHeight = geometry.boundingBox.max.y - geometry.boundingBox.min.y;
       const hitAreaWidth = textWidth * 1.5; // Much wider
       const hitAreaHeight = textHeight * 2; // Much taller
       const hitAreaDepth = 0.5; // Deeper for better 3D hit detection
-      const hitAreaGeometry = new THREE.BoxGeometry(hitAreaWidth, hitAreaHeight, hitAreaDepth); // Create a box geometry for the hit area
-      const hitAreaMaterial = new THREE.MeshBasicMaterial({ // Create a basic material for the hit area
+      const hitAreaGeometry = new THREE.BoxGeometry(hitAreaWidth, hitAreaHeight, hitAreaDepth);
+      const hitAreaMaterial = new THREE.MeshBasicMaterial({
         color: 0x00ff00, // Use a visible color for debugging, then set to transparent
-        transparent: true, // Enable transparency for the hit area material
+        transparent: true,
         opacity: 0.01 // Nearly invisible in production
-      }); // Set the opacity of the hit area material to make it nearly invisible
-      const hitArea = new THREE.Mesh(hitAreaGeometry, hitAreaMaterial); // Create a new Mesh for the hit area using the geometry and material
-      hitArea.position.copy(mesh.position); // Match the position of the text
-      hitArea.rotation.copy(mesh.rotation); // Match the rotation of the text
+      });
+
+      const hitArea = new THREE.Mesh(hitAreaGeometry, hitAreaMaterial);
+      hitArea.position.copy(mesh.position);
+      hitArea.rotation.copy(mesh.rotation);
+
       // Add hit area to the item group
-      this.itemGroup.add(hitArea); // Add the hit area mesh to the item group
+      this.itemGroup.add(hitArea);
+
       // Store hit area and mesh in userData for interaction
-      hitArea.userData = { index, mesh }; // Store the index and reference to the original mesh in userData for interaction
-      mesh.userData.hitArea = hitArea; // Store a reference to the hit area in the original mesh's userData
-      this.itemMeshes.push(mesh); // Add the original mesh to the itemMeshes array for later reference
-      this.itemGroup.add(mesh); // Add the original mesh to the item group
+      hitArea.userData = { index, mesh };
+      mesh.userData.hitArea = hitArea;
+
+      this.itemMeshes.push(mesh);
+      // Note: Mesh is already added to itemGroup above, adding it again here is redundant.
+      // this.itemGroup.add(mesh); // Remove this duplicate add
+
     });
+
     // Maintain a flat array of clickable objects
     this.clickableObjects = this.itemMeshes.map(mesh => mesh.userData.hitArea).filter(Boolean);
-    if (this.itemMeshes.length > 0) { // If there are items, select the first one by default
-      this.selectItem(0, false); // Select first item without animation or preview
-      // Don't create floating preview automatically
+
+    if (this.itemMeshes.length > 0) { // If there are items
+      // --- Restore selected index from localStorage ---
+      let savedIndex = 0; // Default to index 0
+      if (typeof localStorage !== 'undefined') { // Check if localStorage is available
+        const storedIndex = localStorage.getItem('carouselIndex'); // Get stored index
+        if (storedIndex !== null) { // Check if a value was retrieved
+          savedIndex = parseInt(storedIndex, 10); // Parse the stored value as an integer
+          // Validate saved index
+          if (isNaN(savedIndex) || savedIndex < 0 || savedIndex >= this.itemMeshes.length) { // Check if the parsed index is valid
+            savedIndex = 0; // Default to 0 if stored value is not a valid index
+            localStorage.setItem('carouselIndex', '0'); // Correct the stored value
+          }
+        }
+      }
+
+      // --- Use selectItem to set the initial state instantly ---
+      // This ensures the same logic for setting currentIndex, targetRotation,
+      // and applying visuals is used on load as for a click, but without animation.
+      // Calling it here, after itemMeshes is populated, should ensure the meshes are ready.
+      this.selectItem(savedIndex, false); // Select the restored/default item instantly
+
+      // --- Remove all the manual state setting and retry logic below ---
+      // The logic within selectItem(..., false) now handles this initialization
+      // consistently with click behavior.
+
+      // Removed:
+      // this.currentIndex = savedIndex;
+      // const angleStep = (2 * Math.PI) / this.items.length;
+      // this.targetRotation = -savedIndex * angleStep;
+      // this.itemGroup.rotation.y = this.targetRotation;
+      // this.applyHighlightVisuals(savedIndex);
+      // const applyHighlightWithRetry = ...;
+      // applyHighlightWithRetry();
     }
   }
 
-
-
   /**
-* @description Sets up event listeners for user interactions like click, wheel, and a custom 'mainmenu-scroll' event.
-* Handles click events using THREE.Raycaster to detect intersections with clickable objects and select the corresponding item.
-* Handles wheel events by delegating to `this.handleWheel`.
-* Handles the custom 'mainmenu-scroll' event to navigate between items based on the event's detail delta.
-* Includes detailed console logging for raycaster debugging.
-* Ensures execution only occurs in a browser environment.
-*
-* @listens {Event} click - Listens for click events on the window to detect interaction with carousel items.
-* @listens {Event} wheel - Listens for wheel events on the window to handle scrolling navigation.
-* @listens {CustomEvent} mainmenu-scroll - Listens for a custom event to handle programmatic scrolling.
-* @property {THREE.Raycaster} this.raycaster - Used to detect intersections on click.
-* @property {Array<THREE.Object3D>} this.clickableObjects - Array of objects eligible for click detection.
-* @property {object} this.parent.userData - Expected to contain a `camera` property for raycasting.
-* @property {object} this.userData - Used to store the `intendedClickIndex` after a click.
-* @method this.selectItem - Called when a clickable item is successfully intersected by the raycaster.
-* @method this.handleWheel - Called when a wheel event occurs.
-* @method this.goToNext - Called when a 'mainmenu-scroll' event with a positive delta occurs.
-* @method this.goToPrev - Called when a 'mainmenu-scroll' event with a non-positive delta occurs.
-* @returns {void}
-* @private
-*/
+  * @description Sets up event listeners for user interactions like click, wheel, and a custom 'mainmenu-scroll' event.
+  * Handles click events using THREE.Raycaster to detect intersections with clickable objects and select the corresponding item.
+  * Handles wheel events by delegating to `this.handleWheel`.
+  * Handles the custom 'mainmenu-scroll' event to navigate between items based on the event's detail delta.
+  * Includes detailed console logging for raycaster debugging.
+  * Ensures execution only occurs in a browser environment.
+  *
+  * @listens {Event} click - Listens for click events on the window to detect interaction with carousel items.
+  * @listens {Event} wheel - Listens for wheel events on the window to handle scrolling navigation.
+  * @listens {CustomEvent} mainmenu-scroll - Listens for a custom event to handle programmatic scrolling.
+  * @property {THREE.Raycaster} this.raycaster - Used to detect intersections on click.
+  * @property {Array<THREE.Object3D>} this.clickableObjects - Array of objects eligible for click detection.
+  * @property {object} this.parent.userData - Expected to contain a `camera` property for raycasting.
+  * @property {object} this.userData - Used to store the `intendedClickIndex` after a click.
+  * @method this.selectItem - Called when a clickable item is successfully intersected by the raycaster.
+  * @method this.handleWheel - Called when a wheel event occurs.
+  * @method this.goToNext - Called when a 'mainmenu-scroll' event with a positive delta occurs.
+  * @method this.goToPrev - Called when a 'mainmenu-scroll' event with a non-positive delta occurs.
+  * @returns {void}
+  * @private
+  */
   setupEventListeners() { // Set up event listeners for user interactions
     if (typeof window === 'undefined') return; // Ensure we're in a browser context
     // Add detailed raycaster logging and force selection of clicked item
@@ -346,16 +456,33 @@ export class Carousel3DPro extends Group { // Carousel3DPro class extends Three.
 */
   selectItem(index, animate = true) { // Select an item in the carousel by index, optionally animating the selection
     if (index < 0 || index >= this.itemMeshes.length) return; // Allow selection even if animating, but let the new animation take over. Check bounds.
+    // GSAP availability check - crucial for browser refresh scenarios
+    const gsapAvailable = typeof gsap !== 'undefined' && gsap !== null;
     // If already animating, potentially stop existing animations before starting new ones
-    if (this.isAnimating) {
+    if (this.isAnimating && gsapAvailable) {
       gsap.killTweensOf(this.itemGroup.rotation);
       this.itemMeshes.forEach(mesh => gsap.killTweensOf(mesh.scale));
     }
-
+    if (!this.isAnimating && animate && this.targetRotation !== this.itemGroup.rotation.y && gsapAvailable) {
+      this.isAnimating = true;
+      gsap.to(this.itemGroup.rotation, {
+        y: this.targetRotation,
+        duration: 1,
+        ease: "power2.out",
+        onComplete: () => {
+          this.isAnimating = false;
+          this.applyHighlightVisuals(this.currentIndex);
+        }
+      });
+    }
     this.lastInteractionType = 'click'; // <<< Mark interaction as click
-    this.isAnimating = animate; // Set animating flag
+    this.isAnimating = animate && gsapAvailable; // Set animating flag
     this.currentIndex = index; // Update the current index
-
+    // --- Persist the selected index ---
+    if (typeof localStorage !== 'undefined') {
+      localStorage.setItem('carouselIndex', index.toString());
+    }
+    // --- End Persist ---
     // Remove selection from all items
     this.itemMeshes.forEach((mesh, meshIndex) => { // Iterate over all item meshes in the carousel
       // Only change if it's not the item we are about to select
@@ -382,13 +509,10 @@ export class Carousel3DPro extends Group { // Carousel3DPro class extends Three.
         }
       }
     });
-
     // Apply selection to current item
     const selectedMesh = this.itemMeshes[index]; // Get the mesh for the selected item
     if (!selectedMesh) return; // Safety check
-
     selectedMesh.userData.isSelected = true; // Mark the selected mesh as selected
-
     // Apply glow material only if it's not already applied
     if (!(selectedMesh.material instanceof THREE.ShaderMaterial)) { // Assuming glow is ShaderMaterial
       const glowMaterial = getGlowShaderMaterial(); // Create a new glow material using the custom shader
@@ -398,23 +522,19 @@ export class Carousel3DPro extends Group { // Carousel3DPro class extends Three.
       // If it already has glow, ensure color is correct (might be redundant)
       selectedMesh.material.uniforms.glowColor.value = new THREE.Color(this.config.glowColor);
     }
-
-    if (animate) {
+    if (animate && gsapAvailable) { // Only animate if GSAP is available and animate flag is true
       // Animate scale up
-      gsap.to(selectedMesh.scale, {
-        x: selectedMesh.userData.originalScale.x * 1.2,
-        y: selectedMesh.userData.originalScale.y * 1.2,
-        z: selectedMesh.userData.originalScale.z * 1.2,
-        duration: 0.3,
-        // REMOVED onComplete here
+      gsap.to(selectedMesh.scale, {  // Animate scale up for the selected mesh
+        x: selectedMesh.userData.originalScale.x * 1.2, // Scale up the selected mesh
+        y: selectedMesh.userData.originalScale.y * 1.2, // Scale up the selected mesh
+        z: selectedMesh.userData.originalScale.z * 1.2, // Scale up the selected mesh
+        // REMOVED onComplete here 
       });
-
       // Rotate carousel to face the selected item
-      const angleStep = (2 * Math.PI) / this.items.length;
+      const angleStep = (2 * Math.PI) / this.items.length; // Calculate the angle step based on the number of items
       // this.targetRotation = index * angleStep; //  <--- Changed sign to positive - Calculate target rotation based on index which is counter-clockwise from 3 o'clock
       this.targetRotation = -index * angleStep; // Calculate target rotation based on index which is clockwise from 3 o'clock
-      // This line above fixed it for me!! -Nuwud
-
+      // This fixes issue where selecting item 0 would rotate to 9 o'clock instead of 3 o'clock
       // Use a variable to ensure onComplete only runs once if multiple animations end simultaneously
       let rotationComplete = false; // Flag to track if rotation animation has completed
       gsap.to(this.itemGroup.rotation, { // Animate the rotation of the item group
@@ -457,12 +577,25 @@ export class Carousel3DPro extends Group { // Carousel3DPro class extends Three.
         selectedMesh.userData.originalScale.z * 1.2 // Scale up the selected mesh
       );
       const angleStep = (2 * Math.PI) / this.items.length; // Calculate the angle step based on the number of items
-      this.targetRotation = index * angleStep; // Calculate target rotation based on index which is counter-clockwise from 3 o'clock
+      // Fix: Use negative sign for consistent rotation direction
+      this.targetRotation = -index * angleStep; // CHANGED: Now matches animated case
+      // this.targetRotation = index * angleStep; // Calculate target rotation based on index which is counter-clockwise from 3 o'clock
       this.itemGroup.rotation.y = this.targetRotation; // Set rotation directly
       this.isAnimating = false; // Not animating
     }
   }
 
+  /**
+   * Applies visual highlighting effects (glow material, increased scale) to the item mesh
+   * at the specified index within `this.itemMeshes` and removes these effects
+   * from any other mesh that might currently have them applied.
+   * It ensures only the item at `indexToHighlight` appears selected.
+   * Visual properties like glow color, text color, and opacity are sourced from `this.config`.
+   *
+   * @param {number} indexToHighlight The zero-based index of the mesh in the `this.itemMeshes` array
+   *                                  that should receive the highlight visuals. If the index is
+   *                                  out of bounds, the function returns early without making changes.
+   */
   applyHighlightVisuals(indexToHighlight) {
     if (indexToHighlight < 0 || indexToHighlight >= this.itemMeshes.length) return;
 
@@ -521,7 +654,6 @@ export class Carousel3DPro extends Group { // Carousel3DPro class extends Three.
     // Calculate the angle corresponding to one item step
     const angleStep = (2 * Math.PI) / this.items.length;
     // Calculate the change in rotation angle for this scroll tick
-    const rotationDelta = scrollAmount * angleStep;
 
     // --- Rotation Direction Logic ---
     // We want scrolling DOWN (positive deltaY, scrollAmount = 1) to bring the NEXT item
@@ -529,6 +661,7 @@ export class Carousel3DPro extends Group { // Carousel3DPro class extends Three.
     // If items are arranged counter-clockwise (index 0 at 0 rad, index 1 at +angleStep, etc.),
     // bringing the next item (higher index) to the front requires DECREASING the rotation angle.
     // Therefore, we SUBTRACT the rotationDelta.
+    const rotationDelta = scrollAmount * angleStep;
     this.targetRotation -= rotationDelta; // <--- Changed from += to -=
 
     // Note: We DO NOT call goToNext/goToPrev or selectItem here.
@@ -542,363 +675,442 @@ export class Carousel3DPro extends Group { // Carousel3DPro class extends Three.
    *   when not animating via selectItem (click selection).
    * - Calls updateCurrentItemFromRotation to keep the highlight synced during wheel scroll.
    * - Updates the time uniform for the glow shader on the currently highlighted item.
+   * - Implements a controlled activation for rotation-based highlight updates to prevent issues on initial load.
    */
   update() {
+    // --- Controlled Activation of Rotation-Based Highlight Update ---
+    if (!this.highlightSyncInitialized) {
+        this.updateCallCount++;
+        if (this.updateCallCount >= this.updatesBeforeHighlightSync) {
+            this.highlightSyncInitialized = true;
+            this.allowHighlightUpdateFromRotation = true; // Activate the flag
+            console.log(`highlightSyncInitialized and allowHighlightUpdateFromRotation enabled after ${this.updateCallCount} updates.`); // Debug log
+            // Immediately perform a sync after enabling to catch the correct state
+            // This ensures the highlight matches the state set by selectItem(..., false) on load
+            if (!this.isAnimating && this.lastInteractionType !== 'click') {
+                 // Calculate the index based on the rotation set by createItems/selectItem(false)
+                 const initialIndex = this.calculateIndexFromRotation(this.itemGroup.rotation.y);
+                 if (initialIndex !== undefined) {
+                    // Ensure the visual highlight matches this initial index
+                    this.applyHighlightVisuals(initialIndex);
+                    // Sync the internal currentIndex ONLY if it differs (it shouldn't ideally, but safe check)
+                    if (this.currentIndex !== initialIndex) {
+                        console.warn(`[Update] Initial sync correcting currentIndex from ${this.currentIndex} to ${initialIndex}`);
+                        this.currentIndex = initialIndex;
+                    }
+                    console.log(`[Update] Initial sync after load complete. Visuals set for index: ${initialIndex}, CurrentIndex: ${this.currentIndex}`); // Debug log
+                 }
+            }
+        }
+    }
+
+
     // Only apply wheel-scroll rotation smoothing if not currently animating via selectItem
-    if (!this.isAnimating) {
+    // AND if highlight sync is initialized (meaning initial load phase is settled)
+    if (!this.isAnimating && this.highlightSyncInitialized) { // Add highlightSyncInitialized check
       const currentRotation = this.itemGroup.rotation.y;
       const twoPi = Math.PI * 2;
-      // --- Calculate Shortest Rotation Path ---
-      // Find the difference between target and current rotation
       let diff = this.targetRotation - currentRotation;
       // Normalize the difference to the range [-PI, PI] to ensure rotation takes the shortest path
       diff = (diff + Math.PI) % twoPi - Math.PI;
       // Adjust if the modulo result is exactly -PI
       if (diff < -Math.PI) diff += twoPi;
-      // Threshold to prevent micro-rotations when very close to the target
       const threshold = 0.001;
+
       if (Math.abs(diff) > threshold) {
         // --- Apply Smooth Rotation ---
-        // Calculate the rotation amount for this frame based on rotationSpeed
         const rotationAmount = diff * this.rotationSpeed;
-        // Apply the rotation to the item group
         this.itemGroup.rotation.y += rotationAmount;
-        // --- Update Highlight During Scroll ---
-        // Continuously update which item is highlighted based on the current visual rotation
-        this.updateCurrentItemFromRotation(); // Keep this call here for scroll feedback
+
+        // --- Conditional Highlight Update During Scroll ---
+        // Only call updateCurrentItemFromRotation if it's allowed and the interaction was a scroll
+        if (this.lastInteractionType === 'scroll' && this.allowHighlightUpdateFromRotation) { // Keep this check
+           this.updateCurrentItemFromRotation(); // Updates visuals based on rotation
+        }
+
       } else if (currentRotation !== this.targetRotation) {
         // --- Snap to Target ---
-        // Once the difference is below the threshold, snap precisely to the target rotation
         this.itemGroup.rotation.y = this.targetRotation;
-        // Ensure the final highlight is correct after snapping
-        // REMOVED: this.updateCurrentItemFromRotation();
-        // DO NOT call updateCurrentItemFromRotation here.
-        // If this snap happened after a selectItem animation, onComplete handled the highlight.
-        // If this snap happened after wheel scroll, the last call during active rotation
-        // should have set the correct highlight visually, and we need to sync the official index.
+        // After snapping from a scroll, update currentIndex based on final rotation
+         if (this.lastInteractionType === 'scroll') {
+            const finalIndex = this.calculateIndexFromRotation(this.itemGroup.rotation.y);
+             if (finalIndex !== undefined && finalIndex !== this.currentIndex) {
+                 this.currentIndex = finalIndex; // Update the official index
+                 this.applyHighlightVisuals(this.currentIndex); // Ensure visuals match the final index
+                 console.log(`[Update] Scroll snapped. Synced currentIndex to: ${this.currentIndex}`); // Debug log
+             } else if (finalIndex !== undefined) {
+                 // Even if index didn't change, ensure visuals are correct
+                 this.applyHighlightVisuals(finalIndex);
+                 console.log(`[Update] Scroll snapped. Re-applied visuals for index: ${this.currentIndex}`); // Debug log
+             }
+         }
+         // Reset interaction type only after scroll has fully settled and snapped
+         if (this.lastInteractionType === 'scroll') {
+            this.lastInteractionType = 'idle';
+            console.log(`[Update] Scroll settled. Interaction type reset.`); // Debug log
+         }
+
       }
-      // --- Sync currentIndex AFTER Scroll Settles ---
-      // Calculate the index based on the final snapped rotation
-      const finalIndex = this.calculateIndexFromRotation(this.itemGroup.rotation.y); // Use a helper or inline calculation
-      if (finalIndex !== undefined && finalIndex !== this.currentIndex) {
-        // Update the official index ONLY when scroll stops visually at a new item
-        this.currentIndex = finalIndex;
-        // Ensure visuals match the final index (redundant if updateCurrentItemFromRotation worked, but safe)
-        this.applyHighlightVisuals(this.currentIndex);
-        // Optional: console.log(`[Update] Scroll settled. Synced currentIndex to: ${this.currentIndex}`);
-      }
-      // Note: isAnimating flag remains false during wheel scroll to allow continuous input and smoothing.
-      // Reset interaction type after handling scroll settle
-      this.lastInteractionType = 'idle';
+       // The rotation-based highlight update for idle state is no longer needed here,
+       // as it's handled by the scroll logic (above) and selectItem's onComplete.
+
     } else if (this.lastInteractionType === 'click') {
-      // If it was a click, index/visuals were set by selectItem's onComplete.
-      // Just reset the interaction type now that rotation has settled.
-      this.lastInteractionType = 'idle';
+       // If it was a click, index/visuals were set by selectItem's onComplete.
+       // Just reset the interaction type now that rotation has settled (isAnimating is false).
+       if (!this.isAnimating) { // Only reset if animation is truly done
+           this.lastInteractionType = 'idle';
+            console.log(`[Update] Click animation settled. Interaction type reset.`); // Debug log
+       }
     }
-    // Removed misplaced else block here
+     // If isAnimating is true (click animation in progress), the update loop
+     // should still run to animate the rotation towards targetRotation (handled by GSAP).
+     // The highlight update logic is handled in selectItem's onComplete callback.
 
 
     // --- Update Glow Shader Time ---
-    // Check if the current index is valid
+    // Check if the current index is valid and the mesh exists
     if (this.currentIndex >= 0 && this.currentIndex < this.itemMeshes.length) {
       const selectedMesh = this.itemMeshes[this.currentIndex];
-      // Check if the mesh is marked as selected and has the necessary shader uniforms
-      if (selectedMesh.userData.isSelected && selectedMesh.material?.uniforms?.time) {
+      // Check if the mesh exists, is marked as selected, and has the necessary shader uniforms
+      if (selectedMesh?.userData?.isSelected && selectedMesh?.material?.uniforms?.time) { // Add checks for existence
         // Update the time uniform for the glow animation effect
         selectedMesh.material.uniforms.time.value = performance.now() * 0.001;
+      } else if (selectedMesh && !selectedMesh.userData?.isSelected) {
+          // If the mesh exists but is somehow not marked as selected despite being at currentIndex,
+          // this indicates a state mismatch. Attempt to correct it.
+           if (selectedMesh.material instanceof THREE.ShaderMaterial) { // Check if it has the glow material
+                console.warn(`[Update] Item at currentIndex ${this.currentIndex} unexpectedly has glow material but is not selected. Correcting visuals.`);
+                 this.applyHighlightVisuals(this.currentIndex); // Force re-application of visuals for the current index
+           }
       }
     }
   } // End of update() method
 
-/**
-* Helper function to calculate the index closest to the front based on rotation.
-* Extracted logic from updateCurrentItemFromRotation, but only returns the index.
-* @param {number} rotationY - The current rotation.y of the itemGroup.
-* @returns {number | undefined} The calculated index or undefined.
-* @private
-*/
-calculateIndexFromRotation(rotationY) {
-  if (!this.itemMeshes.length) return undefined;
-  const angleStep = (2 * Math.PI) / this.items.length;
-  const twoPi = Math.PI * 2;
-  const currentRotation = rotationY;
-  const frontAngleInGroupSpace = ((-currentRotation % twoPi) + twoPi) % twoPi;
-  let closestIndex = 0;
-  let minAngleDiff = twoPi;
+  /**
+ * Calculates the item index that is closest to the front based on the carousel's rotation.
+ * Works with any rotation axis (X, Y, or Z) but primarily used with Y-axis rotation.
+ * 
+ * @param {number} rotation - The current rotation value (in radians) to calculate from
+ * @param {string} [axis='y'] - The rotation axis to consider ('x', 'y', or 'z')
+ * @returns {number|undefined} The calculated index or undefined if no items exist
+  */
+  calculateIndexFromRotation(rotation/**, axis = 'y'*/) {
+    if (!this.itemMeshes.length) return undefined;
+    const angleStep = (2 * Math.PI) / this.items.length;
+    const twoPi = Math.PI * 2;
+    const currentRotation = rotation; // Use the provided rotation value
+    const frontAngleInGroupSpace = ((-currentRotation % twoPi) + twoPi) % twoPi;
+    let closestIndex = 0;
+    let minAngleDiff = twoPi;
 
-  this.itemMeshes.forEach((mesh, index) => {
-    const itemNaturalAngle = (index * angleStep);
-    let angleDiff = frontAngleInGroupSpace - itemNaturalAngle;
-    angleDiff = (angleDiff + Math.PI) % twoPi - Math.PI;
-    if (angleDiff <= -Math.PI) angleDiff += twoPi;
-    const absAngleDiff = Math.abs(angleDiff);
-    if (absAngleDiff < minAngleDiff) {
-      minAngleDiff = absAngleDiff;
-      closestIndex = index;
+    this.itemMeshes.forEach((mesh, index) => {
+      const itemNaturalAngle = (index * angleStep);
+      let angleDiff = frontAngleInGroupSpace - itemNaturalAngle;
+      angleDiff = (angleDiff + Math.PI) % twoPi - Math.PI;
+      if (angleDiff <= -Math.PI) angleDiff += twoPi;
+      const absAngleDiff = Math.abs(angleDiff);
+      if (absAngleDiff < minAngleDiff) {
+        minAngleDiff = absAngleDiff;
+        closestIndex = index;
+      }
+    });
+    return closestIndex;
+  }
+
+
+  // Add a new method to handle continuous spinning via mouse wheel
+  /**
+   * Spins the carousel by a specified angle.
+   * This method updates the target rotation directly without triggering the animation flag,
+   * allowing for smooth, continuous spinning if called repeatedly (e.g., via drag).
+   * If an animation is already in progress (`this.isAnimating` is true), the spin is ignored.
+   *
+   * @param {number} deltaAngle - The angle (in degrees or radians, depending on implementation context) to add to the current target rotation.
+   */
+  spin(deltaAngle) { // Method to spin the carousel by a specified angle
+    if (this.isAnimating) return; // Prevent spinning if currently animating
+    // Add the rotation directly to the target
+    this.targetRotation += deltaAngle; // Update the target rotation by the specified delta angle
+    // Don't set isAnimating flag to allow smooth continuous spinning
+  }
+
+  // Add a method to figure out which item is at the front based on rotation
+  /**
+   * Updates the currently selected item based on the carousel's rotation.
+   * Finds the item index closest to the front (0 radians / 3 o'clock position relative to the world/camera)
+   * and updates currentIndex and visual highlights (material, scale).
+   * This is primarily used during wheel scrolling to keep the highlight synced.
+   * In order to revers flow the carousel, we subtract the rotationDelta instead of adding it.
+   * to reverse different aspects of the carousel one must subtract the rotationDelta instead of adding it like on line numbers 483 in the handleWheel method.
+   * For example when one selects a menu item, the carousel rotates counter-clockwise to bring the selected item to the front and to flip it one must subtract the rotationDelta instead of adding it on line 483 that looks like this: this.targetRotation -= rotationDelta; 
+   */
+  // updateCurrentItemFromRotation() {
+  //   // Exit if there are no items to process
+  //   if (!this.itemMeshes.length) return;
+
+  //   // Calculate the angular separation between items by dividing the full circle (2π radians) by the number of items
+  //   const angleStep = (2 * Math.PI) / this.items.length;
+  //   // Get the current rotation of the item group around the Y axis by accessing the rotation property
+  //   const currentRotation = this.itemGroup.rotation.y;
+  //   // Define a constant for 2π to avoid repeated calculations by using Math.PI * 2
+  //   const twoPi = Math.PI * 2;
+
+  //   // --- Determine which item angle is currently at the front (0 rad position) ---
+  //   // The angle within the group's local coordinate system that corresponds to the
+  //   // world's 0 angle (the front-facing direction) is the negative of the group's current rotation.
+  //   // We normalize this angle to be within the [0, 2PI) range.
+  //   const frontAngleInGroupSpace = ((-currentRotation % twoPi) + twoPi) % twoPi;
+
+  //   // Initialize variables to find the item closest to the front
+  //   let closestIndex = 0.0;
+  //   let minAngleDiff = twoPi; // Start with the maximum possible angle difference
+
+  //   // Iterate through each item mesh to find which one is closest to the front-facing angle
+  //   this.itemMeshes.forEach((mesh, index) => {
+  //     // Calculate the natural angle where this item is placed within the group (if group rotation were 0)
+  //     const itemNaturalAngle = (index * angleStep);
+  //     // Calculate the shortest angular difference between the item's natural angle
+  //     // and the angle that is currently facing the front (frontAngleInGroupSpace).
+  //     let angleDiff = frontAngleInGroupSpace - itemNaturalAngle;
+  //     // Normalize the difference to the range [-PI, PI] to ensure we find the shortest path (clockwise or counter-clockwise)
+  //     angleDiff = (angleDiff + Math.PI) % twoPi - Math.PI;
+  //     // Adjust if the modulo result is exactly -PI, ensuring the range is (-PI, PI]
+  //     if (angleDiff <= -Math.PI) angleDiff += twoPi;
+  //     // Get the absolute difference
+  //     const absAngleDiff = Math.abs(angleDiff);
+  //     // If this item is closer to the front than the previous closest, update tracking variables
+  //     if (absAngleDiff < minAngleDiff) {
+  //       minAngleDiff = absAngleDiff;
+  //       closestIndex = index;
+  //     }
+  //   });
+
+  //   // The index of the item currently determined to be closest to the front
+  //   const indexFromRotation = closestIndex;
+
+  //   // --- Update Highlight if the Front Item Changed ---
+  //   // Only proceed if the calculated front item index is different from the currently stored currentIndex
+  //   if (indexFromRotation !== this.currentIndex) {
+  //     // --- Deselect the Previous Item ---
+  //     // Check if the previous currentIndex is valid
+  //     if (this.currentIndex >= 0 && this.currentIndex < this.itemMeshes.length) {
+  //       const previousMesh = this.itemMeshes[this.currentIndex];
+  //       // Ensure the previous mesh was actually marked as selected
+  //       if (previousMesh.userData.isSelected) {
+  //         previousMesh.userData.isSelected = false; // Mark as not selected
+  //         // Reset its material back to the standard non-highlighted look
+  //         previousMesh.material = new THREE.MeshStandardMaterial({
+  //           color: this.config.textColor,
+  //           transparent: true,
+  //           opacity: this.config.opacity
+  //         });
+  //         // Reset its scale back to the original size instantly
+  //         previousMesh.scale.copy(previousMesh.userData.originalScale);
+  //       }
+  //     }
+
+  //     // --- Select the New Item ---
+  //     // Get the mesh corresponding to the new front index
+  //     const newSelectedMesh = this.itemMeshes[indexFromRotation];
+  //     // Ensure the mesh exists before proceeding
+  //     if (newSelectedMesh) {
+  //       newSelectedMesh.userData.isSelected = true; // Mark the new mesh as selected
+  //       // Apply the glow shader material for the highlight effect
+  //       const glowMaterial = getGlowShaderMaterial();
+  //       glowMaterial.uniforms.glowColor.value = new THREE.Color(this.config.glowColor);
+  //       newSelectedMesh.material = glowMaterial;
+  //       // Scale up the newly selected mesh instantly (no animation during wheel scroll update)
+  //       newSelectedMesh.scale.set(
+  //         newSelectedMesh.userData.originalScale.x * 1.2,
+  //         newSelectedMesh.userData.originalScale.y * 1.2,
+  //         newSelectedMesh.userData.originalScale.z * 1.2
+  //       );
+  //       // Update the official currentIndex state for the carousel
+  //       // this.currentIndex = indexFromRotation;
+  //       // !!! PROBLEM LINE !!!
+  //       // This line overwrites the currentIndex set by selectItem()
+  //       // with the index calculated purely from the final rotation angle.
+  //       // this.currentIndex = indexFromRotation;
+
+  //       // Optional: Add a console log for debugging highlight changes during scroll
+  //       // console.log(`[updateCurrentItemFromRotation] Highlight updated to index: ${this.currentIndex}`);
+  //     } else {
+  //       // Log a warning if the mesh for the calculated index couldn't be found
+  //       console.warn(`[updateCurrentItemFromRotation] Could not find mesh for index: ${indexFromRotation}`);
+  //     }
+  //   }
+  // }
+
+  // Public API methods
+
+  // updateCurrentItemFromRotation() should now ONLY handle applying visuals
+  // based on a calculated index, without changing this.currentIndex.
+  // It's primarily called during active scroll smoothing.
+
+  updateCurrentItemFromRotation() {
+    // For Y-axis rotation (default):
+    const indexFromRotation = this.calculateIndexFromRotation(this.itemGroup.rotation.y);
+    // Calculate geometrically front index, how to use this? Easy, one simply call this method with the axis parameter set to 'y' when needed.
+
+    // For other axes (if needed):
+    // const indexFromX = this.calculateIndexFromRotation(this.itemGroup.rotation.x, 'x'); 
+    // Calculate index from X rotation, how to use this? Easy, one simply call this method with the axis parameter set to 'x' when needed. 
+    // const indexFromZ = this.calculateIndexFromRotation(this.itemGroup.rotation.z, 'z'); 
+    // Calculate index from Z rotation, how to use this? Easy, one simply call this method with the axis parameter set to 'z' when needed.
+
+    if (indexFromRotation === undefined) return;
+
+    // Find the currently visually highlighted item (using userData.isSelected)
+    let currentlyHighlightedIndex = +1;
+    for (let i = 0; i < this.itemMeshes.length; i++) {
+      if (this.itemMeshes[i].userData.isSelected) {
+        currentlyHighlightedIndex = i;
+        break;
+      }
     }
-  });
-  return closestIndex;
-}
 
-// Add a new method to handle continuous spinning via mouse wheel
-/**
- * Spins the carousel by a specified angle.
- * This method updates the target rotation directly without triggering the animation flag,
- * allowing for smooth, continuous spinning if called repeatedly (e.g., via drag).
- * If an animation is already in progress (`this.isAnimating` is true), the spin is ignored.
- *
- * @param {number} deltaAngle - The angle (in degrees or radians, depending on implementation context) to add to the current target rotation.
- */
-spin(deltaAngle) { // Method to spin the carousel by a specified angle
-  if (this.isAnimating) return; // Prevent spinning if currently animating
-  // Add the rotation directly to the target
-  this.targetRotation += deltaAngle; // Update the target rotation by the specified delta angle
-  // Don't set isAnimating flag to allow smooth continuous spinning
-}
+    // If the geometrically front item is different from the visually highlighted one...
+    if (indexFromRotation !== currentlyHighlightedIndex) {
+      // Apply visuals: Deselect old, Select new
+      this.applyHighlightVisuals(indexFromRotation); // Use the helper to manage visuals
 
-// Add a method to figure out which item is at the front based on rotation
-/**
- * Updates the currently selected item based on the carousel's rotation.
- * Finds the item index closest to the front (0 radians / 3 o'clock position relative to the world/camera)
- * and updates currentIndex and visual highlights (material, scale).
- * This is primarily used during wheel scrolling to keep the highlight synced.
- * In order to revers flow the carousel, we subtract the rotationDelta instead of adding it.
- * to reverse different aspects of the carousel one must subtract the rotationDelta instead of adding it like on line numbers 483 in the handleWheel method.
- * For example when one selects a menu item, the carousel rotates counter-clockwise to bring the selected item to the front and to flip it one must subtract the rotationDelta instead of adding it on line 483 that looks like this: this.targetRotation -= rotationDelta; 
- */
-// updateCurrentItemFromRotation() {
-//   // Exit if there are no items to process
-//   if (!this.itemMeshes.length) return;
-
-//   // Calculate the angular separation between items by dividing the full circle (2π radians) by the number of items
-//   const angleStep = (2 * Math.PI) / this.items.length;
-//   // Get the current rotation of the item group around the Y axis by accessing the rotation property
-//   const currentRotation = this.itemGroup.rotation.y;
-//   // Define a constant for 2π to avoid repeated calculations by using Math.PI * 2
-//   const twoPi = Math.PI * 2;
-
-//   // --- Determine which item angle is currently at the front (0 rad position) ---
-//   // The angle within the group's local coordinate system that corresponds to the
-//   // world's 0 angle (the front-facing direction) is the negative of the group's current rotation.
-//   // We normalize this angle to be within the [0, 2PI) range.
-//   const frontAngleInGroupSpace = ((-currentRotation % twoPi) + twoPi) % twoPi;
-
-//   // Initialize variables to find the item closest to the front
-//   let closestIndex = 0.0;
-//   let minAngleDiff = twoPi; // Start with the maximum possible angle difference
-
-//   // Iterate through each item mesh to find which one is closest to the front-facing angle
-//   this.itemMeshes.forEach((mesh, index) => {
-//     // Calculate the natural angle where this item is placed within the group (if group rotation were 0)
-//     const itemNaturalAngle = (index * angleStep);
-//     // Calculate the shortest angular difference between the item's natural angle
-//     // and the angle that is currently facing the front (frontAngleInGroupSpace).
-//     let angleDiff = frontAngleInGroupSpace - itemNaturalAngle;
-//     // Normalize the difference to the range [-PI, PI] to ensure we find the shortest path (clockwise or counter-clockwise)
-//     angleDiff = (angleDiff + Math.PI) % twoPi - Math.PI;
-//     // Adjust if the modulo result is exactly -PI, ensuring the range is (-PI, PI]
-//     if (angleDiff <= -Math.PI) angleDiff += twoPi;
-//     // Get the absolute difference
-//     const absAngleDiff = Math.abs(angleDiff);
-//     // If this item is closer to the front than the previous closest, update tracking variables
-//     if (absAngleDiff < minAngleDiff) {
-//       minAngleDiff = absAngleDiff;
-//       closestIndex = index;
-//     }
-//   });
-
-//   // The index of the item currently determined to be closest to the front
-//   const indexFromRotation = closestIndex;
-
-//   // --- Update Highlight if the Front Item Changed ---
-//   // Only proceed if the calculated front item index is different from the currently stored currentIndex
-//   if (indexFromRotation !== this.currentIndex) {
-//     // --- Deselect the Previous Item ---
-//     // Check if the previous currentIndex is valid
-//     if (this.currentIndex >= 0 && this.currentIndex < this.itemMeshes.length) {
-//       const previousMesh = this.itemMeshes[this.currentIndex];
-//       // Ensure the previous mesh was actually marked as selected
-//       if (previousMesh.userData.isSelected) {
-//         previousMesh.userData.isSelected = false; // Mark as not selected
-//         // Reset its material back to the standard non-highlighted look
-//         previousMesh.material = new THREE.MeshStandardMaterial({
-//           color: this.config.textColor,
-//           transparent: true,
-//           opacity: this.config.opacity
-//         });
-//         // Reset its scale back to the original size instantly
-//         previousMesh.scale.copy(previousMesh.userData.originalScale);
-//       }
-//     }
-
-//     // --- Select the New Item ---
-//     // Get the mesh corresponding to the new front index
-//     const newSelectedMesh = this.itemMeshes[indexFromRotation];
-//     // Ensure the mesh exists before proceeding
-//     if (newSelectedMesh) {
-//       newSelectedMesh.userData.isSelected = true; // Mark the new mesh as selected
-//       // Apply the glow shader material for the highlight effect
-//       const glowMaterial = getGlowShaderMaterial();
-//       glowMaterial.uniforms.glowColor.value = new THREE.Color(this.config.glowColor);
-//       newSelectedMesh.material = glowMaterial;
-//       // Scale up the newly selected mesh instantly (no animation during wheel scroll update)
-//       newSelectedMesh.scale.set(
-//         newSelectedMesh.userData.originalScale.x * 1.2,
-//         newSelectedMesh.userData.originalScale.y * 1.2,
-//         newSelectedMesh.userData.originalScale.z * 1.2
-//       );
-//       // Update the official currentIndex state for the carousel
-//       // this.currentIndex = indexFromRotation;
-//       // !!! PROBLEM LINE !!!
-//       // This line overwrites the currentIndex set by selectItem()
-//       // with the index calculated purely from the final rotation angle.
-//       // this.currentIndex = indexFromRotation;
-
-//       // Optional: Add a console log for debugging highlight changes during scroll
-//       // console.log(`[updateCurrentItemFromRotation] Highlight updated to index: ${this.currentIndex}`);
-//     } else {
-//       // Log a warning if the mesh for the calculated index couldn't be found
-//       console.warn(`[updateCurrentItemFromRotation] Could not find mesh for index: ${indexFromRotation}`);
-//     }
-//   }
-// }
-
-// Public API methods
-
-// updateCurrentItemFromRotation() should now ONLY handle applying visuals
-// based on a calculated index, without changing this.currentIndex.
-// It's primarily called during active scroll smoothing.
-
-updateCurrentItemFromRotation() {
-  const indexFromRotation = this.calculateIndexFromRotation(this.itemGroup.rotation.y); // Calculate geometrically front index
-
-  if (indexFromRotation === undefined) return;
-
-  // Find the currently visually highlighted item (using userData.isSelected)
-  let currentlyHighlightedIndex = -1;
-  for (let i = 0; i < this.itemMeshes.length; i++) {
-    if (this.itemMeshes[i].userData.isSelected) {
-      currentlyHighlightedIndex = i;
-      break;
+      // DO NOT CHANGE this.currentIndex here.
+      // this.currentIndex = indexFromRotation; // Keep commented out
     }
   }
 
-  // If the geometrically front item is different from the visually highlighted one...
-  if (indexFromRotation !== currentlyHighlightedIndex) {
-    // Apply visuals: Deselect old, Select new
-    this.applyHighlightVisuals(indexFromRotation); // Use the helper to manage visuals
+  /**
+   * Animates the carousel to the next item in the sequence.
+   *
+   * Prevents starting a new animation if one is already in progress.
+   * Calculates the index of the next item, wrapping around if necessary.
+   * Determines the required rotation angle based on the number of items.
+   * Uses GSAP to smoothly animate the rotation of the item group (`this.itemGroup`)
+   * to the calculated target rotation with a "back.out" easing for a gentle snap effect.
+   * Updates the `currentIndex` and resets the `isAnimating` flag upon animation completion.
+   * Calls `selectItem` to highlight the newly selected item.
+   */
+  // goToNext() {
+  //   if (this.isAnimating) return; // Prevent going to next item if currently animating
+  //   this.isAnimating = true; // Set animating flag to true
+  //   const nextIndex = (this.currentIndex + 1) % this.items.length; // Calculate the next index, wrapping around if necessary
+  //   // Calculate rotation amount - smooth transition
+  //   const segmentAngle = (2 * Math.PI) / this.items.length; // Calculate the angle step based on the number of items
+  //   this.targetRotation = this.itemGroup.rotation.y - segmentAngle; // Update the target rotation to rotate to the next item
+  //   // Animate with smoother, more controlled motion and gentle snap
+  //   gsap.to(this.itemGroup.rotation, { // Animate the rotation of the item group to face the next item
+  //     y: this.targetRotation, // Set the target rotation angle
+  //     duration: 0.5, // Duration of the animation
+  //     ease: "back.out(1.2)", // Add gentle snap-to effect
+  //     onComplete: () => { // Callback when the animation is complete
+  //       this.currentIndex = nextIndex; // Update the current index to the next index
+  //       this.isAnimating = false; // Reset animating flag when animation is complete
+  //     }
+  //   });
 
-    // DO NOT CHANGE this.currentIndex here.
-    // this.currentIndex = indexFromRotation; // Keep commented out
+  //   // Highlight new item
+  //   this.selectItem(nextIndex, true); // Select the next item with animation
+  // }
+  /**
+  * Selects and animates the carousel to the next item.
+  * Calculates the next index and calls selectItem to handle the animation and state update.
+  */
+  goToNext() {
+    // Prevent interaction if already animating (selectItem also checks this, but good for early exit)
+    if (this.isAnimating) return;
+
+    // In goToNext() and goToPrev()
+    const gsapAvailable = typeof gsap !== 'undefined' && gsap !== null;
+    if (!gsapAvailable) {
+      // Fallback to direct property setting without animation
+      const nextIndex = (this.currentIndex + 1) % this.items.length;
+      const angleStep = (2 * Math.PI) / this.items.length;
+      this.targetRotation = -nextIndex * angleStep;
+      this.itemGroup.rotation.y = this.targetRotation;
+      this.currentIndex = nextIndex;
+      this.applyHighlightVisuals(this.currentIndex);
+      return;
+    }
+
+    const nextIndex = (this.currentIndex + 1) % this.items.length; // Calculate the next index, wrapping around
+    // REMOVED: Internal GSAP animation and targetRotation calculation.
+    this.selectItem(nextIndex, true); // Delegate animation and highlight to selectItem
   }
-}
 
-/**
- * Animates the carousel to the next item in the sequence.
- *
- * Prevents starting a new animation if one is already in progress.
- * Calculates the index of the next item, wrapping around if necessary.
- * Determines the required rotation angle based on the number of items.
- * Uses GSAP to smoothly animate the rotation of the item group (`this.itemGroup`)
- * to the calculated target rotation with a "back.out" easing for a gentle snap effect.
- * Updates the `currentIndex` and resets the `isAnimating` flag upon animation completion.
- * Calls `selectItem` to highlight the newly selected item.
- */
-// goToNext() {
-//   if (this.isAnimating) return; // Prevent going to next item if currently animating
-//   this.isAnimating = true; // Set animating flag to true
-//   const nextIndex = (this.currentIndex + 1) % this.items.length; // Calculate the next index, wrapping around if necessary
-//   // Calculate rotation amount - smooth transition
-//   const segmentAngle = (2 * Math.PI) / this.items.length; // Calculate the angle step based on the number of items
-//   this.targetRotation = this.itemGroup.rotation.y - segmentAngle; // Update the target rotation to rotate to the next item
-//   // Animate with smoother, more controlled motion and gentle snap
-//   gsap.to(this.itemGroup.rotation, { // Animate the rotation of the item group to face the next item
-//     y: this.targetRotation, // Set the target rotation angle
-//     duration: 0.5, // Duration of the animation
-//     ease: "back.out(1.2)", // Add gentle snap-to effect
-//     onComplete: () => { // Callback when the animation is complete
-//       this.currentIndex = nextIndex; // Update the current index to the next index
-//       this.isAnimating = false; // Reset animating flag when animation is complete
-//     }
-//   });
+  /**
+   * Navigates the carousel to the previous item with a smooth rotation animation.
+   *
+   * Prevents navigation if an animation is already in progress. Calculates the
+   * index of the previous item, handling wrap-around. Determines the target rotation
+   * angle based on the number of items and initiates a GSAP animation to rotate
+   * the item group. Uses a 'back.out' ease for a gentle snap effect.
+   * On animation completion, updates the current index and resets the animation flag.
+   * Also highlights the newly selected previous item.
+   *
+   * @memberof Carousel3DPro
+   * @returns {void} - Does not return a value.
+   */
+  // goToPrev() {
+  //   if (this.isAnimating) return; // Prevent going to previous item if currently animating
+  //   this.isAnimating = true; // Set animating flag to true
+  //   const prevIndex = (this.currentIndex - 1 + this.items.length) % this.items.length; // Calculate the previous index, wrapping around if necessary
+  //   // Calculate rotation amount - smooth transition
+  //   const segmentAngle = (2 * Math.PI) / this.items.length; // Calculate the angle step based on the number of items
+  //   this.targetRotation = this.itemGroup.rotation.y + segmentAngle; // Update the target rotation to rotate to the previous item
+  //   // Animate with smoother, more controlled motion and gentle snap
+  //   gsap.to(this.itemGroup.rotation, { // Animate the rotation of the item group to face the previous item
+  //     y: this.targetRotation, // Set the target rotation angle
+  //     duration: 0.5, // Duration of the animation
+  //     ease: "back.out(1.2)", // Add gentle snap-to effect
+  //     onComplete: () => { // Callback when the animation is complete
+  //       this.currentIndex = prevIndex; // Update the current index to the previous index
+  //       this.isAnimating = false; // Reset animating flag when animation is complete
+  //     }
+  //   });
+  //   // Highlight new item
+  //   this.selectItem(prevIndex, true); // Select the previous item with animation
+  // }
+  /**
+  * Selects and animates the carousel to the previous item.
+  * Calculates the previous index and calls selectItem to handle the animation and state update.
+  */
+  goToPrev() {
+    // Prevent interaction if already animating
+    if (this.isAnimating) return;
 
-//   // Highlight new item
-//   this.selectItem(nextIndex, true); // Select the next item with animation
-// }
-/**
-* Selects and animates the carousel to the next item.
-* Calculates the next index and calls selectItem to handle the animation and state update.
-*/
-goToNext() {
-  // Prevent interaction if already animating (selectItem also checks this, but good for early exit)
-  if (this.isAnimating) return;
+    // In goToNext() and goToPrev()
+    const gsapAvailable = typeof gsap !== 'undefined' && gsap !== null;
+    if (!gsapAvailable) {
+      // Fallback to direct property setting without animation
+      const nextIndex = (this.currentIndex + 1) % this.items.length;
+      const angleStep = (2 * Math.PI) / this.items.length;
+      this.targetRotation = -nextIndex * angleStep;
+      this.itemGroup.rotation.y = this.targetRotation;
+      this.currentIndex = nextIndex;
+      this.applyHighlightVisuals(this.currentIndex);
+      return;
+    }
 
-  const nextIndex = (this.currentIndex + 1) % this.items.length; // Calculate the next index, wrapping around
-  // REMOVED: Internal GSAP animation and targetRotation calculation.
-  this.selectItem(nextIndex, true); // Delegate animation and highlight to selectItem
-}
+    const prevIndex = (this.currentIndex - 1 + this.items.length) % this.items.length; // Calculate the previous index, wrapping around
+    // REMOVED: Internal GSAP animation and targetRotation calculation.
+    this.selectItem(prevIndex, true); // Delegate animation and highlight to selectItem
+  }
 
-/**
- * Navigates the carousel to the previous item with a smooth rotation animation.
- *
- * Prevents navigation if an animation is already in progress. Calculates the
- * index of the previous item, handling wrap-around. Determines the target rotation
- * angle based on the number of items and initiates a GSAP animation to rotate
- * the item group. Uses a 'back.out' ease for a gentle snap effect.
- * On animation completion, updates the current index and resets the animation flag.
- * Also highlights the newly selected previous item.
- *
- * @memberof Carousel3DPro
- * @returns {void} - Does not return a value.
- */
-// goToPrev() {
-//   if (this.isAnimating) return; // Prevent going to previous item if currently animating
-//   this.isAnimating = true; // Set animating flag to true
-//   const prevIndex = (this.currentIndex - 1 + this.items.length) % this.items.length; // Calculate the previous index, wrapping around if necessary
-//   // Calculate rotation amount - smooth transition
-//   const segmentAngle = (2 * Math.PI) / this.items.length; // Calculate the angle step based on the number of items
-//   this.targetRotation = this.itemGroup.rotation.y + segmentAngle; // Update the target rotation to rotate to the previous item
-//   // Animate with smoother, more controlled motion and gentle snap
-//   gsap.to(this.itemGroup.rotation, { // Animate the rotation of the item group to face the previous item
-//     y: this.targetRotation, // Set the target rotation angle
-//     duration: 0.5, // Duration of the animation
-//     ease: "back.out(1.2)", // Add gentle snap-to effect
-//     onComplete: () => { // Callback when the animation is complete
-//       this.currentIndex = prevIndex; // Update the current index to the previous index
-//       this.isAnimating = false; // Reset animating flag when animation is complete
-//     }
-//   });
-//   // Highlight new item
-//   this.selectItem(prevIndex, true); // Select the previous item with animation
-// }
-/**
-* Selects and animates the carousel to the previous item.
-* Calculates the previous index and calls selectItem to handle the animation and state update.
-*/
-goToPrev() {
-  // Prevent interaction if already animating
-  if (this.isAnimating) return;
+  /**
+   * Retrieves the item currently selected in the carousel.
+   * @returns {object} The item object located at the current index within the items array.
+   */
+  getCurrentItem() { // Get the currently selected item
+    return this.items[this.currentIndex]; // Return the item at the current index
+  }
 
-  const prevIndex = (this.currentIndex - 1 + this.items.length) % this.items.length; // Calculate the previous index, wrapping around
-  // REMOVED: Internal GSAP animation and targetRotation calculation.
-  this.selectItem(prevIndex, true); // Delegate animation and highlight to selectItem
-}
-
-/**
- * Retrieves the item currently selected in the carousel.
- * @returns {object} The item object located at the current index within the items array.
- */
-getCurrentItem() { // Get the currently selected item
-  return this.items[this.currentIndex]; // Return the item at the current index
-}
-
-/**
- * Handles resizing of the carousel for responsive layouts.
- * This method should be invoked by the parent component whenever the window size changes
- * to ensure the carousel adjusts its dimensions and layout accordingly.
- */
-resize() {
-  // Update for responsive layout
-  // This would be called by the parent component when window resizes
-}
+  /**
+   * Handles resizing of the carousel for responsive layouts.
+   * This method should be invoked by the parent component whenever the window size changes
+   * to ensure the carousel adjusts its dimensions and layout accordingly.
+   */
+  resize() {
+    // Update for responsive layout
+    // This would be called by the parent component when window resizes
+  }
 }

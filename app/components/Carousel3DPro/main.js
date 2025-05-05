@@ -652,9 +652,9 @@ export function setupCarousel(container) {
             let current = hit.object; // Start with the hit object
             while (current && current.parent !== carousel.itemGroup) current = current.parent; // Traverse up the hierarchy to find the parent item group
             if (current && current.userData.index !== undefined) { // Check if the parent item has a valid index in userData
-                const i = current.userData.index; // Get the index of the clicked item
-                carousel.onItemClick?.(i, items[i]); // Call the onItemClick handler if it exists
-                carousel.selectItem(i, true); // Select the clicked item in the carousel
+                const i = current.userData.index; // Get the index of the clicked item and store it with i
+                carousel.onItemClick?.(i, items[i]); // Call the onItemClick handler if it exists and pass the index and item
+                carousel.selectItem(i, true); // Select the clicked item in the carousel and show preview
                 break; // Exit after handling the first valid item click
             }
         }

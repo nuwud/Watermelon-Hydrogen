@@ -230,7 +230,8 @@ export class Carousel3DSubmenu extends THREE.Group { // Class definition for Car
         // Position wheel
         if (this.itemMeshes.length > 0) { // Check if there are items created
           const firstItem = this.itemMeshes[0]; // Get the first item mesh
-          this.itemGroup.rotation.x = -firstItem.userData.angle + 0; // Set rotation to position first item at front
+          // this.itemGroup.rotation.x = -firstItem.userData.angle + 0; // Set rotation to position first item at front
+          this.itemGroup.rotation.x = -firstItem.userData.angle + this.mainCarouselHomeAngle; // Set rotation to position first item at front
           this.targetRotation = this.itemGroup.rotation.x; // Set target rotation to match
         }
       });
@@ -248,20 +249,20 @@ export class Carousel3DSubmenu extends THREE.Group { // Class definition for Car
     this.addCloseButtonPlaceholder(); // Add close button to fixed elements
   }
 
-    /**
-   * @function addCloseButtonPlaceholder
-   * @description Creates and adds a 3D placeholder mesh representing a close button to the scene.
-   * This function initializes a red cylindrical mesh (`THREE.Mesh`) with specific material properties
-   * (red color, transparency, emissive glow) to serve as the base for the close button.
-   * It positions the button in the top corner, sets its initial scale, and assigns a high `renderOrder`
-   * to ensure it's rendered on top of other elements.
-   * User data (`userData`) is added to the mesh, including a flag `isCloseButton` for identification,
-   * the original color, and a hover color for interaction feedback.
-   * It then calls `createCloseButtonX` to add the "X" symbol geometry to the button.
-   * Finally, the complete close button mesh is added to the `this.fixedElements` group,
-   * which likely keeps elements fixed relative to the camera or view.
-   * @memberof Carousel3DSubmenu
-   */
+  /**
+ * @function addCloseButtonPlaceholder
+ * @description Creates and adds a 3D placeholder mesh representing a close button to the scene.
+ * This function initializes a red cylindrical mesh (`THREE.Mesh`) with specific material properties
+ * (red color, transparency, emissive glow) to serve as the base for the close button.
+ * It positions the button in the top corner, sets its initial scale, and assigns a high `renderOrder`
+ * to ensure it's rendered on top of other elements.
+ * User data (`userData`) is added to the mesh, including a flag `isCloseButton` for identification,
+ * the original color, and a hover color for interaction feedback.
+ * It then calls `createCloseButtonX` to add the "X" symbol geometry to the button.
+ * Finally, the complete close button mesh is added to the `this.fixedElements` group,
+ * which likely keeps elements fixed relative to the camera or view.
+ * @memberof Carousel3DSubmenu
+ */
   addCloseButtonPlaceholder() { // Create a placeholder for the close button
     // Create a red disk with VISIBLE settings
     const baseGeometry = new THREE.CylinderGeometry(0.22, 0.22, 0.05, 24); // Cylinder for close button
@@ -720,7 +721,6 @@ export class Carousel3DSubmenu extends THREE.Group { // Class definition for Car
     }
   }
 
-  // Floating Preview Methods
   /**
    * Creates and displays a floating 3D preview for a selected carousel item at the specified index.
    *
@@ -901,22 +901,22 @@ export class Carousel3DSubmenu extends THREE.Group { // Class definition for Car
     this.startFloatingPreviewSpin(); // <<< FIX 3: Start rotation animation here
   }
 
-    /**
-   * Selects an item in the submenu by its index, handling visual updates and animations.
-   *
-   * This function manages the process of deselecting the currently active item (if any)
-   * and highlighting the newly selected item. It supports both animated transitions
-   * (scaling, rotation, color changes) and instant updates based on the `animate` flag.
-   * It also handles internal state management, including locking mechanisms (`forceLockedIndex`,
-   * `selectItemLock`, `forceSelectLock`, `targetRotationLocked`, `highlightLockIndex`, `ignoreHighlightOverride`)
-   * to prevent conflicts during animations or state changes, and manages the `isTransitioning` flag.
-   * Optionally, it can trigger the creation of a floating preview for the selected item.
-   *
-   * @param {number} index - The zero-based index of the item to select within the `itemMeshes` array.
-   * @param {boolean} [animate=true] - If true, performs selection with animations (scaling, rotation). If false, updates instantly.
-   * @param {boolean} [createPreview=false] - If true, triggers the creation/update of a floating preview element for the selected item.
-   * @returns {void}
-   */
+  /**
+ * Selects an item in the submenu by its index, handling visual updates and animations.
+ *
+ * This function manages the process of deselecting the currently active item (if any)
+ * and highlighting the newly selected item. It supports both animated transitions
+ * (scaling, rotation, color changes) and instant updates based on the `animate` flag.
+ * It also handles internal state management, including locking mechanisms (`forceLockedIndex`,
+ * `selectItemLock`, `forceSelectLock`, `targetRotationLocked`, `highlightLockIndex`, `ignoreHighlightOverride`)
+ * to prevent conflicts during animations or state changes, and manages the `isTransitioning` flag.
+ * Optionally, it can trigger the creation of a floating preview for the selected item.
+ *
+ * @param {number} index - The zero-based index of the item to select within the `itemMeshes` array.
+ * @param {boolean} [animate=true] - If true, performs selection with animations (scaling, rotation). If false, updates instantly.
+ * @param {boolean} [createPreview=false] - If true, triggers the creation/update of a floating preview element for the selected item.
+ * @returns {void}
+ */
   selectItem(index, animate = true, createPreview = false) { // Select an item in the submenu by index
     if (index < 0 || index >= this.itemMeshes.length) return; // Check if index is valid
     // <<< FIX 1: Set forceLockedIndex at the beginning
@@ -1069,6 +1069,13 @@ export class Carousel3DSubmenu extends THREE.Group { // Class definition for Car
       this.showingPreview = true; // Track that we are showing a preview
       this.updateFloatingPreview(index); // Update the floating preview for the newly selected item
     }
+    const angle = this.itemMeshes[index].userData.angle; // Get the angle of the selected item
+    this.targetRotation = -angle + this.mainCarouselHomeAngle; // Set the target rotation to the selected item's angle
+    gsap.to(this.itemGroup.rotation, { // Animate rotation to target position
+      x: this.targetRotation, // Rotate to the target position
+      duration: 0.8, // Duration of the animation
+      ease: "power2.out" // Smooth deceleration curve
+    });    
   }
 
   /**
@@ -1362,18 +1369,20 @@ export class Carousel3DSubmenu extends THREE.Group { // Class definition for Car
    */
   update() {
     try {
-      // Smooth rotation with improved damping for fluid motion
-      if (this.targetRotation !== undefined && this.itemGroup) { // Check if targetRotation is defined and itemGroup exists, for example, if targetRotation is 0 and current rotation is -1.57, rotationDiff will be 1.57, and if targetRotation is -1.57 and current rotation is 0, rotationDiff will be -1.57.
-        const rotationDiff = this.targetRotation - this.itemGroup.rotation.x; // Calculate the difference between current and target rotation, for example, if targetRotation is 0 and current rotation is -1.57, rotationDiff will be 1.57, and if targetRotation is -1.57 and current rotation is 0, rotationDiff will be -1.57.
-        if (Math.abs(rotationDiff) > 0.001) { // More sensitive threshold
-          // Apply ease-out style damping for smoother deceleration
-          const dampingFactor = Math.min(1, Math.max(0.05, Math.abs(rotationDiff) * 0.8)); // Calculate damping factor based on rotation difference, for example, if rotationDiff is 1.57, dampingFactor will be 0.8, and if rotationDiff is 0.1, dampingFactor will be 0.05.
-          this.itemGroup.rotation.x += rotationDiff * dampingFactor * this.rotationSpeed; // Apply damping to rotation
-        } else {
-          // Snap exactly to target when very close
-          this.itemGroup.rotation.x = this.targetRotation; // Snap to target rotation when close enough to avoid jitter by setting the rotation directly
-        }
-      }
+      // --- REMOVE OR COMMENT OUT THIS ENTIRE BLOCK ---
+      // // Smooth rotation with improved damping for fluid motion
+      // if (this.targetRotation !== undefined && this.itemGroup) { // Check if targetRotation is defined and itemGroup exists, for example, if targetRotation is 0 and current rotation is -1.57, rotationDiff will be 1.57, and if targetRotation is -1.57 and current rotation is 0, rotationDiff will be -1.57.
+      //   const rotationDiff = this.targetRotation - this.itemGroup.rotation.x; // Calculate the difference between current and target rotation, for example, if targetRotation is 0 and current rotation is -1.57, rotationDiff will be 1.57, and if targetRotation is -1.57 and current rotation is 0, rotationDiff will be -1.57.
+      //   if (Math.abs(rotationDiff) > 0.001) { // More sensitive threshold
+      //     // Apply ease-out style damping for smoother deceleration
+      //     const dampingFactor = Math.min(1, Math.max(0.05, Math.abs(rotationDiff) * 0.8)); // Calculate damping factor based on rotation difference, for example, if rotationDiff is 1.57, dampingFactor will be 0.8, and if rotationDiff is 0.1, dampingFactor will be 0.05.
+      //     this.itemGroup.rotation.x += rotationDiff * dampingFactor * this.rotationSpeed; // Apply damping to rotation
+      //   } else {
+      //     // Snap exactly to target when very close
+      //     this.itemGroup.rotation.x = this.targetRotation; // Snap to target rotation when close enough to avoid jitter by setting the rotation directly
+      //   }
+      // }
+      // --- END OF BLOCK TO REMOVE ---
       // Position submenu correctly relative to parent item
       if (this.parentItem && this.parentItem.parent) { // Check if parentItem and its parent exist
         try {
@@ -1425,6 +1434,10 @@ export class Carousel3DSubmenu extends THREE.Group { // Class definition for Car
                 }
               }
             }
+          }
+          // Ensure counter-rotation still happens:
+          if (container) {
+            container.rotation.x = -this.itemGroup.rotation.x; // Keep items upright
           }
           // Keep text upright regardless of wheel rotation
           container.rotation.x = -this.itemGroup.rotation.x; // 
@@ -1629,7 +1642,7 @@ export class Carousel3DSubmenu extends THREE.Group { // Class definition for Car
       this.floatingPreview = null; // Clear reference to floating preview
     }
   }
- 
+
   /**
    * Starts a continuous spinning animation for the floating preview object.
    *
