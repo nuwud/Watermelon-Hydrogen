@@ -72,7 +72,8 @@ import { FontLoader } from 'three/examples/jsm/loaders/FontLoader.js';
 import { getGlowShaderMaterial } from './CarouselShaderFX.js';
 import { defaultCarouselStyle } from './CarouselStyleConfig.js'
 
-const gsap = typeof window !== 'undefined' && window.gsap ? window.gsap : null;
+import gsap from 'gsap';
+// const gsap = typeof window !== 'undefined' && window.gsap ? window.gsap : null;
 console.log('GSAP availability check:', gsap ? 'Available' : 'Not available');
 
 export class Carousel3DPro extends Group {
@@ -272,7 +273,7 @@ export class Carousel3DPro extends Group {
         if (!this.isAnimating && savedIndex >= 0 && savedIndex < this.itemMeshes.length) { // Check if savedIndex is valid
           this.selectItem(savedIndex, true); // Animate to the saved index
         }
-      }, 300); // Delay to ensure scene is fully ready      
+      }, 300); // Delay to ensure scene is fully ready       
 
       // --- Use selectItem to set the initial state instantly ---
       // This ensures the same logic for setting currentIndex, targetRotation,
