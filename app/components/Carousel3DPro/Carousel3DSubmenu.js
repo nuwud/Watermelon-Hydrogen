@@ -181,6 +181,7 @@ export class Carousel3DSubmenu extends THREE.Group { // Class definition for Car
    * @param {Object} [config={}] - Configuration options for customizing the submenu's
    *                               appearance and behavior (e.g., radius, rotation speed, styling).
    */
+  
   constructor(parentItem, items = [], config = {}) { // Call parent constructor
     super(); // Call parent constructor
     this.parentItem = parentItem; // Reference to the parent item this submenu is attached to
@@ -189,7 +190,10 @@ export class Carousel3DSubmenu extends THREE.Group { // Class definition for Car
     this.itemMeshes = []; // Array to hold THREE.Group containers for each item
     this.currentIndex = 0; // Currently selected item index
     this.watermillRadius = 1.2; // Radius of the submenu cylinder
-    this.mainCarouselHomeAngle = config.mainCarouselHomeAngle || 0; // Home angle of the main carousel
+    //this.mainCarouselHomeAngle = config.mainCarouselHomeAngle || 0; // Home angle of the main carousel
+    this.mainCarouselHomeAngle = typeof config.mainCarouselHomeAngle === 'number'
+      ? config.mainCarouselHomeAngle
+      : 0;
     this.rotationAngle = 0; // Current rotation angle of the submenu
     this.targetRotation = 0; // Target rotation angle for smooth animations
     this.rotationSpeed = 0.15; // Increased for smoother rotation
@@ -1046,11 +1050,11 @@ export class Carousel3DSubmenu extends THREE.Group { // Class definition for Car
       const currentContainer = this.itemMeshes[this.currentIndex];
       const currentMesh = currentContainer.userData.mesh;
       const currentIcon = currentContainer.userData.iconMesh;
-      
+
       // Reset appearance
       currentMesh.material.color.copy(currentMesh.userData.originalColor);
       currentMesh.material.emissive = new THREE.Color(0x000000);
-      
+
       if (animate) {
         gsap.to(currentMesh.scale, {
           x: currentMesh.userData.originalScale.x,
@@ -1058,7 +1062,7 @@ export class Carousel3DSubmenu extends THREE.Group { // Class definition for Car
           z: currentMesh.userData.originalScale.z,
           duration: 0.3
         });
-        
+
         if (currentIcon) {
           const iconOriginal = currentIcon.userData.originalScale || new THREE.Vector3(1, 1, 1);
           gsap.to(currentIcon.scale, {
@@ -1067,7 +1071,7 @@ export class Carousel3DSubmenu extends THREE.Group { // Class definition for Car
             z: iconOriginal.z,
             duration: 0.3
           });
-          
+
           // Reset rotation to upright immediately without animation
           gsap.killTweensOf(currentIcon.rotation);
           gsap.set(currentIcon.rotation, { x: 0, y: 0, z: 0 });
@@ -1085,11 +1089,11 @@ export class Carousel3DSubmenu extends THREE.Group { // Class definition for Car
     // Apply visual highlight to the selected item
     const selectedMesh = selected.userData.mesh;
     const selectedIcon = selected.userData.iconMesh;
-    
+
     // Apply highlight appearance
     selectedMesh.material.color.set(this.config.highlightColor || 0x00ffff);
     selectedMesh.material.emissive = new THREE.Color(0x003333);
-    
+
     if (animate) {
       // Scale up text
       gsap.to(selectedMesh.scale, {
@@ -1098,7 +1102,7 @@ export class Carousel3DSubmenu extends THREE.Group { // Class definition for Car
         z: selectedMesh.userData.originalScale.z * 1.3,
         duration: 0.3
       });
-      
+
       if (selectedIcon) {
         // Scale up icon using original scale
         const iconOriginal = selectedIcon.userData.originalScale || new THREE.Vector3(1, 1, 1);
@@ -1109,7 +1113,7 @@ export class Carousel3DSubmenu extends THREE.Group { // Class definition for Car
           duration: 0.3,
           ease: "back.out"
         });
-        
+
         // Add a geodesic spin animation to the icon
         gsap.killTweensOf(selectedIcon.rotation);
         gsap.timeline()
@@ -1134,7 +1138,7 @@ export class Carousel3DSubmenu extends THREE.Group { // Class definition for Car
         selectedMesh.userData.originalScale.y * 1.3,
         selectedMesh.userData.originalScale.z * 1.3
       );
-      
+
       if (selectedIcon) {
         const iconOriginal = selectedIcon.userData.originalScale || new THREE.Vector3(1, 1, 1);
         selectedIcon.scale.set(
