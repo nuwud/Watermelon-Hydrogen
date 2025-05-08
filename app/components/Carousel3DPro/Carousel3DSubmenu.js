@@ -181,7 +181,6 @@ export class Carousel3DSubmenu extends THREE.Group { // Class definition for Car
    * @param {Object} [config={}] - Configuration options for customizing the submenu's
    *                               appearance and behavior (e.g., radius, rotation speed, styling).
    */
-  
   constructor(parentItem, items = [], config = {}) { // Call parent constructor
     super(); // Call parent constructor
     this.parentItem = parentItem; // Reference to the parent item this submenu is attached to
@@ -636,7 +635,7 @@ export class Carousel3DSubmenu extends THREE.Group { // Class definition for Car
               x: model.userData.originalScale.x * multiplier, // Use original scale
               y: model.userData.originalScale.y * multiplier, // Use original scale
               z: model.userData.originalScale.z * multiplier, // Use original scale
-              duration: 0.5, // Duration of the animation
+              duration: 0.3, // Duration of the animation
               ease: 'elastic.out', // Elastic easing for a bouncy effect
             });
             // If this item is highlighted when loaded, apply spin
@@ -644,7 +643,7 @@ export class Carousel3DSubmenu extends THREE.Group { // Class definition for Car
               gsap.killTweensOf(model.rotation); // Stop any existing rotation animations
               gsap.timeline() // Create a new timeline for sequential animations
                 .to(model.rotation, { // Rotate to initial position
-                  y: Math.PI * 2, x: Math.PI * 0.8, z: Math.PI * 0.5, // Rotate to a specific position
+                  y: Math.PI * 2, x: Math.PI * 0.8, z: Math.PI * 0.3, // Rotate to a specific position
                   duration: 1.0, ease: "power1.inOut" // Smooth rotation
                 })
                 .to(model.rotation, { // Spin the cart icon
@@ -938,28 +937,34 @@ export class Carousel3DSubmenu extends THREE.Group { // Class definition for Car
     // Animate to new position
     gsap.to(this.itemGroup.rotation, {
       x: this.targetRotation,
-      duration: 0.5,
+      duration: 0.3,
       ease: "power3.out",
       onUpdate: () => {
-        // Determine which item is now at the front position
-        const frontIndex = this.getFrontIndex();
-
-        // Only highlight if not locked
-        if (frontIndex !== -1 && frontIndex !== this.currentIndex &&
-          !this.forceLockedIndex && !this.targetRotationLocked) {
-          // Update current index and apply highlighting
-          this.currentIndex = frontIndex;
-          this.highlightItemAtIndex(frontIndex);
+        if (!this.selectItemLock && !this.isTransitioning && this.forceLockedIndex === null) {
+          // It's safe to allow geometric highlight updates
+          // Determine which item is now at the front position
+          const frontIndex = this.getFrontIndex();
+          // Check if the front index is valid and not the same as the current index
+          // Also check if the index is not locked
+          // and if the target rotation is not locked
+          // Only highlight if not locked
+          if (frontIndex !== -1 && frontIndex !== this.currentIndex &&
+            !this.forceLockedIndex && !this.targetRotationLocked) {
+            // Update current index and apply highlighting
+            this.currentIndex = frontIndex;
+            this.highlightItemAtIndex(frontIndex);
+          }
         }
       },
       onComplete: () => {
         this.isAnimating = false;
-
-        // Get final front index after animation
-        const frontIndex = this.getFrontIndex(); // Determine which item is now at the front position
-        if (frontIndex !== -1 && frontIndex !== this.currentIndex) { // Only update if the front index has changed
-          this.currentIndex = frontIndex; // Update current index to the new front index
-          this.highlightItemAtIndex(frontIndex);
+        if (!this.selectItemLock && !this.isTransitioning && this.forceLockedIndex === null) {
+          // Get final front index after animation
+          const frontIndex = this.getFrontIndex(); // Determine which item is now at the front position
+          if (frontIndex !== -1 && frontIndex !== this.currentIndex) { // Only update if the front index has changed
+            this.currentIndex = frontIndex; // Update current index to the new front index
+            this.highlightItemAtIndex(frontIndex);
+          }
         }
       }
     });
@@ -1032,151 +1037,252 @@ export class Carousel3DSubmenu extends THREE.Group { // Class definition for Car
  * @param {boolean} [createPreview=false] - If true, triggers the creation/update of a floating preview element for the selected item.
  * @returns {void}
  */
+  // selectItem(index, animate = true, createPreview = false) {
+  //   if (index < 0 || index >= this.itemMeshes.length) return;
+
+  //   const selected = this.itemMeshes[index];
+  //   const selectedAngle = selected.userData.angle;
+
+  //   // Determine the angle that brings this item to 3 o'clock (front)
+  //   const frontAngle = +selectedAngle + this.mainCarouselHomeAngle;
+
+  //   this.forceLockedIndex = index;
+  //   this.selectItemLock = true;
+  //   this.isTransitioning = true;
+
+  //   // Remove highlight from the currently active item
+  //   if (this.currentIndex !== index && this.itemMeshes[this.currentIndex]) {
+  //     const currentContainer = this.itemMeshes[this.currentIndex];
+  //     const currentMesh = currentContainer.userData.mesh;
+  //     const currentIcon = currentContainer.userData.iconMesh;
+
+  //     // Reset appearance
+  //     currentMesh.material.color.copy(currentMesh.userData.originalColor);
+  //     currentMesh.material.emissive = new THREE.Color(0x000000);
+
+  //     if (animate) {
+  //       gsap.to(currentMesh.scale, {
+  //         x: currentMesh.userData.originalScale.x,
+  //         y: currentMesh.userData.originalScale.y,
+  //         z: currentMesh.userData.originalScale.z,
+  //         duration: 0.3
+  //       });
+
+  //       if (currentIcon) {
+  //         const iconOriginal = currentIcon.userData.originalScale || new THREE.Vector3(1, 1, 1);
+  //         gsap.to(currentIcon.scale, {
+  //           x: iconOriginal.x,
+  //           y: iconOriginal.y,
+  //           z: iconOriginal.z,
+  //           duration: 0.3
+  //         });
+
+  //         // Reset rotation to upright immediately without animation
+  //         gsap.killTweensOf(currentIcon.rotation);
+  //         gsap.set(currentIcon.rotation, { x: 0, y: 0, z: 0 });
+  //       }
+  //     } else {
+  //       currentMesh.scale.copy(currentMesh.userData.originalScale);
+  //       if (currentIcon) {
+  //         const iconOriginal = currentIcon.userData.originalScale || new THREE.Vector3(1, 1, 1);
+  //         currentIcon.scale.copy(iconOriginal);
+  //         currentIcon.rotation.set(0, 0, 0);
+  //       }
+  //     }
+  //   }
+
+  //   // Apply visual highlight to the selected item
+  //   const selectedMesh = selected.userData.mesh;
+  //   const selectedIcon = selected.userData.iconMesh;
+
+  //   // Apply highlight appearance
+  //   selectedMesh.material.color.set(this.config.highlightColor || 0x00ffff);
+  //   selectedMesh.material.emissive = new THREE.Color(0x003333);
+
+  //   if (animate) {
+  //     // Scale up text
+  //     gsap.to(selectedMesh.scale, {
+  //       x: selectedMesh.userData.originalScale.x * 1.3,
+  //       y: selectedMesh.userData.originalScale.y * 1.3,
+  //       z: selectedMesh.userData.originalScale.z * 1.3,
+  //       duration: 0.3
+  //     });
+
+  //     if (selectedIcon) {
+  //       // Scale up icon using original scale
+  //       const iconOriginal = selectedIcon.userData.originalScale || new THREE.Vector3(1, 1, 1);
+  //       gsap.to(selectedIcon.scale, {
+  //         x: iconOriginal.x * 1.3,
+  //         y: iconOriginal.y * 1.3,
+  //         z: iconOriginal.z * 1.3,
+  //         duration: 0.3,
+  //         ease: "back.out"
+  //       });
+
+  //       // Add a geodesic spin animation to the icon
+  //       gsap.killTweensOf(selectedIcon.rotation);
+  //       gsap.timeline()
+  //         .to(selectedIcon.rotation, {
+  //           y: Math.PI * 2,
+  //           x: Math.PI * 0.8,
+  //           z: Math.PI * 0.5,
+  //           duration: 1.0,
+  //           ease: "power1.inOut"
+  //         })
+  //         .to(selectedIcon.rotation, {
+  //           x: 0,
+  //           z: 0,
+  //           duration: 0.3,
+  //           ease: "back.out(2)"
+  //         }, "-=0.1");
+  //     }
+  //   } else {
+  //     // Instant scale without animation
+  //     selectedMesh.scale.set(
+  //       selectedMesh.userData.originalScale.x * 1.3,
+  //       selectedMesh.userData.originalScale.y * 1.3,
+  //       selectedMesh.userData.originalScale.z * 1.3
+  //     );
+
+  //     if (selectedIcon) {
+  //       const iconOriginal = selectedIcon.userData.originalScale || new THREE.Vector3(1, 1, 1);
+  //       selectedIcon.scale.set(
+  //         iconOriginal.x * 1.3,
+  //         iconOriginal.y * 1.3,
+  //         iconOriginal.z * 1.3
+  //       );
+  //     }
+  //   }
+
+  //   const finish = () => {
+  //     this.currentIndex = index;
+  //     this.selectItemLock = false;
+  //     this.forceLockedIndex = null;
+  //     this.isTransitioning = false;
+  //     this.targetRotation = frontAngle; // sync final target
+  //   };
+
+  //   // Animate rotation or set instantly
+  //   if (animate) {
+  //     gsap.to(this.itemGroup.rotation, {
+  //       x: frontAngle,
+  //       duration: 0.6,
+  //       ease: "power2.out",
+  //       onComplete: finish
+  //     });
+  //   } else {
+  //     this.itemGroup.rotation.x = frontAngle;
+  //     finish();
+  //   }
+
+  //   if (createPreview) {
+  //     this.showingPreview = true;
+  //     this.createFloatingPreview(index);
+  //   }
+
+  //   console.warn(`[🧩 selectItem] Finalized selection: index=${index}, angle=${selectedAngle.toFixed(2)}, frontAngle=${frontAngle.toFixed(2)}`);
+  // }
+
   selectItem(index, animate = true, createPreview = false) {
     if (index < 0 || index >= this.itemMeshes.length) return;
-
+  
     const selected = this.itemMeshes[index];
     const selectedAngle = selected.userData.angle;
-
-    // Determine the angle that brings this item to 3 o'clock (front)
-    const frontAngle = +selectedAngle + this.mainCarouselHomeAngle;
-
+    const currentAngle = this.itemGroup.rotation.x;
+    const desiredAngle = selectedAngle + this.mainCarouselHomeAngle;
+  
+    const twoPi = Math.PI * 2;
+    let delta = ((desiredAngle - currentAngle + Math.PI) % twoPi) - Math.PI;
+    const target = currentAngle + delta;
+  
     this.forceLockedIndex = index;
     this.selectItemLock = true;
     this.isTransitioning = true;
-
-    // Remove highlight from the currently active item
+  
     if (this.currentIndex !== index && this.itemMeshes[this.currentIndex]) {
-      const currentContainer = this.itemMeshes[this.currentIndex];
-      const currentMesh = currentContainer.userData.mesh;
-      const currentIcon = currentContainer.userData.iconMesh;
-
-      // Reset appearance
-      currentMesh.material.color.copy(currentMesh.userData.originalColor);
-      currentMesh.material.emissive = new THREE.Color(0x000000);
-
-      if (animate) {
-        gsap.to(currentMesh.scale, {
-          x: currentMesh.userData.originalScale.x,
-          y: currentMesh.userData.originalScale.y,
-          z: currentMesh.userData.originalScale.z,
-          duration: 0.3
-        });
-
-        if (currentIcon) {
-          const iconOriginal = currentIcon.userData.originalScale || new THREE.Vector3(1, 1, 1);
-          gsap.to(currentIcon.scale, {
-            x: iconOriginal.x,
-            y: iconOriginal.y,
-            z: iconOriginal.z,
-            duration: 0.3
-          });
-
-          // Reset rotation to upright immediately without animation
-          gsap.killTweensOf(currentIcon.rotation);
-          gsap.set(currentIcon.rotation, { x: 0, y: 0, z: 0 });
-        }
-      } else {
-        currentMesh.scale.copy(currentMesh.userData.originalScale);
-        if (currentIcon) {
-          const iconOriginal = currentIcon.userData.originalScale || new THREE.Vector3(1, 1, 1);
-          currentIcon.scale.copy(iconOriginal);
-          currentIcon.rotation.set(0, 0, 0);
-        }
-      }
-    }
-
-    // Apply visual highlight to the selected item
-    const selectedMesh = selected.userData.mesh;
-    const selectedIcon = selected.userData.iconMesh;
-
-    // Apply highlight appearance
-    selectedMesh.material.color.set(this.config.highlightColor || 0x00ffff);
-    selectedMesh.material.emissive = new THREE.Color(0x003333);
-
-    if (animate) {
-      // Scale up text
-      gsap.to(selectedMesh.scale, {
-        x: selectedMesh.userData.originalScale.x * 1.3,
-        y: selectedMesh.userData.originalScale.y * 1.3,
-        z: selectedMesh.userData.originalScale.z * 1.3,
+      const prev = this.itemMeshes[this.currentIndex];
+      const mesh = prev.userData.mesh;
+      const icon = prev.userData.iconMesh;
+      mesh.material.color.copy(mesh.userData.originalColor);
+      mesh.material.emissive.set(0x000000);
+      gsap.to(mesh.scale, {
+        ...mesh.userData.originalScale,
         duration: 0.3
       });
-
-      if (selectedIcon) {
-        // Scale up icon using original scale
-        const iconOriginal = selectedIcon.userData.originalScale || new THREE.Vector3(1, 1, 1);
-        gsap.to(selectedIcon.scale, {
-          x: iconOriginal.x * 1.3,
-          y: iconOriginal.y * 1.3,
-          z: iconOriginal.z * 1.3,
-          duration: 0.3,
-          ease: "back.out"
+      if (icon) {
+        gsap.to(icon.scale, {
+          ...icon.userData.originalScale,
+          duration: 0.3
         });
-
-        // Add a geodesic spin animation to the icon
-        gsap.killTweensOf(selectedIcon.rotation);
-        gsap.timeline()
-          .to(selectedIcon.rotation, {
-            y: Math.PI * 2,
-            x: Math.PI * 0.8,
-            z: Math.PI * 0.5,
-            duration: 1.0,
-            ease: "power1.inOut"
-          })
-          .to(selectedIcon.rotation, {
-            x: 0,
-            z: 0,
-            duration: 0.3,
-            ease: "back.out(2)"
-          }, "-=0.1");
-      }
-    } else {
-      // Instant scale without animation
-      selectedMesh.scale.set(
-        selectedMesh.userData.originalScale.x * 1.3,
-        selectedMesh.userData.originalScale.y * 1.3,
-        selectedMesh.userData.originalScale.z * 1.3
-      );
-
-      if (selectedIcon) {
-        const iconOriginal = selectedIcon.userData.originalScale || new THREE.Vector3(1, 1, 1);
-        selectedIcon.scale.set(
-          iconOriginal.x * 1.3,
-          iconOriginal.y * 1.3,
-          iconOriginal.z * 1.3
-        );
+        gsap.killTweensOf(icon.rotation);
+        gsap.set(icon.rotation, { x: 0, y: 0, z: 0 });
       }
     }
-
+  
+    const mesh = selected.userData.mesh;
+    const icon = selected.userData.iconMesh;
+    mesh.material.color.set(this.config.highlightColor || 0x00ffff);
+    mesh.material.emissive.set(0x003333);
+    gsap.to(mesh.scale, {
+      x: mesh.userData.originalScale.x * 1.3,
+      y: mesh.userData.originalScale.y * 1.3,
+      z: mesh.userData.originalScale.z * 1.3,
+      duration: 0.3
+    });
+  
+    if (icon) {
+      const s = icon.userData.originalScale;
+      gsap.to(icon.scale, {
+        x: s.x * 1.3,
+        y: s.y * 1.3,
+        z: s.z * 1.3,
+        duration: 0.3,
+        ease: "back.out"
+      });
+      gsap.killTweensOf(icon.rotation);
+      gsap.timeline()
+        .to(icon.rotation, {
+          x: Math.PI * 0.8,
+          y: Math.PI * 2,
+          z: Math.PI * 0.5,
+          duration: 1,
+          ease: "power1.inOut"
+        })
+        .to(icon.rotation, {
+          x: 0,
+          z: 0,
+          duration: 0.3,
+          ease: "back.out(2)"
+        }, "-=0.1");
+    }
+  
     const finish = () => {
       this.currentIndex = index;
       this.selectItemLock = false;
       this.forceLockedIndex = null;
       this.isTransitioning = false;
-      this.targetRotation = frontAngle; // sync final target
+      this.targetRotation = target;
     };
-
-    // Animate rotation or set instantly
+  
     if (animate) {
       gsap.to(this.itemGroup.rotation, {
-        x: frontAngle,
+        x: target,
         duration: 0.6,
         ease: "power2.out",
         onComplete: finish
       });
     } else {
-      this.itemGroup.rotation.x = frontAngle;
+      this.itemGroup.rotation.x = target;
       finish();
     }
-
+  
     if (createPreview) {
       this.showingPreview = true;
       this.createFloatingPreview(index);
     }
-
-    console.warn(`[🧩 selectItem] Finalized selection: index=${index}, angle=${selectedAngle.toFixed(2)}, frontAngle=${frontAngle.toFixed(2)}`);
-  }
+  
+    console.warn(`[🧩 selectItem] Finalized selection: index=${index}, angle=${selectedAngle.toFixed(2)}, target=${target.toFixed(2)}`);
+  }  
 
   /**
    * Scrolls the 3D carousel submenu vertically based on the provided delta.
@@ -1221,7 +1327,7 @@ export class Carousel3DSubmenu extends THREE.Group { // Class definition for Car
     // Animate to the new position with improved easing
     gsap.to(this.itemGroup.rotation, {
       x: this.targetRotation, // Rotate to the target position
-      duration: 0.5, // Slightly longer for smoother motion
+      duration: 0.3, // Slightly longer for smoother motion
       ease: "power3.out", // Better deceleration curve
       onUpdate: () => {
         // Update the highlight during the animation
@@ -1321,7 +1427,7 @@ export class Carousel3DSubmenu extends THREE.Group { // Class definition for Car
       // Animate to full size
       gsap.to(this.itemGroup.scale, { // Animate to full size
         x: 1, y: 1, z: 1, // End at full scale
-        duration: 0.5, // Duration of the animation
+        duration: 0.3, // Duration of the animation
         ease: "back.out(1.7)" // Snappy elastic ease
       });
       // Also animate rotation for a nice effect
@@ -1501,152 +1607,246 @@ export class Carousel3DSubmenu extends THREE.Group { // Class definition for Car
    * @property {boolean} isSpinning - Indicates whether the floating preview is spinning.
    * @property {boolean} isErrorState - Indicates if the submenu is in an error state.
    */
+  // update() {
+  //   try {
+  //     // --- REMOVE OR COMMENT OUT THIS ENTIRE BLOCK ---
+  //     // IMPORTANT: KEEP THIS BLOCK - Critical for 3 o'clock position
+  //     // // Smooth rotation with improved damping for fluid motion
+  //     if (this.targetRotation !== undefined && this.itemGroup) {
+  //       const rotationDiff = this.targetRotation - this.itemGroup.rotation.x;
+  //       if (Math.abs(rotationDiff) > 0.001) {
+  //         // Apply ease-out style damping for smoother deceleration
+  //         const dampingFactor = Math.min(1, Math.max(0.05, Math.abs(rotationDiff) * 0.8));
+  //         this.itemGroup.rotation.x += rotationDiff * dampingFactor * this.rotationSpeed;
+  //       } else {
+  //         // Snap exactly to target when very close
+  //         this.itemGroup.rotation.x = this.targetRotation;
+  //       }
+  //     }
+  //     // --- END OF BLOCK TO REMOVE ---
+  //     // Position submenu correctly relative to parent item
+  //     if (this.parentItem && this.parentItem.parent) { // Check if parentItem and its parent exist
+  //       try {
+  //         // Check if parent has valid matrices before trying to get world position
+  //         if (this.parentItem.matrixWorld && this.parentItem.matrixWorld.elements) { // Check if parentItem has a valid matrixWorld
+  //           // Get parent world position safely
+  //           const parentWorldPos = new THREE.Vector3(); // Create a new Vector3 for parent world position
+  //           this.parentItem.getWorldPosition(parentWorldPos); // Get the world position of the parent item
+  //           // Only copy position if we got valid coordinates
+  //           if (!isNaN(parentWorldPos.x) && !isNaN(parentWorldPos.y) && !isNaN(parentWorldPos.z)) { // Check if the position is valid
+  //             this.position.copy(parentWorldPos); // Copy the parent world position to this submenu's position
+  //           }
+  //         }
+  //         // Match parent Y rotation only if it's a valid number
+  //         if (this.parentItem.rotation && !isNaN(this.parentItem.rotation.y)) { // Check if parentItem has a valid rotation so we can match it
+  //           this.rotation.y = this.parentItem.rotation.y; // Match the Y rotation of the parent item by copying its rotation
+  //           // Also match parent's parent rotation (the carousel) with safeguards
+  //           if (this.parentItem.parent.rotation && !isNaN(this.parentItem.parent.rotation.y)) {
+  //             this.rotation.y = this.parentItem.parent.rotation.y + this.parentItem.rotation.y;
+  //           } // Match the Y rotation of the parent item's parent (the carousel)
+  //         }
+  //       } catch (positionError) {
+  //         console.warn("Error positioning submenu:", positionError);
+  //         // Continue execution despite positioning error
+  //       }
+  //     }
+  //     // Only process items if the arrays are valid
+  //     if (this.itemMeshes && this.itemMeshes.length > 0) { // Check if itemMeshes exists and has items
+  //       // First reset all items to non-highlighted state (keep this for visual consistency)
+  //       this.itemMeshes.forEach((container, i) => { // Iterate over each item container
+  //         if (!container || !container.userData) return; // Skip if container or userData is missing
+  //         const mesh = container.userData.mesh; // Get the mesh reference from userData
+  //         const iconMesh = container.userData.iconMesh; // Get iconMesh reference from userData
+  //         // FIXED: Add null check for iconMesh before accessing properties
+  //         if (!mesh) return; // Only mesh is strictly required for text reset
+  //         // Only reset if this isn't already the current item
+  //         if (i !== this.currentIndex) { // Check if this is not the currently selected item
+  //           if (mesh.userData && mesh.userData.originalColor) { // Check if originalColor exists in userData
+  //             mesh.material.color.copy(mesh.userData.originalColor); // Reset color to original
+  //             mesh.material.emissive = new THREE.Color(0x000000); // Reset emissive color
+  //             mesh.scale.copy(mesh.userData.originalScale); // Reset scale to original size
+  //             if (iconMesh) { // FIXED: Add null check for iconMesh
+  //               // ✅ Step 2: Update scaling logic
+  //               const iconOriginal = iconMesh.userData.originalScale || new THREE.Vector3(1, 1, 1); // Get original scale from userData or default to (1, 1, 1)
+  //               iconMesh.scale.copy(iconOriginal); // Reset instantly using original scale
+  //               // Make sure non-highlighted icons stay upright
+  //               if (!gsap.isTweening(iconMesh.rotation)) { // Check if there are no active rotations
+  //                 iconMesh.rotation.set(0, 0, 0); // Reset rotation to upright immediately without animation
+  //               }
+  //             }
+  //           }
+  //         }
+  //         // Ensure counter-rotation still happens:
+  //         if (container) {
+  //           container.rotation.x = -this.itemGroup.rotation.x; // Keep items upright
+  //         }
+  //         // Keep text upright regardless of wheel rotation
+  //         container.rotation.x = -this.itemGroup.rotation.x; // 
+  //         // Reset any Y rotation for consistent appearance
+  //         container.rotation.y = 0; // Reset Y rotation to avoid tilt
+  //         // Basic wheel positioning
+  //         container.position.y = this.watermillRadius * Math.sin(container.userData.angle); // Position based on angle
+  //         container.position.z = this.watermillRadius * Math.cos(container.userData.angle); // Position based on angle
+  //       });
+  //     }
+  //     // Exit early if we're in the middle of a GSAP animation (e.g., from selectItem)
+  //     if (this.isAnimating) return;
+
+  //     const current = this.itemGroup.rotation.x;  // Changed from y to x to match other code
+  //     const diff = this.targetRotation - current;
+  //     const threshold = 0.005;
+
+  //     if (Math.abs(diff) > threshold) {
+  //       // Smoothly interpolate toward the target rotation
+  //       this.itemGroup.rotation.x += diff * this.rotationSpeed;
+  //       this.isSpinning = true;
+  //     } else if (this.isSpinning) {
+  //       // Once close enough, snap into place
+  //       this.itemGroup.rotation.x = this.targetRotation;
+  //       this.isSpinning = false;
+
+  //       // Only update the current index if we're not locked by selectItem
+  //       // This prevents the menu from shifting unnecessarily
+  //       if (!this.selectItemLock && !this.forceLockedIndex && !this.isTransitioning && !this.targetRotationLocked) {
+  //         // Identify which item is now at the 3 o'clock front-facing anchor
+  //         const frontIndex = this.getFrontIndex();  // Use existing method instead of undefined one
+
+  //         if (frontIndex !== -1 && frontIndex !== this.currentIndex) {
+  //           this.currentIndex = frontIndex;
+  //           this.highlightItemAtIndex(frontIndex);  // Use existing method instead of undefined one
+  //         }
+  //       }
+  //     }
+  //     // Maintain glow effect if active
+  //     const currentMesh = this.itemMeshes[this.currentIndex];
+  //     if (currentMesh?.material?.uniforms?.time) {
+  //       currentMesh.material.uniforms.time.value = performance.now() * 0.001;
+  //     }
+  //     if (this.closeButton) { // Check if closeButton exists
+  //       const cameraPosWorld = new THREE.Vector3(0, 0, 10); // Where the camera "is"
+  //       // Convert to local space relative to closeButton’s parent
+  //       this.closeButton.parent.worldToLocal(cameraPosWorld); // Convert world position to local space
+  //       // Make the button face that point
+  //       this.closeButton.lookAt(cameraPosWorld); // Make the close button face the camera position in local space
+  //       // Orient the red disk so its flat face looks forward (Z)
+  //       this.closeButton.rotateZ(Math.PI / 2); // Rotate the close button to face the camera
+  //     }
+  //     // Update floating preview position based on parent carousel rotation
+  //     if (this.floatingPreview && this.parentItem && this.parentItem.parent) { // Check if floatingPreview and parentItem's parent exist
+  //       // If parent carousel is rotating, stop the automatic spin
+  //       if (this.parentItem.parent.rotation.y !== this.lastParentRotation) { // Check if parent carousel rotation has changed
+  //         if (this.isSpinning) { // If we were spinning, stop the spin
+  //           this.stopFloatingPreviewSpin(); // Stop the spinning animation
+  //         }
+  //         // Match the parent's rotation for the floating preview
+  //         this.floatingPreview.rotation.y = this.parentItem.parent.rotation.y; // Match the Y rotation of the parent carousel
+  //       } else if (!this.isSpinning) { // If parent carousel has stopped rotating and we're not already spinning
+  //         // If parent stopped moving and we're not spinning, restart the spin
+  //         this.startFloatingPreviewSpin(); // Start the spinning animation
+  //       }
+  //       // Store last rotation for comparison
+  //       this.lastParentRotation = this.parentItem.parent.rotation.y; // Store the current parent rotation for future comparisons
+  //     }
+  //   } catch (error) {
+  //     console.error("Error in Carousel3DSubmenu update:", error); // Log the error for debugging
+  //     // Prevent further errors by setting a safe state
+  //     this.isErrorState = true; // Set an error state flag to prevent further issues
+  //   }
+  // }
+
   update() {
     try {
-      // --- REMOVE OR COMMENT OUT THIS ENTIRE BLOCK ---
-      // IMPORTANT: KEEP THIS BLOCK - Critical for 3 o'clock position
-      // // Smooth rotation with improved damping for fluid motion
-      if (this.targetRotation !== undefined && this.itemGroup) {
-        const rotationDiff = this.targetRotation - this.itemGroup.rotation.x;
-        if (Math.abs(rotationDiff) > 0.001) {
-          // Apply ease-out style damping for smoother deceleration
-          const dampingFactor = Math.min(1, Math.max(0.05, Math.abs(rotationDiff) * 0.8));
-          this.itemGroup.rotation.x += rotationDiff * dampingFactor * this.rotationSpeed;
-        } else {
-          // Snap exactly to target when very close
-          this.itemGroup.rotation.x = this.targetRotation;
+      if (this.parentItem && this.parentItem.parent) {
+        if (this.parentItem.matrixWorld?.elements) {
+          const parentWorldPos = new THREE.Vector3();
+          this.parentItem.getWorldPosition(parentWorldPos);
+          if (!isNaN(parentWorldPos.x)) {
+            this.position.copy(parentWorldPos);
+          }
+        }
+        if (!isNaN(this.parentItem.rotation?.y)) {
+          this.rotation.y = this.parentItem.rotation.y;
+          if (!isNaN(this.parentItem.parent.rotation?.y)) {
+            this.rotation.y = this.parentItem.parent.rotation.y + this.parentItem.rotation.y;
+          }
         }
       }
-      // --- END OF BLOCK TO REMOVE ---
-      // Position submenu correctly relative to parent item
-      if (this.parentItem && this.parentItem.parent) { // Check if parentItem and its parent exist
-        try {
-          // Check if parent has valid matrices before trying to get world position
-          if (this.parentItem.matrixWorld && this.parentItem.matrixWorld.elements) { // Check if parentItem has a valid matrixWorld
-            // Get parent world position safely
-            const parentWorldPos = new THREE.Vector3(); // Create a new Vector3 for parent world position
-            this.parentItem.getWorldPosition(parentWorldPos); // Get the world position of the parent item
-            // Only copy position if we got valid coordinates
-            if (!isNaN(parentWorldPos.x) && !isNaN(parentWorldPos.y) && !isNaN(parentWorldPos.z)) { // Check if the position is valid
-              this.position.copy(parentWorldPos); // Copy the parent world position to this submenu's position
-            }
-          }
-          // Match parent Y rotation only if it's a valid number
-          if (this.parentItem.rotation && !isNaN(this.parentItem.rotation.y)) { // Check if parentItem has a valid rotation so we can match it
-            this.rotation.y = this.parentItem.rotation.y; // Match the Y rotation of the parent item by copying its rotation
-            // Also match parent's parent rotation (the carousel) with safeguards
-            if (this.parentItem.parent.rotation && !isNaN(this.parentItem.parent.rotation.y)) {
-              this.rotation.y = this.parentItem.parent.rotation.y + this.parentItem.rotation.y;
-            } // Match the Y rotation of the parent item's parent (the carousel)
-          }
-        } catch (positionError) {
-          console.warn("Error positioning submenu:", positionError);
-          // Continue execution despite positioning error
-        }
-      }
-      // Only process items if the arrays are valid
-      if (this.itemMeshes && this.itemMeshes.length > 0) { // Check if itemMeshes exists and has items
-        // First reset all items to non-highlighted state (keep this for visual consistency)
-        this.itemMeshes.forEach((container, i) => { // Iterate over each item container
-          if (!container || !container.userData) return; // Skip if container or userData is missing
-          const mesh = container.userData.mesh; // Get the mesh reference from userData
-          const iconMesh = container.userData.iconMesh; // Get iconMesh reference from userData
-          // FIXED: Add null check for iconMesh before accessing properties
-          if (!mesh) return; // Only mesh is strictly required for text reset
-          // Only reset if this isn't already the current item
-          if (i !== this.currentIndex) { // Check if this is not the currently selected item
-            if (mesh.userData && mesh.userData.originalColor) { // Check if originalColor exists in userData
-              mesh.material.color.copy(mesh.userData.originalColor); // Reset color to original
-              mesh.material.emissive = new THREE.Color(0x000000); // Reset emissive color
-              mesh.scale.copy(mesh.userData.originalScale); // Reset scale to original size
-              if (iconMesh) { // FIXED: Add null check for iconMesh
-                // ✅ Step 2: Update scaling logic
-                const iconOriginal = iconMesh.userData.originalScale || new THREE.Vector3(1, 1, 1); // Get original scale from userData or default to (1, 1, 1)
-                iconMesh.scale.copy(iconOriginal); // Reset instantly using original scale
-                // Make sure non-highlighted icons stay upright
-                if (!gsap.isTweening(iconMesh.rotation)) { // Check if there are no active rotations
-                  iconMesh.rotation.set(0, 0, 0); // Reset rotation to upright immediately without animation
-                }
+  
+      if (this.itemMeshes?.length) {
+        this.itemMeshes.forEach((container, i) => {
+          if (!container?.userData) return;
+          const mesh = container.userData.mesh;
+          const iconMesh = container.userData.iconMesh;
+          if (!mesh) return;
+  
+          if (i !== this.currentIndex && mesh.userData?.originalColor) {
+            mesh.material.color.copy(mesh.userData.originalColor);
+            mesh.material.emissive = new THREE.Color(0x000000);
+            mesh.scale.copy(mesh.userData.originalScale);
+            if (iconMesh) {
+              const iconOriginal = iconMesh.userData.originalScale || new THREE.Vector3(1, 1, 1);
+              iconMesh.scale.copy(iconOriginal);
+              if (!gsap.isTweening(iconMesh.rotation)) {
+                iconMesh.rotation.set(0, 0, 0);
               }
             }
           }
-          // Ensure counter-rotation still happens:
-          if (container) {
-            container.rotation.x = -this.itemGroup.rotation.x; // Keep items upright
-          }
-          // Keep text upright regardless of wheel rotation
-          container.rotation.x = -this.itemGroup.rotation.x; // 
-          // Reset any Y rotation for consistent appearance
-          container.rotation.y = 0; // Reset Y rotation to avoid tilt
-          // Basic wheel positioning
-          container.position.y = this.watermillRadius * Math.sin(container.userData.angle); // Position based on angle
-          container.position.z = this.watermillRadius * Math.cos(container.userData.angle); // Position based on angle
+  
+          container.rotation.x = -this.itemGroup.rotation.x;
+          container.rotation.y = 0;
+          container.position.y = this.watermillRadius * Math.sin(container.userData.angle);
+          container.position.z = this.watermillRadius * Math.cos(container.userData.angle);
         });
       }
-      // Exit early if we're in the middle of a GSAP animation (e.g., from selectItem)
+  
       if (this.isAnimating) return;
-
-      const current = this.itemGroup.rotation.x;  // Changed from y to x to match other code
+  
+      const current = this.itemGroup.rotation.x;
       const diff = this.targetRotation - current;
       const threshold = 0.005;
-
+  
       if (Math.abs(diff) > threshold) {
-        // Smoothly interpolate toward the target rotation
         this.itemGroup.rotation.x += diff * this.rotationSpeed;
         this.isSpinning = true;
       } else if (this.isSpinning) {
-        // Once close enough, snap into place
         this.itemGroup.rotation.x = this.targetRotation;
         this.isSpinning = false;
-
-        // Only update the current index if we're not locked by selectItem
-        // This prevents the menu from shifting unnecessarily
+  
         if (!this.selectItemLock && !this.forceLockedIndex && !this.isTransitioning && !this.targetRotationLocked) {
-          // Identify which item is now at the 3 o'clock front-facing anchor
-          const frontIndex = this.getFrontIndex();  // Use existing method instead of undefined one
-
+          const frontIndex = this.getFrontIndex();
           if (frontIndex !== -1 && frontIndex !== this.currentIndex) {
             this.currentIndex = frontIndex;
-            this.highlightItemAtIndex(frontIndex);  // Use existing method instead of undefined one
+            this.highlightItemAtIndex(frontIndex);
           }
         }
       }
-      // Maintain glow effect if active
+  
       const currentMesh = this.itemMeshes[this.currentIndex];
       if (currentMesh?.material?.uniforms?.time) {
         currentMesh.material.uniforms.time.value = performance.now() * 0.001;
       }
-      if (this.closeButton) { // Check if closeButton exists
-        const cameraPosWorld = new THREE.Vector3(0, 0, 10); // Where the camera "is"
-        // Convert to local space relative to closeButton’s parent
-        this.closeButton.parent.worldToLocal(cameraPosWorld); // Convert world position to local space
-        // Make the button face that point
-        this.closeButton.lookAt(cameraPosWorld); // Make the close button face the camera position in local space
-        // Orient the red disk so its flat face looks forward (Z)
-        this.closeButton.rotateZ(Math.PI / 2); // Rotate the close button to face the camera
+  
+      if (this.closeButton) {
+        const cameraPosWorld = new THREE.Vector3(0, 0, 10);
+        this.closeButton.parent.worldToLocal(cameraPosWorld);
+        this.closeButton.lookAt(cameraPosWorld);
+        this.closeButton.rotateZ(Math.PI / 2);
       }
-      // Update floating preview position based on parent carousel rotation
-      if (this.floatingPreview && this.parentItem && this.parentItem.parent) { // Check if floatingPreview and parentItem's parent exist
-        // If parent carousel is rotating, stop the automatic spin
-        if (this.parentItem.parent.rotation.y !== this.lastParentRotation) { // Check if parent carousel rotation has changed
-          if (this.isSpinning) { // If we were spinning, stop the spin
-            this.stopFloatingPreviewSpin(); // Stop the spinning animation
-          }
-          // Match the parent's rotation for the floating preview
-          this.floatingPreview.rotation.y = this.parentItem.parent.rotation.y; // Match the Y rotation of the parent carousel
-        } else if (!this.isSpinning) { // If parent carousel has stopped rotating and we're not already spinning
-          // If parent stopped moving and we're not spinning, restart the spin
-          this.startFloatingPreviewSpin(); // Start the spinning animation
+  
+      if (this.floatingPreview && this.parentItem?.parent) {
+        if (this.parentItem.parent.rotation.y !== this.lastParentRotation) {
+          if (this.isSpinning) this.stopFloatingPreviewSpin();
+          this.floatingPreview.rotation.y = this.parentItem.parent.rotation.y;
+        } else if (!this.isSpinning) {
+          this.startFloatingPreviewSpin();
         }
-        // Store last rotation for comparison
-        this.lastParentRotation = this.parentItem.parent.rotation.y; // Store the current parent rotation for future comparisons
+        this.lastParentRotation = this.parentItem.parent.rotation.y;
       }
     } catch (error) {
-      console.error("Error in Carousel3DSubmenu update:", error); // Log the error for debugging
-      // Prevent further errors by setting a safe state
-      this.isErrorState = true; // Set an error state flag to prevent further issues
+      console.error("Error in Carousel3DSubmenu update:", error);
+      this.isErrorState = true;
     }
-  }
+  }  
 
   /**
    * Updates the visual highlight for the carousel item designated as the "front" item.
