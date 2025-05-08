@@ -1022,167 +1022,34 @@ export class Carousel3DSubmenu extends THREE.Group { // Class definition for Car
   }
 
   /**
- * Selects an item in the submenu by its index, handling visual updates and animations.
- *
- * This function manages the process of deselecting the currently active item (if any)
- * and highlighting the newly selected item. It supports both animated transitions
- * (scaling, rotation, color changes) and instant updates based on the `animate` flag.
- * It also handles internal state management, including locking mechanisms (`forceLockedIndex`,
- * `selectItemLock`, `forceSelectLock`, `targetRotationLocked`, `highlightLockIndex`, `ignoreHighlightOverride`)
- * to prevent conflicts during animations or state changes, and manages the `isTransitioning` flag.
- * Optionally, it can trigger the creation of a floating preview for the selected item.
- *
- * @param {number} index - The zero-based index of the item to select within the `itemMeshes` array.
- * @param {boolean} [animate=true] - If true, performs selection with animations (scaling, rotation). If false, updates instantly.
- * @param {boolean} [createPreview=false] - If true, triggers the creation/update of a floating preview element for the selected item.
- * @returns {void}
- */
-  // selectItem(index, animate = true, createPreview = false) {
-  //   if (index < 0 || index >= this.itemMeshes.length) return;
-
-  //   const selected = this.itemMeshes[index];
-  //   const selectedAngle = selected.userData.angle;
-
-  //   // Determine the angle that brings this item to 3 o'clock (front)
-  //   const frontAngle = +selectedAngle + this.mainCarouselHomeAngle;
-
-  //   this.forceLockedIndex = index;
-  //   this.selectItemLock = true;
-  //   this.isTransitioning = true;
-
-  //   // Remove highlight from the currently active item
-  //   if (this.currentIndex !== index && this.itemMeshes[this.currentIndex]) {
-  //     const currentContainer = this.itemMeshes[this.currentIndex];
-  //     const currentMesh = currentContainer.userData.mesh;
-  //     const currentIcon = currentContainer.userData.iconMesh;
-
-  //     // Reset appearance
-  //     currentMesh.material.color.copy(currentMesh.userData.originalColor);
-  //     currentMesh.material.emissive = new THREE.Color(0x000000);
-
-  //     if (animate) {
-  //       gsap.to(currentMesh.scale, {
-  //         x: currentMesh.userData.originalScale.x,
-  //         y: currentMesh.userData.originalScale.y,
-  //         z: currentMesh.userData.originalScale.z,
-  //         duration: 0.3
-  //       });
-
-  //       if (currentIcon) {
-  //         const iconOriginal = currentIcon.userData.originalScale || new THREE.Vector3(1, 1, 1);
-  //         gsap.to(currentIcon.scale, {
-  //           x: iconOriginal.x,
-  //           y: iconOriginal.y,
-  //           z: iconOriginal.z,
-  //           duration: 0.3
-  //         });
-
-  //         // Reset rotation to upright immediately without animation
-  //         gsap.killTweensOf(currentIcon.rotation);
-  //         gsap.set(currentIcon.rotation, { x: 0, y: 0, z: 0 });
-  //       }
-  //     } else {
-  //       currentMesh.scale.copy(currentMesh.userData.originalScale);
-  //       if (currentIcon) {
-  //         const iconOriginal = currentIcon.userData.originalScale || new THREE.Vector3(1, 1, 1);
-  //         currentIcon.scale.copy(iconOriginal);
-  //         currentIcon.rotation.set(0, 0, 0);
-  //       }
-  //     }
-  //   }
-
-  //   // Apply visual highlight to the selected item
-  //   const selectedMesh = selected.userData.mesh;
-  //   const selectedIcon = selected.userData.iconMesh;
-
-  //   // Apply highlight appearance
-  //   selectedMesh.material.color.set(this.config.highlightColor || 0x00ffff);
-  //   selectedMesh.material.emissive = new THREE.Color(0x003333);
-
-  //   if (animate) {
-  //     // Scale up text
-  //     gsap.to(selectedMesh.scale, {
-  //       x: selectedMesh.userData.originalScale.x * 1.3,
-  //       y: selectedMesh.userData.originalScale.y * 1.3,
-  //       z: selectedMesh.userData.originalScale.z * 1.3,
-  //       duration: 0.3
-  //     });
-
-  //     if (selectedIcon) {
-  //       // Scale up icon using original scale
-  //       const iconOriginal = selectedIcon.userData.originalScale || new THREE.Vector3(1, 1, 1);
-  //       gsap.to(selectedIcon.scale, {
-  //         x: iconOriginal.x * 1.3,
-  //         y: iconOriginal.y * 1.3,
-  //         z: iconOriginal.z * 1.3,
-  //         duration: 0.3,
-  //         ease: "back.out"
-  //       });
-
-  //       // Add a geodesic spin animation to the icon
-  //       gsap.killTweensOf(selectedIcon.rotation);
-  //       gsap.timeline()
-  //         .to(selectedIcon.rotation, {
-  //           y: Math.PI * 2,
-  //           x: Math.PI * 0.8,
-  //           z: Math.PI * 0.5,
-  //           duration: 1.0,
-  //           ease: "power1.inOut"
-  //         })
-  //         .to(selectedIcon.rotation, {
-  //           x: 0,
-  //           z: 0,
-  //           duration: 0.3,
-  //           ease: "back.out(2)"
-  //         }, "-=0.1");
-  //     }
-  //   } else {
-  //     // Instant scale without animation
-  //     selectedMesh.scale.set(
-  //       selectedMesh.userData.originalScale.x * 1.3,
-  //       selectedMesh.userData.originalScale.y * 1.3,
-  //       selectedMesh.userData.originalScale.z * 1.3
-  //     );
-
-  //     if (selectedIcon) {
-  //       const iconOriginal = selectedIcon.userData.originalScale || new THREE.Vector3(1, 1, 1);
-  //       selectedIcon.scale.set(
-  //         iconOriginal.x * 1.3,
-  //         iconOriginal.y * 1.3,
-  //         iconOriginal.z * 1.3
-  //       );
-  //     }
-  //   }
-
-  //   const finish = () => {
-  //     this.currentIndex = index;
-  //     this.selectItemLock = false;
-  //     this.forceLockedIndex = null;
-  //     this.isTransitioning = false;
-  //     this.targetRotation = frontAngle; // sync final target
-  //   };
-
-  //   // Animate rotation or set instantly
-  //   if (animate) {
-  //     gsap.to(this.itemGroup.rotation, {
-  //       x: frontAngle,
-  //       duration: 0.6,
-  //       ease: "power2.out",
-  //       onComplete: finish
-  //     });
-  //   } else {
-  //     this.itemGroup.rotation.x = frontAngle;
-  //     finish();
-  //   }
-
-  //   if (createPreview) {
-  //     this.showingPreview = true;
-  //     this.createFloatingPreview(index);
-  //   }
-
-  //   console.warn(`[🧩 selectItem] Finalized selection: index=${index}, angle=${selectedAngle.toFixed(2)}, frontAngle=${frontAngle.toFixed(2)}`);
-  // }
-
+   * Selects an item in the 3D carousel by its index.
+   * 
+   * @param {number} index - The index of the carousel item to select.
+   * @param {boolean} [animate=true] - Whether to animate the transition to the selected item.
+   * @param {boolean} [createPreview=false] - Whether to create and display a floating preview of the selected item.
+   * 
+   * @description
+   * This method handles the selection of an item in the 3D carousel, including:
+   * - Rotating the carousel to center the selected item (determined by angle)
+   * - Applying visual effects to highlight the selected item (scaling, color changes)
+   * - Animating the icon of the selected item
+   * - Reverting previous item to its original state
+   * - Tracking the current selection state
+   * 
+   * The method prevents selection if the provided index is out of bounds.
+   * During transition, selection is locked to prevent multiple simultaneous selections.
+   * The method also handles the creation of a floating preview for the selected item,
+   * which is displayed in the scene.
+   * 
+   * @returns {void}
+   * @throws {Error} If the index is out of bounds.
+   * 
+   * @example
+   * // Select the first item in the carousel with animation and preview
+   * carousel.selectItem(0, true, true);
+   *   
+   * 
+   */
   selectItem(index, animate = true, createPreview = false) {
     if (index < 0 || index >= this.itemMeshes.length) return;
   
