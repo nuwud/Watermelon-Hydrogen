@@ -1,8 +1,6 @@
 import * as THREE from 'three';
-import { Submenu } from './Submenu.js'; // Assuming Submenu.js exists and exports Submenu class
-import { CloseButton3D } from './CloseButton3D.js';
-import { CarouselItem } from './CarouselItem.js'; // To identify parent items
-import { SubmenuItem } from './SubmenuItem.js'; // To identify submenu items
+//import { CloseButton3D } from './CloseButton3D.js';
+import { Carousel3DSubmenu } from './Carousel3DSubmenu.js';
 
 /**
  * Manages the lifecycle and interactions of submenus within the 3D carousel environment.
@@ -59,7 +57,7 @@ export class SubmenuManager {
         }
 
         // Create and position the new submenu
-        const newSubmenu = new Submenu(
+        const newSubmenu = new Carousel3DSubmenu(
             parentItem,
             submenuData,
             {
@@ -141,17 +139,17 @@ export class SubmenuManager {
             let targetObject = clickedObject;
             while (targetObject) {
                 // Check for Close Button click
-                if (targetObject instanceof CloseButton3D && targetObject === this.activeSubmenu.closeButton) {
+                if (targetObject.userData?.isCloseButton && targetObject === this.activeSubmenu.closeButton) {
                     console.log("Submenu Close Button clicked.");
-                    targetObject.handleClick(); // Button handles its own logic (calls manager's close)
+                    // Button handles its own logic or call our close method
+                    this.closeActiveSubmenu();
                     interactionHandled = true;
                     break;
                 }
                 // Check for Submenu Item click
-                if (targetObject instanceof SubmenuItem && targetObject.parent === this.activeSubmenu.itemGroup) {
-                     // Ensure the item belongs to the *active* submenu's item group
+                if (targetObject.userData?.isSubmenuItem && targetObject.parent === this.activeSubmenu.itemGroup) {
                     console.log(`Submenu Item clicked: Index ${targetObject.userData.index}`);
-                    this.activeSubmenu.handleItemClick(targetObject.userData.index); // Tell submenu to handle it
+                    this.activeSubmenu.handleItemClick?.(targetObject.userData.index);
                     interactionHandled = true;
                     break;
                 }
@@ -170,8 +168,8 @@ export class SubmenuManager {
         // --- Priority 2: Check Main Carousel Interactions (only if no active submenu interaction) ---
         let targetObject = clickedObject;
         while (targetObject) {
-            if (targetObject instanceof CarouselItem && targetObject.parent === this.mainCarousel.itemGroup) {
-                 // Ensure the item belongs to the main carousel's item group
+            // Replace CarouselItem with user data check
+            if (targetObject.userData?.index !== undefined && targetObject.parent === this.mainCarousel.itemGroup) {
                 console.log(`Main Carousel Item clicked: Index ${targetObject.userData.index}`);
                 const itemData = targetObject.userData.itemData;
                 // Check if this item *has* submenu data defined
@@ -228,4 +226,115 @@ export class SubmenuManager {
         this.mainCarousel = null;
         console.log("SubmenuManager disposed.");
     }
+}
+
+/**
+ * Asynchronously spawns a submenu for a parent carousel item
+ * @param {string} item - The label of the parent item
+ * @param {number} index - The index of the parent item in the carousel
+ * @param {Object} options - Configuration options
+ * @param {THREE.Scene} options.scene - The Three.js scene
+ * @param {THREE.Camera} options.camera - The Three.js camera
+ * @param {Object} options.carousel - The parent carousel instance
+ * @param {Object} options.submenus - Map of submenu items by parent name
+ * @param {Function} options.setActiveSubmenu - Function to set the active submenu reference
+ * @param {Object} options.currentTheme - The current theme configuration
+ * @returns {Promise<Carousel3DSubmenu>} - Promise resolving to the spawned submenu
+ */
+export async function spawnSubmenuAsync(item, index, options) {
+    const { scene, camera, carousel, submenus, setActiveSubmenu, currentTheme, /** getItemAngles,*/ guard } = options;
+    
+    return new Promise((resolve, reject) => {
+        console.warn(`[Watermelon] Starting submenu spawn for: ${item} at index ${index}`);
+        
+        // Enhanced validation and debugging
+        if (!scene) {
+            console.error('[Watermelon] CRITICAL: Scene is missing during submenu creation!');
+            return reject(new Error('Scene is required for submenu creation'));
+        }
+        
+        if (!camera) {
+            console.error('[Watermelon] CRITICAL: Camera is missing during submenu creation!');
+            return reject(new Error('Camera is required for submenu creation'));
+        }
+        
+        // Check if guard is available and log warning if not
+        if (!guard) {
+            console.warn('[Watermelon] No selection guard provided, submenu will create its own');
+        }
+        
+        const mesh = carousel.itemMeshes[index]; 
+        if (!mesh) { 
+            console.error('[Watermelon] No mesh found for submenu spawn:', item, index);
+            return reject(new Error(`Mesh not found for item ${item} at index ${index}`)); 
+        }
+        
+        const submenuItems = submenus[item]; 
+        
+        // Check if submenuItems is an array
+        if (!Array.isArray(submenuItems) || submenuItems.length === 0) {
+            console.error(`[Watermelon] Invalid submenu items for ${item}:`, submenuItems);
+            return reject(new Error(`Invalid submenu items for ${item}`));
+        } else {
+            console.warn(`[Watermelon] Creating submenu with ${submenuItems.length} items:`, submenuItems);
+        }
+        
+        // Pass the angles to the submenu if available
+        const angles = options.getItemAngles ? options.getItemAngles(submenuItems.length) : null;
+        
+        // Create the submenu with the guard included in config
+        const submenu = new Carousel3DSubmenu(mesh, submenuItems, {
+            ...currentTheme,
+            carousel,
+            angles,
+            // Explicitly pass the guard
+            guard
+        });
+        
+        // CRITICAL: Scene and camera injection
+        submenu.scene = scene;
+        submenu.camera = camera;
+        
+        // Add to scene before starting initialization checks
+        scene.add(submenu);
+        console.warn('[Watermelon] Added submenu to scene, checking scene children:', 
+                    scene.children.includes(submenu));
+        
+        setActiveSubmenu(submenu);
+        scene.userData.activeSubmenu = submenu;
+        
+        // Show animation
+        submenu.show?.();
+        
+        // Wait for initialization to complete with timeout safety
+        const waitForInitialization = () => {
+            const maxAttempts = 30;  // 3 seconds max wait time
+            let attempts = 0;
+            
+            const checkInitialization = () => {
+                attempts++;
+                
+                if (submenu.isInitialized && submenu.itemMeshes.length > 0) {
+                    console.warn(`[Watermelon] Submenu for ${item} initialized with ${submenu.itemMeshes.length} items`);
+                    resolve(submenu);
+                    return;
+                }
+                
+                if (attempts >= maxAttempts) {
+                    console.error(`[Watermelon] Submenu initialization timed out after ${maxAttempts} attempts`);
+                    // Still resolve, but with a warning - the menu might not be fully functional
+                    resolve(submenu);
+                    return;
+                }
+                
+                console.log(`[Watermelon] Waiting for submenu initialization... (${attempts}/${maxAttempts})`);
+                setTimeout(checkInitialization, 100);
+            };
+            
+            checkInitialization();
+        };
+        
+        // Start initialization check process
+        waitForInitialization();
+    });
 }

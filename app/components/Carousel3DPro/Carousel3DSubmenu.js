@@ -1,161 +1,3 @@
-/**
- * Class that creates and manages a 3D submenu cylinder that spawns from a parent carousel item.
- * When a user selects an item in the parent Carousel3DPro, this component creates a submenu that
- * rotates its items in a cylindrical formation.
- * 
- * @class
- * @extends THREE.Group
- * @classdesc Creates a 3D submenu with items positioned in a cylindrical formation around a parent item.
- * Handles item positioning, rotation, highlighting, and animated transitions.
- * 
- * @param {THREE.Object3D} parentItem - The parent item from which this submenu spawns
- * @param {Array<string|Object>} items - Array of items to display in the submenu
- * @param {Object} config - Configuration options for the submenu
- * @param {number} [config.textColor=0xffffff] - Color for the item text
- * @param {number} [config.textEmissive=0x222222] - Emissive color for text
- * @param {number} [config.highlightColor=0x00ffff] - Color for highlighted items
- * @param {THREE.Camera} config.camera - The camera used for rendering
- * @param {THREE.Scene} config.scene - The scene to add elements to
- * @param {Object} config.carousel - Reference to the parent carousel
- * 
- * @property {THREE.Object3D} parentItem - The parent item this submenu is attached to
- * @property {Array} items - Array of items in the submenu
- * @property {Object} config - Configuration options
- * @property {Array} itemMeshes - Array of THREE.Group containers for each item
- * @property {number} currentIndex - Currently selected item index
- * @property {number} watermillRadius - Radius of the submenu cylinder
- * @property {number} rotationAngle - Current rotation angle
- * @property {number} targetRotation - Target rotation angle
- * @property {number} rotationSpeed - Speed of rotation animation
- * @property {boolean} isTransitioning - Flag indicating if submenu is in transition
- * @property {boolean} selectItemLock - Flag to prevent selection during animation
- * @property {number|null} forceLockedIndex - Forced index override during transitions
- * @property {THREE.Group} itemGroup - Container for all rotatable items
- * @property {THREE.Group} fixedElements - Container for UI elements that don't rotate
- * @property {THREE.Mesh} closeButton - Close button mesh
- * @property {THREE.Group} floatingPreview - Preview that appears when an item is selected
- */
-/**
- * @AI-PROMPT
- * This file defines a 3D submenu cylinder that spawns from an item on the parent Carousel3DPro.
- * This file implements nested 3D submenu cylinders.
- * When a user selects an item in Carousel3DPro, use this class to pop out submenus around it.
- * 
- * Each submenu rotates its items around a cylinder, using `getItemAngles()` from carouselAngleUtils.js to determine layout.
- * 
- * 🎯 OBJECTIVE
- * Ensure the submenu highlights the clicked item, rotates it to the 3 o’clock position, and maintains smooth animations without overriding selection state.:
- *
- * 🧠 ROLE:
- * This class creates and manages the 3D submenu ring that appears when a parent item is selected.
- * It controls submenu geometry, item positioning, rotation, highlighting, and animation flow.
- *
- * 🔍 CRITICAL RULES:
- * - The clicked item must rotate into the 3 o’clock (front-facing) position.
- * - `selectItem(index)` must set the selected item without being overridden post-animation.
- * - `update()` and `updateFrontItemHighlight()` MUST NOT override selection during transitions.
- * - All items should be aware of their position via index, not just angle comparisons.
- *
- * 🔁 WORK IN PROGRESS:
- * - Fix highlight hijack: `currentIndex` being reset by visual alignment logic.
- * - Respect lock guards: isTransitioning, forceLockedIndex, selectItemLock.
- * - Use `carouselAngleUtils.getItemAngles()` for deterministic item layout.
- *
- * 🔧 CALL TREE (primary methods):
- * - selectItem(index, { forceSmooth = true })
- * - update() → updates rotation, calls getFrontItemIndex()
- * - getFrontItemIndex() → uses angle comparisons (may be unstable)
- * - createItems() → builds icons + text, positions them using angle layout
- * - show() → places submenu in 3D space based on parent + carousel rotation
- *
- * 🧱 DEPENDENCIES:
- * - carouselAngleUtils.js → getItemAngles()
- * - main.js → calls show(), selectItem(), and injects camera/scene
- * - Carousel3DPro.js → provides parentItem, parent rotation
- *
- * ✅ GOAL:
- * Submenu behavior should be index-based, smooth, visually correct, and free of race conditions.
- * - Always position the *clicked* submenu item at the 3 o’clock position (angle = 0).
- * - Avoid auto-overriding the `currentIndex` during rotation animation (i.e., don’t let `update()` or `updateFrontItemHighlight()` hijack the state).
- * - Support smooth animated alignment, not snapping.
- * 
- * 🔧 FUNCTIONS TO WATCH:
- * - `selectItem(index, opts)` → must lock rotation target to match predefined angles
- * - `update()` → may override currentIndex during spin unless `forceLockedIndex` is respected
- *
- * 🔁 RELATION TO PARENT:
- * - Carousel3DPro controls the orientation of `parentItem` and its `.parent`, which this submenu uses to derive its world-space rotation.
- *
- * 🛠️ DEBUG STRATEGY:
- * - Log: parentItem.rotation.y, this.rotation.y, clicked index, currentIndex, frontItemIndex
- * - Compare against expected angle from `getItemAngles()`
- *
- * 🧠 DEV NOTES:
- * - If submenu highlights the wrong item, index mismatch is likely due to reversed order, angle wraparound, or frontItemIndex override.
- * - Consider introducing `rotationIndexMap` to guarantee index–angle correspondence.
- *
- * ✅ CONTEXT:
- * This file is part of a custom 3D menu system using Three.js for Shopify Hydrogen (WatermelonOS).
- * The system includes a parent carousel (main ring), and nested submenus (submenu ring).
- * Each submenu pops out of a selected parent item and must:
- * - Always highlight the *clicked* item.
- * - Rotate so that the clicked item lands at the 3 o’clock (front-facing) position.
- * - Avoid flipping, skipping, or overriding state due to visual alignment mismatches.
- *
- * 🚨 IMPORTANT CONSIDERATIONS:
- * - Do NOT override currentIndex during animations unless forceLockedIndex is null.
- * - Items are laid out in clockwise rotation using angles from `carouselAngleUtils.js`.
- * - Rotation logic must resolve based on index, not just angle.
- * - Rotation direction may be counterclockwise but should result in correct alignment.
- * - `selectItem()` is the only safe place to set `currentIndex` intentionally.
- * - `update()` and `updateFrontItemHighlight()` may override state unintentionally — guard them!
- *
- * 🔁 WORK IN PROGRESS:
- * - Replace all “angle-based guessing” with an index-based locking mechanism.
- * - Visual snap-to-rotation must feel smooth, not teleporting.
- * - Optional utility `getItemAngles(itemCount)` from `carouselAngleUtils.js` is available.
- *
- * 🧠 DEV STYLE:
- * Patrick (Nuwud) prefers full function rewrites, strong guardrails, and traceable debug logs.
- * The goal is stability, clarity, and modularity — this is a *real* production UI, not a demo.
- *
- * 🛠️ KEY METHODS INVOLVED:
- * - selectItem(index, options)
- * - getFrontItemIndex()
- * - update()
- * - updateFrontItemHighlight()
- * - createItems()
- *
- * 🧩 Primary file interactions:
- * - Carousel3DSubmenu.js (submenu logic)
- * - main.js (instantiates submenus, injects camera/scene, handles clicks)
- * - Carousel3DPro.js (handles parent carousel logic)
- * - carouselAngleUtils.js (source of angle map or angle calculation per index)
- */
-
-/**
- * @method update
- * @memberof Carousel3DSubmenu
- * @description Updates the state of the 3D submenu each frame. This method is typically called
- *              within the main application's render loop. It handles the smooth rotation of the
- *              submenu's item group towards its target rotation using a damped easing approach for fluid motion,
- *              snapping to the target when very close.
- *              It synchronizes the submenu's world position and Y-axis orientation with its `parentItem`
- *              and the main carousel (parent's parent), ensuring it stays correctly attached. Includes
- *              safety checks for valid parent data (matrices, rotation) before applying updates.
- *              It begins iterating through the `itemMeshes` to reset the visual state (like color,
- *              emissive properties, scale) of non-highlighted items back to their defaults, ensuring
- *              visual consistency before specific highlights or states are applied elsewhere in the loop
- *              or application logic. (Note: The full item update logic within the loop is truncated
- *              in the provided code selection).
- *
- * @modifies this.itemGroup.rotation - Updates the X-axis rotation for the spinning animation.
- * @modifies this.position - Updates the world position to match the parent item.
- * @modifies this.rotation - Updates the Y-axis rotation to align with the parent item and the main carousel.
- * @modifies Potentially modifies properties (e.g., material color, emissive, scale) of meshes within `this.itemMeshes` during the item iteration (full logic truncated).
- * @sideEffects Performs visual updates to the submenu's rotation and position in the 3D scene. Initiates the process of resetting item appearances within the loop. Logs warnings if positioning errors occur.
- * @returns {void} This method does not return a value.
- */
 import * as THREE from 'three'; // Import Three.js core
 import { TextGeometry } from 'three/examples/jsm/geometries/TextGeometry.js'; // Import TextGeometry for 3D text rendering
 import { FontLoader } from 'three/examples/jsm/loaders/FontLoader.js'; // Import FontLoader for loading fonts
@@ -163,6 +5,9 @@ import { FontLoader } from 'three/examples/jsm/loaders/FontLoader.js'; // Import
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js'; // Import GLTFLoader for loading 3D models
 // Access GSAP from the global scope
 import gsap from 'gsap'; // Import GSAP for animations
+// Import the utility
+import { SelectionGuard, withSelectionLock } from './modules/selectionGuards.js';
+import { FloatingPreview } from './modules/FloatingPreview.js'; // Import the FloatingPreview module
 
 // Cache font to improve performance
 let cachedFont = null; // Cache for font to avoid loading multiple times
@@ -183,6 +28,15 @@ export class Carousel3DSubmenu extends THREE.Group { // Class definition for Car
    */
   constructor(parentItem, items = [], config = {}) { // Call parent constructor
     super(); // Call parent constructor
+    console.warn('[Carousel3DSubmenu] 🚀 Constructor called with', {
+      parentExists: !!parentItem,
+      itemCount: items.length,
+      hasConfig: !!config
+    });
+
+    // Set name for easier debugging
+    this.name = "Carousel3DSubmenu";
+
     this.parentItem = parentItem; // Reference to the parent item this submenu is attached to
     this.items = items; // Array of items to display in the submenu
     this.config = config; // Configuration options for the submenu
@@ -197,12 +51,11 @@ export class Carousel3DSubmenu extends THREE.Group { // Class definition for Car
     this.targetRotation = 0; // Target rotation angle for smooth animations
     this.rotationSpeed = 0.15; // Increased for smoother rotation
     this.isInitialized = false; // Track initialization state
-    this.floatingPreview = null; // Preview that appears when an item is selected
-    this.isSpinning = false; // Track if submenu is currently spinning
     this.showingPreview = false; // Track if preview is currently being shown
     this.lastParentRotation = 0; // Initialize to track parent rotation
     // this.isForceHighlightLocked = false; // Keep commented or remove if selectItemLock replaces it
     this.selectItemLock = false; // <<< FIX 1: Add selectItemLock flag
+    this.selectionInProgress = false; // NEW FLAG
     this.forceLockedIndex = null; // <<< FIX 1: Add forceLockedIndex flag
     this.targetRotationLocked = false; // <<< BONUS FIX: Add targetRotation lock flag
     this.isTransitioning = false; // Global flag to track any selection or transition animation
@@ -212,32 +65,43 @@ export class Carousel3DSubmenu extends THREE.Group { // Class definition for Car
     this.add(this.itemGroup); // Add the item group to the main group
     // Load font from CDN directly
     this.fontLoader = new FontLoader(); // Create a new FontLoader instance
+    // CRITICAL: Force visibility flag on from the start
+    this.visible = true;
+    // Initialize the preview manager to null (will be created when needed)
+    this.previewManager = null;
     // Try to use cached font first for instant creation
     if (cachedFont) { // Check if font is already cached
       this.font = cachedFont; // Use cached font if available
+      console.warn('[Carousel3DSubmenu] Using cached font');
       this.createItems(); // Create items using the cached font
       this.isInitialized = true; // Track initialization state
+      console.warn('[Carousel3DSubmenu] Items created from cached font:', this.itemMeshes.length);
+
       // Position wheel so first item is at front
       if (this.itemMeshes.length > 0) { // Check if there are items created
         const firstItem = this.itemMeshes[0]; // Get the first item mesh
         this.itemGroup.rotation.x = -firstItem.userData.angle + 0; // Set rotation to position first item at front
         this.targetRotation = this.itemGroup.rotation.x; // Set target rotation to match
+
+        // Ensure the first item is highlighted
+        this.currentIndex = 0;
+        this.highlightItemAtIndex(0);
       }
     } else {
-      // Load font if not cached
-      this.fontLoader.load('/helvetiker_regular.typeface.json', (font) => { // Load the font from the specified URL
-        cachedFont = font; // Cache for future use
-        this.font = font; // Store the loaded font in the instance
-        this.createItems(); // Create items using the loaded font
-        this.isInitialized = true; // Track initialization state
-        // Position wheel
-        if (this.itemMeshes.length > 0) { // Check if there are items created
-          const firstItem = this.itemMeshes[0]; // Get the first item mesh
-          // this.itemGroup.rotation.x = -firstItem.userData.angle + 0; // Set rotation to position first item at front
-          this.itemGroup.rotation.x = -firstItem.userData.angle + this.mainCarouselHomeAngle; // Set rotation to position first item at front
-          this.targetRotation = this.itemGroup.rotation.x; // Set target rotation to match
-        }
-      });
+      // Improved font loading with fallbacks and better error handling
+      console.warn('[Carousel3DSubmenu] Loading font...');
+
+      // Array of font paths to try in order
+      const fontPaths = [
+        '/helvetiker_regular.typeface.json',
+        '/fonts/helvetiker_regular.typeface.json',
+        '/assets/fonts/helvetiker_regular.typeface.json',
+        'https://threejs.org/examples/fonts/helvetiker_regular.typeface.json', // CDN fallback
+        '/public/helvetiker_regular.typeface.json' // Try public folder
+      ];
+
+      // Try to load fonts in sequence
+      this.loadFontWithFallbacks(fontPaths, 0);
     }
     // Position directly in front of parent item (not just centered on it)
     this.position.copy(this.parentItem.position); // Copy position from parent
@@ -250,6 +114,230 @@ export class Carousel3DSubmenu extends THREE.Group { // Class definition for Car
     this.add(this.fixedElements); //  Add to the main group
     // Add close button immediately with fixed position - only call once
     this.addCloseButtonPlaceholder(); // Add close button to fixed elements
+
+    // Replace individual flags with a guard instance
+    // CRITICAL: Initialize the guard properly
+    // Check if config contains a guard, otherwise create a new one
+    if (config.guard instanceof SelectionGuard) {
+      // Use provided guard (preferred)
+      this.guard = config.guard;
+      console.warn('[Carousel3DSubmenu] Using provided SelectionGuard');
+    } else {
+      // Create new guard as fallback
+      this.guard = new SelectionGuard();
+      console.warn('[Carousel3DSubmenu] Created new SelectionGuard');
+    }
+  }
+
+  /**
+   * Initialize the preview manager when needed
+   */
+  initPreviewManager() {
+    if (!this.scene || !this.camera) {
+      console.warn('[Carousel3DSubmenu] Cannot initialize preview manager: missing scene or camera');
+      return;
+    }
+
+    if (this.previewManager) {
+      return; // Already initialized
+    }
+
+    this.previewManager = new FloatingPreview({
+      scene: this.scene,
+      camera: this.camera,
+      anchorObject: this.config.carousel?.itemGroup || null,
+      getPreviewContent: (index) => {
+        if (index < 0 || index >= this.itemMeshes.length) return null;
+
+        const sourceContainer = this.itemMeshes[index];
+        const sourceIcon = sourceContainer?.userData?.iconMesh;
+        const item = this.items[index];
+
+        // Clone icon if available
+        let icon = null;
+        if (sourceIcon) {
+          if (sourceIcon instanceof THREE.Group) {
+            icon = sourceIcon.clone(true);
+            // Add emissive effects to materials in the group
+            icon.traverse(child => {
+              if (child.isMesh && child.material) {
+                child.material = child.material.clone();
+                child.material.emissive = new THREE.Color(this.getIconColor(index));
+                child.material.emissiveIntensity = 0.3;
+                child.material.needsUpdate = true;
+              }
+            });
+          } else if (sourceIcon instanceof THREE.Mesh) {
+            const clonedGeometry = sourceIcon.geometry.clone();
+            const clonedMaterial = sourceIcon.material.clone();
+            clonedMaterial.emissive = new THREE.Color(this.getIconColor(index));
+            clonedMaterial.emissiveIntensity = 0.5;
+            icon = new THREE.Mesh(clonedGeometry, clonedMaterial);
+          }
+        }
+
+        // Create text label if font is loaded
+        let text = null;
+        if (this.font) {
+          const labelString = item.label || item || `Item ${index}`;
+          const textGeometry = new TextGeometry(labelString, {
+            font: this.font,
+            size: 0.3,
+            depth: 0.1,
+            height: 0.05,
+            bevelEnabled: true,
+            bevelThickness: 0.01,
+            bevelSize: 0.005,
+            bevelOffset: 0,
+            bevelSegments: 3,
+            curveSegments: 8
+          });
+          textGeometry.computeBoundingBox();
+          textGeometry.center();
+
+          const textMaterial = new THREE.MeshStandardMaterial({
+            color: 0xffffff,
+            emissive: 0x99ccff,
+            emissiveIntensity: 0.5,
+            transparent: true,
+            opacity: 0.9
+          });
+
+          text = new THREE.Mesh(textGeometry, textMaterial);
+          text.scale.set(0.75, 0.75, 0.75);
+          text.updateMatrixWorld();
+        }
+
+        return { icon, text };
+      }
+    });
+
+    console.warn('[Carousel3DSubmenu] Preview manager initialized');
+  }
+
+  /**
+   * Attempts to load fonts from multiple paths in sequence until one succeeds
+   * @param {Array<string>} paths - Array of font file paths to try
+   * @param {number} index - Current index to try
+   */
+  loadFontWithFallbacks(paths, index) {
+    if (index >= paths.length) {
+      console.error('[Carousel3DSubmenu] All font loading attempts failed! Using emergency fallback.');
+      // Emergency fallback: Create basic geometry instead of text
+      this.createFallbackItems();
+      return;
+    }
+
+    console.warn(`[Carousel3DSubmenu] Attempting to load font from: ${paths[index]}`);
+
+    this.fontLoader.load(
+      paths[index],
+      (font) => {
+        console.warn('[Carousel3DSubmenu] Font loaded successfully!');
+        cachedFont = font;
+        this.font = font;
+        this.createItems();
+        console.warn('[Carousel3DSubmenu] Items created:', this.itemMeshes.length);
+        this.isInitialized = true;
+
+        // Position wheel
+        if (this.itemMeshes.length > 0) {
+          const firstItem = this.itemMeshes[0];
+          this.itemGroup.rotation.x = -firstItem.userData.angle + this.mainCarouselHomeAngle;
+          this.targetRotation = this.itemGroup.rotation.x;
+        } else {
+          console.error('[Carousel3DSubmenu] No items were created after font loaded!');
+        }
+      },
+      (progress) => {
+        // Track loading progress
+        console.log(`[Carousel3DSubmenu] Font loading: ${Math.round(progress.loaded / progress.total * 100)}%`);
+      },
+      (error) => {
+        console.warn(`[Carousel3DSubmenu] Font loading failed for ${paths[index]}:`, error);
+        // Try next font in the sequence
+        this.loadFontWithFallbacks(paths, index + 1);
+      }
+    );
+  }
+
+  /**
+   * Creates fallback menu items using basic geometry when font loading fails
+   */
+  createFallbackItems() {
+    console.warn('[Carousel3DSubmenu] Creating fallback items without text geometry');
+
+    this.items.forEach((item, index) => {
+      // Create a container for the item
+      const container = new THREE.Group();
+      container.userData.index = index;
+      container.userData.isSubmenuItem = true;
+      container.userData.item = item;
+
+      // Calculate angle for positioning
+      const angle = (index / this.items.length) * (Math.PI * 2);
+      container.userData.angle = angle;
+      container.userData.originalAngle = angle;
+
+      // Create a simple colored plane instead of text
+      const planeGeometry = new THREE.PlaneGeometry(1, 0.3);
+      const material = new THREE.MeshBasicMaterial({
+        color: this.config.textColor || 0xffffff,
+        transparent: true,
+        opacity: 0.9,
+        side: THREE.DoubleSide
+      });
+
+      const mesh = new THREE.Mesh(planeGeometry, material);
+      mesh.userData.originalScale = mesh.scale.clone();
+      mesh.userData.originalColor = material.color.clone();
+      container.add(mesh);
+      container.userData.mesh = mesh;
+
+      // Create a simple icon
+      const iconGeometry = new THREE.SphereGeometry(0.1, 16, 16);
+      const iconMaterial = new THREE.MeshBasicMaterial({
+        color: this.getIconColor(index),
+        transparent: true,
+        opacity: 0.9
+      });
+
+      const iconMesh = new THREE.Mesh(iconGeometry, iconMaterial);
+      iconMesh.position.x = -0.7; // Position to left of text plane
+      iconMesh.userData.originalScale = iconMesh.scale.clone();
+      container.add(iconMesh);
+      container.userData.iconMesh = iconMesh;
+
+      // Add hit area
+      const hitAreaGeometry = new THREE.BoxGeometry(1.5, 0.5, 0.3);
+      const hitAreaMaterial = new THREE.MeshBasicMaterial({
+        color: 0xffffff,
+        transparent: true,
+        opacity: 0.01,
+        depthWrite: false
+      });
+
+      const hitArea = new THREE.Mesh(hitAreaGeometry, hitAreaMaterial);
+      hitArea.position.z = -0.1;
+      container.add(hitArea);
+      container.userData.hitArea = hitArea;
+
+      // Position in circle
+      container.position.y = this.watermillRadius * Math.sin(angle);
+      container.position.z = this.watermillRadius * Math.cos(angle);
+
+      // Add to arrays and scene
+      this.itemMeshes.push(container);
+      this.itemGroup.add(container);
+    });
+
+    // Finalize initialization
+    this.isInitialized = true;
+
+    // Highlight first item
+    if (this.itemMeshes.length > 0) {
+      this.selectItem(0, false);
+    }
   }
 
   /**
@@ -424,7 +512,12 @@ export class Carousel3DSubmenu extends THREE.Group { // Class definition for Car
    * @returns {void} - This method does not return a value but modifies the instance's state.
    */
   createItems() { // Ensure font is loaded before creating items
-    if (!this.font) return; // Return if font is not loaded yet
+    console.warn('[Carousel3DSubmenu] 📦 Creating items, font available:', !!this.font);
+
+    if (!this.font) {
+      console.warn('[Carousel3DSubmenu] ⚠️ No font available, cannot create items');
+      return;
+    }
     // Special handling for Gallery items - create more elaborate 3D models
     const isGallerySubmenu = this.parentItem.userData?.item === 'Gallery'; // Check if parent item is tagged as Gallery
     // Define shapes for icons with more elaborate options for Gallery
@@ -717,197 +810,20 @@ export class Carousel3DSubmenu extends THREE.Group { // Class definition for Car
       this.itemMeshes.push(container); // Add the container to the itemMeshes array
       this.itemGroup.add(container); // Add the container to the itemGroup
     });
+    // Log results
+    console.warn(`[Carousel3DSubmenu] 📦 Created ${this.itemMeshes.length} items`);
     // Highlight first item
     if (this.itemMeshes.length > 0) { // Check if there are items created
       this.selectItem(0, false); // <--- The call
+      console.warn('[Carousel3DSubmenu] 🎯 Selected first item');
       // Don't create floating preview automatically
     }
   }
 
   /**
-   * Creates and displays a floating 3D preview for a selected carousel item at the specified index.
-   *
-   * This function handles the entire lifecycle of the floating preview:
-   * 1. Removes any existing floating preview.
-   * 2. Performs checks to ensure a valid index and the presence of necessary components (camera, scene, carousel reference).
-   * 3. Determines the preview's position: preferably near the center of the main carousel's item group, falling back to a position relative to the camera.
-   * 4. Clones the icon associated with the item at the given index. It handles both `THREE.Mesh` and `THREE.Group` icons (cloning groups recursively) and applies an emissive effect to the cloned materials for better visibility.
-   * 5. Creates a text label (using `TextGeometry` if `this.font` is loaded) displaying the item's label or a default identifier, positioned above the icon.
-   * 6. Adds the complete preview group (icon and text) to the scene.
-   * 7. Animates the preview into view using GSAP, scaling it from zero to one with an elastic easing effect.
-   * 8. Initiates a continuous slow spinning animation for the preview by calling `startFloatingPreviewSpin`.
-   *
-   * @param {number} index - The numerical index of the item within the `this.items` and `this.itemMeshes` arrays for which to create the floating preview.
-   * @returns {void} This function does not return a value.
+   * Handles mouse wheel events to rotate items around the fixed 3 o'clock position.
+   * @param {WheelEvent} event - The wheel event
    */
-  // Floating Preview Methods
-  createFloatingPreview(index) { // Create a floating preview for the item at the specified index
-    // Remove any existing preview
-    if (this.floatingPreview) { // Check if a floating preview already exists
-      if (this.floatingPreview.parent) { // Check if the floating preview has a parent
-        this.floatingPreview.parent.remove(this.floatingPreview); // Remove the floating preview from its parent
-      }
-      this.floatingPreview = null; // Reset the floating preview reference
-    }
-    // Add camera check and scene check early
-    if (index < 0 || index >= this.itemMeshes.length || !this.camera || !this.scene || !this.config.carousel) { // Added carousel check
-      console.warn("[🍉 Preview] Cannot create floating preview: Invalid index, missing camera, scene, or carousel reference.", {
-        index, // Log the index being used
-        hasCamera: !!this.camera, // Check for camera reference
-        hasScene: !!this.scene, // Check for scene reference
-        hasCarousel: !!this.config.carousel // Check for carousel reference
-      });
-      return; // Early exit if conditions are not met
-    }
-    const item = this.items[index]; // Get the item at the specified index
-    const sourceContainer = this.itemMeshes[index]; // Get the container for the item at the specified index
-    // Create a new group for the floating preview
-    this.floatingPreview = new THREE.Group(); // Create a new group for the floating preview
-    // --- Position preview based on carousel center ---
-    const center = new THREE.Vector3(); // Create a vector to hold the center position
-    // Use the injected carousel reference from config
-    const carouselItemGroup = this.config.carousel?.itemGroup; // Check if carousel reference is available
-    if (carouselItemGroup) { // If carousel reference is available
-      carouselItemGroup.getWorldPosition(center); // Get world position of the main carousel's item group
-      this.floatingPreview.position.copy(center); // Copy the center position to the floating preview
-      // Optional: Nudge slightly towards the camera or adjust Y position
-      const offsetDirection = new THREE.Vector3(); // Get direction vector
-      this.camera.getWorldPosition(offsetDirection); // Get camera position
-      offsetDirection.sub(center).normalize(); // Get direction from center to camera
-      this.floatingPreview.position.y += 1.2; // <<< FIX 4: Elevate floating preview
-      // Make the preview face the camera
-      this.floatingPreview.lookAt(this.camera.position); // Face the camera
-    } else {
-      console.warn("⚠️ Could not find carousel itemGroup to determine center position. Falling back to camera-relative positioning.");
-      // Fallback (original camera-relative positioning - might still be wrong)
-      const distanceInFront = 4.5; // Distance in front of the camera
-      const previewPosition = new THREE.Vector3(); // Create a vector to hold the preview position
-      const cameraDirection = new THREE.Vector3(); // Get direction vector
-      this.camera.getWorldDirection(cameraDirection); // Get camera's world direction
-      this.camera.getWorldPosition(previewPosition); // Get camera's world position
-      previewPosition.addScaledVector(cameraDirection, distanceInFront); // Move forward
-      this.floatingPreview.position.copy(previewPosition); // Copy the calculated position to the floating preview
-      this.floatingPreview.rotation.copy(this.camera.rotation); // Face camera (approx)
-      this.floatingPreview.position.y += 1.2; // <<< FIX 4: Elevate floating preview (fallback case)
-    }
-    // --- End Positioning ---
-    // Clone icon from the selected item with larger scale
-    const sourceIcon = sourceContainer.userData.iconMesh; // Get the icon mesh from the source container
-    let previewIcon = null; // Initialize to null
-    // <<< ADD DEBUG LOG for Cart cloning >>>
-    if (item === 'Cart' && sourceIcon) { // Check if the item is 'Cart' and sourceIcon exists
-      console.warn('🧩 Cloning Cart icon:', {
-        isGroup: sourceIcon instanceof THREE.Group, // Check if sourceIcon is a group
-        childrenCount: sourceIcon.children?.length, // Log number of children if it's a group
-        sourceIcon // Log the object itself for inspection
-      });
-    }
-    // Handle different types of icons (meshes vs groups)
-    if (sourceIcon instanceof THREE.Group) { // Check if the sourceIcon is a group
-      // <<< FIX: Clone the entire group structure recursively >>>
-      previewIcon = sourceIcon.clone(true); // Use recursive clone
-      // <<< FIX: Traverse cloned group to clone materials and set emissive >>>
-      previewIcon.traverse(child => { // Traverse the cloned group
-        if (child.isMesh) { // Check if the child is a mesh
-          // Ensure material exists and is clonable
-          if (child.material && typeof child.material.clone === 'function') { // Clone the material
-            child.material = child.material.clone(); // Clone material
-            // Set emissive properties on the cloned material
-            child.material.emissive = new THREE.Color(this.getIconColor(index)); // Set emissive color based on index
-            child.material.emissiveIntensity = 0.3; // Set emissive intensity
-            child.material.needsUpdate = true; // Ensure update
-          } else {
-            console.warn("[🍉 Preview Clone] Child mesh material missing or not clonable:", child);
-          }
-        }
-      });
-    } else if (sourceIcon instanceof THREE.Mesh) { // Check if it's a mesh
-      // Clone the mesh
-      const clonedGeometry = sourceIcon.geometry.clone(); // Clone the geometry
-      const clonedMaterial = sourceIcon.material.clone(); // Clone the material
-      // Enhance material with emissive and glow for better visibility
-      clonedMaterial.emissive = new THREE.Color(this.getIconColor(index)); // Set emissive color based on index
-      clonedMaterial.emissiveIntensity = 0.5; // Set emissive intensity
-      previewIcon = new THREE.Mesh(clonedGeometry, clonedMaterial); // Create a new mesh with cloned geometry and material
-    } else {
-      console.warn("[🍉 Preview] Source icon is not a Mesh or Group, cannot clone for preview.");
-    }
-    // Log if previewIcon is null after cloning attempt
-    if (!previewIcon) {
-      console.warn("[🍉 Preview] previewIcon is null after cloning attempt.");
-    } else {
-      // Scale up the icon (4x larger)
-      previewIcon.scale.set(4, 4, 4); // Set larger scale for better visibility
-      this.floatingPreview.add(previewIcon); // Add the cloned icon to the floating preview
-    }
-    // Create text label to display above the icon
-    let labelString = `Item ${index}`; // Default label
-    let textMesh = null; // Initialize to null
-    if (this.font) { // Check if the font is loaded
-      labelString = item.label || item || `Item ${index}`; // Use item itself if label is missing, fallback to index
-      // Fallback to a default label if none is provided
-      if (!labelString) {
-        // console.warn("[🍉 Preview] No label provided for floating preview, using default.");
-        labelString = `Item ${index}`;
-      }
-      // <<< FIX 2: Update TextGeometry parameters
-      const textGeometry = new TextGeometry(labelString, { // Create text geometry using the loaded font
-        font: this.font, // Use the loaded font
-        size: 0.3, // Set font size
-        depth: 0.1, // Reduced depth for better visibility
-        height: 0.05, // Keep some depth
-        bevelEnabled: true, // Enable bevel for a more polished look
-        bevelThickness: 0.01, // Smaller bevel
-        bevelSize: 0.005,     // Smaller bevel
-        bevelOffset: 0, // No offset
-        bevelSegments: 3,     // Fewer segments
-        curveSegments: 8      // Fewer segments
-      });
-      textGeometry.computeBoundingBox(); // <<< FIX 2: Compute bounding box before centering
-      textGeometry.center(); // <<< FIX 2: Ensure centering
-      const textMaterial = new THREE.MeshStandardMaterial({ // Create a standard material for the text
-        color: 0xffffff, // Default text color
-        emissive: 0x99ccff, // Light blue emissive for better visibility
-        emissiveIntensity: 0.5, // Set emissive intensity
-        transparent: true, // Enable transparency
-        opacity: 0.9 // Default opacity
-      });
-      textMesh = new THREE.Mesh(textGeometry, textMaterial); // Assign to textMesh
-      // Position text above the icon
-      textMesh.position.y = 2.2; // Position above the icon
-      // <<< FIX 2: Normalize scale and update geometry/matrix
-      textMesh.scale.set(0.75, 0.75, 0.75); // Uniform scale
-      textMesh.geometry.computeBoundingBox(); // Recompute after scale? Maybe not needed if centered before scale.
-      textMesh.geometry.computeBoundingSphere(); // Recompute bounding sphere if needed
-      textMesh.updateMatrixWorld(); // Force update
-      this.floatingPreview.add(textMesh);
-    }
-    // Store the index this preview represents
-    this.floatingPreview.userData.index = index; // Store the index in userData for easy access
-    // Start with zero scale and animate in
-    this.floatingPreview.userData.originalPosition = this.floatingPreview.position.clone(); // Store original position for potential future use
-    // --- Visibility + Scale Audit ---
-    this.floatingPreview.visible = true; // Ensure visibility is set to true
-    this.floatingPreview.updateMatrixWorld(true); // Force update
-    // Add to the scene explicitly
-    this.scene.add(this.floatingPreview); // Add the floating preview to the scene
-    // Animate in (ensure scale starts from 0 if audit scale is removed later)
-    gsap.fromTo(this.floatingPreview.scale,
-      { x: 0, y: 0, z: 0 }, // Explicitly start from 0
-      {
-        x: 1, y: 1, z: 1, // Set final scale to 1
-        duration: 0.8, // Duration of the animation
-        ease: "elastic.out(1, 0.5)" // Elastic easing for a bouncy effect
-      }
-    );
-    // Start the slow rotation animation
-    this.startFloatingPreviewSpin(); // <<< FIX 3: Start rotation animation here
-  }
-
-  /**
- * Handles mouse wheel events to rotate items around the fixed 3 o'clock position.
- * @param {WheelEvent} event - The wheel event
- */
   handleWheel(event) {
     event.preventDefault();
 
@@ -933,6 +849,7 @@ export class Carousel3DSubmenu extends THREE.Group { // Class definition for Car
     if (this.floatingPreview && this.showingPreview) {
       this.closeFloatingPreview();
     }
+    gsap.killTweensOf(this.itemGroup.rotation); // Prevent multiple simultaneous spins
 
     // Animate to new position
     gsap.to(this.itemGroup.rotation, {
@@ -986,13 +903,20 @@ export class Carousel3DSubmenu extends THREE.Group { // Class definition for Car
       const iconMesh = container.userData.iconMesh;
 
       if (mesh && mesh.userData && mesh.userData.originalColor) {
+        // Revert to original values without changing opacity
         mesh.material.color.copy(mesh.userData.originalColor);
-        mesh.material.emissive = new THREE.Color(0x000000);
+        mesh.material.emissive.set(0x000000);
         mesh.scale.copy(mesh.userData.originalScale);
       }
 
-      if (iconMesh && iconMesh.userData && iconMesh.userData.originalScale) {
-        iconMesh.scale.copy(iconMesh.userData.originalScale);
+      if (iconMesh) {
+        const iconOriginal = iconMesh.userData.originalScale || new THREE.Vector3(1, 1, 1);
+        iconMesh.scale.copy(iconOriginal);
+
+        // Reset rotation if not actively animating
+        if (iconMesh && !gsap.isTweening(iconMesh.rotation)) {
+          iconMesh.rotation.set(0, 0, 0);
+        }
       }
     });
 
@@ -1003,7 +927,7 @@ export class Carousel3DSubmenu extends THREE.Group { // Class definition for Car
 
     if (mesh) {
       mesh.material.color.set(this.config.highlightColor || 0x00ffff);
-      mesh.material.emissive = new THREE.Color(0x003333);
+      mesh.material.emissive.set(0x003333);
       mesh.scale.set(
         mesh.userData.originalScale.x * 1.3,
         mesh.userData.originalScale.y * 1.3,
@@ -1051,105 +975,149 @@ export class Carousel3DSubmenu extends THREE.Group { // Class definition for Car
    * 
    */
   selectItem(index, animate = true, createPreview = false) {
-    if (index < 0 || index >= this.itemMeshes.length) return;
-  
-    const selected = this.itemMeshes[index];
-    const selectedAngle = selected.userData.angle;
-    const currentAngle = this.itemGroup.rotation.x;
-    const desiredAngle = selectedAngle + this.mainCarouselHomeAngle;
-  
-    const twoPi = Math.PI * 2;
-    let delta = ((desiredAngle - currentAngle + Math.PI) % twoPi) - Math.PI;
-    const target = currentAngle + delta;
-  
-    this.forceLockedIndex = index;
-    this.selectItemLock = true;
-    this.isTransitioning = true;
-  
-    if (this.currentIndex !== index && this.itemMeshes[this.currentIndex]) {
-      const prev = this.itemMeshes[this.currentIndex];
-      const mesh = prev.userData.mesh;
-      const icon = prev.userData.iconMesh;
-      mesh.material.color.copy(mesh.userData.originalColor);
-      mesh.material.emissive.set(0x000000);
-      gsap.to(mesh.scale, {
-        ...mesh.userData.originalScale,
-        duration: 0.3
-      });
-      if (icon) {
-        gsap.to(icon.scale, {
-          ...icon.userData.originalScale,
+    // Check if selection is already in progress
+    if (this.selectionInProgress) {
+      console.warn("[🧩 selectItem] Blocked: selection already in progress");
+      return;
+    }
+
+    this.selectionInProgress = true; // Lock
+
+    if (index < 0 || index >= this.itemMeshes.length) {
+      this.selectionInProgress = false; // Release lock if invalid index
+      return;
+    }
+
+    // Double-check that guard exists and is valid
+    if (!this.guard || typeof this.guard.lockSelection !== 'function') {
+      console.error('[Carousel3DSubmenu] Invalid guard in selectItem, creating new one');
+      this.guard = new SelectionGuard();
+    }
+
+    // Use the guard utility for locking
+    return withSelectionLock(this.guard, index, () => {
+      const selected = this.itemMeshes[index];
+      const selectedAngle = selected.userData.angle;
+      const currentAngle = this.itemGroup.rotation.x;
+      const desiredAngle = selectedAngle + this.mainCarouselHomeAngle;
+
+      const twoPi = Math.PI * 2;
+      let delta = ((desiredAngle - currentAngle + Math.PI) % twoPi) - Math.PI;
+      const target = currentAngle + delta;
+
+      if (this.currentIndex !== index && this.itemMeshes[this.currentIndex]) {
+        const prev = this.itemMeshes[this.currentIndex];
+        const mesh = prev.userData.mesh;
+        const icon = prev.userData.iconMesh;
+
+        // Restore previous item appearance - keep it simple
+        if (mesh) {
+          mesh.material.color.copy(mesh.userData.originalColor);
+          mesh.material.emissive.set(0x000000);
+
+          gsap.to(mesh.scale, {
+            ...mesh.userData.originalScale,
+            duration: 0.3
+          });
+        }
+
+        if (icon) {
+          gsap.to(icon.scale, {
+            ...icon.userData.originalScale,
+            duration: 0.3
+          });
+
+          gsap.killTweensOf(icon.rotation);
+          gsap.set(icon.rotation, { x: 0, y: 0, z: 0 });
+        }
+      }
+
+      const mesh = selected.userData.mesh;
+      const icon = selected.userData.iconMesh;
+
+      // Enhance selected item appearance - keep it simple
+      if (mesh) {
+        mesh.material.color.set(this.config.highlightColor || 0x00ffff);
+        mesh.material.emissive.set(0x003333);
+
+        gsap.to(mesh.scale, {
+          x: mesh.userData.originalScale.x * 1.3,
+          y: mesh.userData.originalScale.y * 1.3,
+          z: mesh.userData.originalScale.z * 1.3,
           duration: 0.3
         });
-        gsap.killTweensOf(icon.rotation);
-        gsap.set(icon.rotation, { x: 0, y: 0, z: 0 });
       }
-    }
-  
-    const mesh = selected.userData.mesh;
-    const icon = selected.userData.iconMesh;
-    mesh.material.color.set(this.config.highlightColor || 0x00ffff);
-    mesh.material.emissive.set(0x003333);
-    gsap.to(mesh.scale, {
-      x: mesh.userData.originalScale.x * 1.3,
-      y: mesh.userData.originalScale.y * 1.3,
-      z: mesh.userData.originalScale.z * 1.3,
-      duration: 0.3
-    });
-  
-    if (icon) {
-      const s = icon.userData.originalScale;
-      gsap.to(icon.scale, {
-        x: s.x * 1.3,
-        y: s.y * 1.3,
-        z: s.z * 1.3,
-        duration: 0.3,
-        ease: "back.out"
-      });
-      gsap.killTweensOf(icon.rotation);
-      gsap.timeline()
-        .to(icon.rotation, {
-          x: Math.PI * 0.8,
-          y: Math.PI * 2,
-          z: Math.PI * 0.5,
-          duration: 1,
-          ease: "power1.inOut"
-        })
-        .to(icon.rotation, {
-          x: 0,
-          z: 0,
+
+      if (icon) {
+        const s = icon.userData.originalScale || new THREE.Vector3(1, 1, 1);
+
+        // Scale up with a bouncy effect
+        gsap.to(icon.scale, {
+          x: s.x * 1.3,
+          y: s.y * 1.3,
+          z: s.z * 1.3,
           duration: 0.3,
-          ease: "back.out(2)"
-        }, "-=0.1");
-    }
-  
-    const finish = () => {
-      this.currentIndex = index;
-      this.selectItemLock = false;
-      this.forceLockedIndex = null;
-      this.isTransitioning = false;
-      this.targetRotation = target;
-    };
-  
-    if (animate) {
-      gsap.to(this.itemGroup.rotation, {
-        x: target,
-        duration: 0.6,
-        ease: "power2.out",
-        onComplete: finish
-      });
-    } else {
-      this.itemGroup.rotation.x = target;
-      finish();
-    }
-  
-    if (createPreview) {
-      this.showingPreview = true;
-      this.createFloatingPreview(index);
-    }
-  
-    console.warn(`[🧩 selectItem] Finalized selection: index=${index}, angle=${selectedAngle.toFixed(2)}, target=${target.toFixed(2)}`);
-  }  
+          ease: "back.out"
+        });
+
+        // Do the geodesic spin animation
+        gsap.killTweensOf(icon.rotation);
+        gsap.timeline()
+          .to(icon.rotation, {
+            x: Math.PI * 0.8,
+            y: Math.PI * 2,
+            z: Math.PI * 0.5,
+            duration: 1,
+            ease: "power1.inOut"
+          })
+          .to(icon.rotation, {
+            x: 0,
+            z: 0,
+            duration: 0.3,
+            ease: "back.out(2)"
+          }, "-=0.1");
+      }
+
+      const finish = () => {
+        this.currentIndex = index;
+        this.selectItemLock = false;
+        this.forceLockedIndex = null;
+        this.isTransitioning = false;
+        this.targetRotation = target;
+        this.selectionInProgress = false; // Release lock
+      };
+
+      if (animate) {
+        gsap.to(this.itemGroup.rotation, {
+          x: target,
+          duration: 0.6,
+          ease: "power2.out",
+          onComplete: finish
+        });
+      } else {
+        this.itemGroup.rotation.x = target;
+        finish();
+      }
+
+      if (createPreview) {
+        this.showingPreview = true;
+
+        // Initialize preview manager if needed
+        if (!this.previewManager) {
+          this.initPreviewManager();
+        }
+
+        // Create preview
+        if (this.previewManager) {
+          this.previewManager.create(index);
+        }
+      }
+
+      this.lastSelectTimestamp = Date.now();
+
+      console.warn(`[🧩 selectItem] Finalized selection: index=${index}, angle=${selectedAngle.toFixed(2)}, target=${target.toFixed(2)}`);
+    }, { lockRotation: true });
+  }
 
   /**
    * Scrolls the 3D carousel submenu vertically based on the provided delta.
@@ -1231,6 +1199,8 @@ export class Carousel3DSubmenu extends THREE.Group { // Class definition for Car
    * @see {@link https://greensock.com/gsap/|GSAP} for animation details.
    */
   show() {
+    console.warn('[Carousel3DSubmenu] 🎭 Show method called');
+
     this.visible = true; // Set visibility to true
     // Make sure close button is fully visible from the start
     if (this.closeButton) { // Reset to full scale immediately before any animations
@@ -1285,6 +1255,15 @@ export class Carousel3DSubmenu extends THREE.Group { // Class definition for Car
           iconOriginal.y * multiplier, // iconOriginal.y * multiplier,
           iconOriginal.z * multiplier // iconOriginal.z * multiplier
         );
+      }
+    } else {
+      console.warn('[Carousel3DSubmenu] ⚠️ No item meshes available during show()');
+
+      // Try to create items if they don't exist but we have a font
+      if (this.font && !this.isInitialized) {
+        console.warn('[Carousel3DSubmenu] 🛠️ Attempting to create items in show()');
+        this.createItems();
+        console.warn('[Carousel3DSubmenu] Created itemMeshes:', this.itemMeshes.length);
       }
     }
     // Make sure entire submenu appears with a smooth animation
@@ -1371,6 +1350,7 @@ export class Carousel3DSubmenu extends THREE.Group { // Class definition for Car
         });
       }
     });
+    console.warn('[Carousel3DSubmenu] 🎭 Show method completed');
   }
 
   /**
@@ -1384,10 +1364,13 @@ export class Carousel3DSubmenu extends THREE.Group { // Class definition for Car
    * Each item in `itemMeshes` is expected to have `userData` containing `mesh` and optionally `iconMesh`.
    */
   hide() {
-    // Close floating preview first with a nice animation
-    if (this.floatingPreview) { // Check if floatingPreview exists
-      this.closeFloatingPreview(); // Animate floating preview scale to zero
+    // Close preview
+    if (this.previewManager) {
+      this.previewManager.dispose();
     }
+    this.showingPreview = false;
+
+    // Hide menu items
     this.itemMeshes.forEach((container, i) => { // Iterate over each item container
       const mesh = container.userData.mesh; // Get the mesh reference from userData
       const iconMesh = container.userData.iconMesh; // Get iconMesh reference from userData
@@ -1474,246 +1457,125 @@ export class Carousel3DSubmenu extends THREE.Group { // Class definition for Car
    * @property {boolean} isSpinning - Indicates whether the floating preview is spinning.
    * @property {boolean} isErrorState - Indicates if the submenu is in an error state.
    */
-  // update() {
-  //   try {
-  //     // --- REMOVE OR COMMENT OUT THIS ENTIRE BLOCK ---
-  //     // IMPORTANT: KEEP THIS BLOCK - Critical for 3 o'clock position
-  //     // // Smooth rotation with improved damping for fluid motion
-  //     if (this.targetRotation !== undefined && this.itemGroup) {
-  //       const rotationDiff = this.targetRotation - this.itemGroup.rotation.x;
-  //       if (Math.abs(rotationDiff) > 0.001) {
-  //         // Apply ease-out style damping for smoother deceleration
-  //         const dampingFactor = Math.min(1, Math.max(0.05, Math.abs(rotationDiff) * 0.8));
-  //         this.itemGroup.rotation.x += rotationDiff * dampingFactor * this.rotationSpeed;
-  //       } else {
-  //         // Snap exactly to target when very close
-  //         this.itemGroup.rotation.x = this.targetRotation;
-  //       }
-  //     }
-  //     // --- END OF BLOCK TO REMOVE ---
-  //     // Position submenu correctly relative to parent item
-  //     if (this.parentItem && this.parentItem.parent) { // Check if parentItem and its parent exist
-  //       try {
-  //         // Check if parent has valid matrices before trying to get world position
-  //         if (this.parentItem.matrixWorld && this.parentItem.matrixWorld.elements) { // Check if parentItem has a valid matrixWorld
-  //           // Get parent world position safely
-  //           const parentWorldPos = new THREE.Vector3(); // Create a new Vector3 for parent world position
-  //           this.parentItem.getWorldPosition(parentWorldPos); // Get the world position of the parent item
-  //           // Only copy position if we got valid coordinates
-  //           if (!isNaN(parentWorldPos.x) && !isNaN(parentWorldPos.y) && !isNaN(parentWorldPos.z)) { // Check if the position is valid
-  //             this.position.copy(parentWorldPos); // Copy the parent world position to this submenu's position
-  //           }
-  //         }
-  //         // Match parent Y rotation only if it's a valid number
-  //         if (this.parentItem.rotation && !isNaN(this.parentItem.rotation.y)) { // Check if parentItem has a valid rotation so we can match it
-  //           this.rotation.y = this.parentItem.rotation.y; // Match the Y rotation of the parent item by copying its rotation
-  //           // Also match parent's parent rotation (the carousel) with safeguards
-  //           if (this.parentItem.parent.rotation && !isNaN(this.parentItem.parent.rotation.y)) {
-  //             this.rotation.y = this.parentItem.parent.rotation.y + this.parentItem.rotation.y;
-  //           } // Match the Y rotation of the parent item's parent (the carousel)
-  //         }
-  //       } catch (positionError) {
-  //         console.warn("Error positioning submenu:", positionError);
-  //         // Continue execution despite positioning error
-  //       }
-  //     }
-  //     // Only process items if the arrays are valid
-  //     if (this.itemMeshes && this.itemMeshes.length > 0) { // Check if itemMeshes exists and has items
-  //       // First reset all items to non-highlighted state (keep this for visual consistency)
-  //       this.itemMeshes.forEach((container, i) => { // Iterate over each item container
-  //         if (!container || !container.userData) return; // Skip if container or userData is missing
-  //         const mesh = container.userData.mesh; // Get the mesh reference from userData
-  //         const iconMesh = container.userData.iconMesh; // Get iconMesh reference from userData
-  //         // FIXED: Add null check for iconMesh before accessing properties
-  //         if (!mesh) return; // Only mesh is strictly required for text reset
-  //         // Only reset if this isn't already the current item
-  //         if (i !== this.currentIndex) { // Check if this is not the currently selected item
-  //           if (mesh.userData && mesh.userData.originalColor) { // Check if originalColor exists in userData
-  //             mesh.material.color.copy(mesh.userData.originalColor); // Reset color to original
-  //             mesh.material.emissive = new THREE.Color(0x000000); // Reset emissive color
-  //             mesh.scale.copy(mesh.userData.originalScale); // Reset scale to original size
-  //             if (iconMesh) { // FIXED: Add null check for iconMesh
-  //               // ✅ Step 2: Update scaling logic
-  //               const iconOriginal = iconMesh.userData.originalScale || new THREE.Vector3(1, 1, 1); // Get original scale from userData or default to (1, 1, 1)
-  //               iconMesh.scale.copy(iconOriginal); // Reset instantly using original scale
-  //               // Make sure non-highlighted icons stay upright
-  //               if (!gsap.isTweening(iconMesh.rotation)) { // Check if there are no active rotations
-  //                 iconMesh.rotation.set(0, 0, 0); // Reset rotation to upright immediately without animation
-  //               }
-  //             }
-  //           }
-  //         }
-  //         // Ensure counter-rotation still happens:
-  //         if (container) {
-  //           container.rotation.x = -this.itemGroup.rotation.x; // Keep items upright
-  //         }
-  //         // Keep text upright regardless of wheel rotation
-  //         container.rotation.x = -this.itemGroup.rotation.x; // 
-  //         // Reset any Y rotation for consistent appearance
-  //         container.rotation.y = 0; // Reset Y rotation to avoid tilt
-  //         // Basic wheel positioning
-  //         container.position.y = this.watermillRadius * Math.sin(container.userData.angle); // Position based on angle
-  //         container.position.z = this.watermillRadius * Math.cos(container.userData.angle); // Position based on angle
-  //       });
-  //     }
-  //     // Exit early if we're in the middle of a GSAP animation (e.g., from selectItem)
-  //     if (this.isAnimating) return;
-
-  //     const current = this.itemGroup.rotation.x;  // Changed from y to x to match other code
-  //     const diff = this.targetRotation - current;
-  //     const threshold = 0.005;
-
-  //     if (Math.abs(diff) > threshold) {
-  //       // Smoothly interpolate toward the target rotation
-  //       this.itemGroup.rotation.x += diff * this.rotationSpeed;
-  //       this.isSpinning = true;
-  //     } else if (this.isSpinning) {
-  //       // Once close enough, snap into place
-  //       this.itemGroup.rotation.x = this.targetRotation;
-  //       this.isSpinning = false;
-
-  //       // Only update the current index if we're not locked by selectItem
-  //       // This prevents the menu from shifting unnecessarily
-  //       if (!this.selectItemLock && !this.forceLockedIndex && !this.isTransitioning && !this.targetRotationLocked) {
-  //         // Identify which item is now at the 3 o'clock front-facing anchor
-  //         const frontIndex = this.getFrontIndex();  // Use existing method instead of undefined one
-
-  //         if (frontIndex !== -1 && frontIndex !== this.currentIndex) {
-  //           this.currentIndex = frontIndex;
-  //           this.highlightItemAtIndex(frontIndex);  // Use existing method instead of undefined one
-  //         }
-  //       }
-  //     }
-  //     // Maintain glow effect if active
-  //     const currentMesh = this.itemMeshes[this.currentIndex];
-  //     if (currentMesh?.material?.uniforms?.time) {
-  //       currentMesh.material.uniforms.time.value = performance.now() * 0.001;
-  //     }
-  //     if (this.closeButton) { // Check if closeButton exists
-  //       const cameraPosWorld = new THREE.Vector3(0, 0, 10); // Where the camera "is"
-  //       // Convert to local space relative to closeButton’s parent
-  //       this.closeButton.parent.worldToLocal(cameraPosWorld); // Convert world position to local space
-  //       // Make the button face that point
-  //       this.closeButton.lookAt(cameraPosWorld); // Make the close button face the camera position in local space
-  //       // Orient the red disk so its flat face looks forward (Z)
-  //       this.closeButton.rotateZ(Math.PI / 2); // Rotate the close button to face the camera
-  //     }
-  //     // Update floating preview position based on parent carousel rotation
-  //     if (this.floatingPreview && this.parentItem && this.parentItem.parent) { // Check if floatingPreview and parentItem's parent exist
-  //       // If parent carousel is rotating, stop the automatic spin
-  //       if (this.parentItem.parent.rotation.y !== this.lastParentRotation) { // Check if parent carousel rotation has changed
-  //         if (this.isSpinning) { // If we were spinning, stop the spin
-  //           this.stopFloatingPreviewSpin(); // Stop the spinning animation
-  //         }
-  //         // Match the parent's rotation for the floating preview
-  //         this.floatingPreview.rotation.y = this.parentItem.parent.rotation.y; // Match the Y rotation of the parent carousel
-  //       } else if (!this.isSpinning) { // If parent carousel has stopped rotating and we're not already spinning
-  //         // If parent stopped moving and we're not spinning, restart the spin
-  //         this.startFloatingPreviewSpin(); // Start the spinning animation
-  //       }
-  //       // Store last rotation for comparison
-  //       this.lastParentRotation = this.parentItem.parent.rotation.y; // Store the current parent rotation for future comparisons
-  //     }
-  //   } catch (error) {
-  //     console.error("Error in Carousel3DSubmenu update:", error); // Log the error for debugging
-  //     // Prevent further errors by setting a safe state
-  //     this.isErrorState = true; // Set an error state flag to prevent further issues
-  //   }
-  // }
-
-  update() {
-    try {
-      if (this.parentItem && this.parentItem.parent) {
-        if (this.parentItem.matrixWorld?.elements) {
-          const parentWorldPos = new THREE.Vector3();
-          this.parentItem.getWorldPosition(parentWorldPos);
-          if (!isNaN(parentWorldPos.x)) {
-            this.position.copy(parentWorldPos);
-          }
-        }
-        if (!isNaN(this.parentItem.rotation?.y)) {
-          this.rotation.y = this.parentItem.rotation.y;
-          if (!isNaN(this.parentItem.parent.rotation?.y)) {
-            this.rotation.y = this.parentItem.parent.rotation.y + this.parentItem.rotation.y;
-          }
-        }
+update() {
+  try {
+    // ✳️ Sync this submenu's position and orientation to its parent in world space
+    if (this.parentItem && this.parentItem.parent) {
+      const parentWorldPos = new THREE.Vector3();
+      this.parentItem.getWorldPosition(parentWorldPos);
+      if (!isNaN(parentWorldPos.x)) {
+        this.position.copy(parentWorldPos);
       }
-  
-      if (this.itemMeshes?.length) {
-        this.itemMeshes.forEach((container, i) => {
-          if (!container?.userData) return;
-          const mesh = container.userData.mesh;
-          const iconMesh = container.userData.iconMesh;
-          if (!mesh) return;
-  
-          if (i !== this.currentIndex && mesh.userData?.originalColor) {
-            mesh.material.color.copy(mesh.userData.originalColor);
-            mesh.material.emissive = new THREE.Color(0x000000);
-            mesh.scale.copy(mesh.userData.originalScale);
-            if (iconMesh) {
-              const iconOriginal = iconMesh.userData.originalScale || new THREE.Vector3(1, 1, 1);
-              iconMesh.scale.copy(iconOriginal);
-              if (!gsap.isTweening(iconMesh.rotation)) {
-                iconMesh.rotation.set(0, 0, 0);
-              }
+
+      const parentRot = this.parentItem.rotation?.y;
+      const grandParentRot = this.parentItem.parent.rotation?.y;
+      if (!isNaN(parentRot)) {
+        this.rotation.y = isNaN(grandParentRot) ? parentRot : grandParentRot + parentRot;
+      }
+    }
+
+    // ✳️ Animate all item positions & reset any stale visuals
+    if (this.itemMeshes?.length) {
+      this.itemMeshes.forEach((container, i) => {
+        if (!container?.userData) return;
+        const mesh = container.userData.mesh;
+        const iconMesh = container.userData.iconMesh;
+        if (!mesh) return;
+
+        // 🔁 Reset non-selected visuals
+        if (i !== this.currentIndex && mesh.userData?.originalColor) {
+          mesh.material.color.copy(mesh.userData.originalColor);
+          mesh.material.emissive.set(0x000000);
+          mesh.scale.copy(mesh.userData.originalScale);
+
+          if (iconMesh) {
+            const iconOriginal = iconMesh.userData.originalScale || new THREE.Vector3(1, 1, 1);
+            iconMesh.scale.copy(iconOriginal);
+            if (!gsap.isTweening(iconMesh.rotation)) {
+              iconMesh.rotation.set(0, 0, 0);
             }
           }
-  
-          container.rotation.x = -this.itemGroup.rotation.x;
-          container.rotation.y = 0;
-          container.position.y = this.watermillRadius * Math.sin(container.userData.angle);
-          container.position.z = this.watermillRadius * Math.cos(container.userData.angle);
-        });
-      }
-  
-      if (this.isAnimating) return;
-  
-      const current = this.itemGroup.rotation.x;
-      const diff = this.targetRotation - current;
-      const threshold = 0.005;
-  
-      if (Math.abs(diff) > threshold) {
-        this.itemGroup.rotation.x += diff * this.rotationSpeed;
-        this.isSpinning = true;
-      } else if (this.isSpinning) {
-        this.itemGroup.rotation.x = this.targetRotation;
-        this.isSpinning = false;
-  
-        if (!this.selectItemLock && !this.forceLockedIndex && !this.isTransitioning && !this.targetRotationLocked) {
-          const frontIndex = this.getFrontIndex();
-          if (frontIndex !== -1 && frontIndex !== this.currentIndex) {
-            this.currentIndex = frontIndex;
-            this.highlightItemAtIndex(frontIndex);
-          }
         }
-      }
-  
-      const currentMesh = this.itemMeshes[this.currentIndex];
-      if (currentMesh?.material?.uniforms?.time) {
-        currentMesh.material.uniforms.time.value = performance.now() * 0.001;
-      }
-  
-      if (this.closeButton) {
-        const cameraPosWorld = new THREE.Vector3(0, 0, 10);
-        this.closeButton.parent.worldToLocal(cameraPosWorld);
-        this.closeButton.lookAt(cameraPosWorld);
-        this.closeButton.rotateZ(Math.PI / 2);
-      }
-  
-      if (this.floatingPreview && this.parentItem?.parent) {
-        if (this.parentItem.parent.rotation.y !== this.lastParentRotation) {
-          if (this.isSpinning) this.stopFloatingPreviewSpin();
-          this.floatingPreview.rotation.y = this.parentItem.parent.rotation.y;
-        } else if (!this.isSpinning) {
-          this.startFloatingPreviewSpin();
-        }
-        this.lastParentRotation = this.parentItem.parent.rotation.y;
-      }
-    } catch (error) {
-      console.error("Error in Carousel3DSubmenu update:", error);
-      this.isErrorState = true;
+
+        // 🎯 Reposition based on angle
+        container.rotation.x = -this.itemGroup.rotation.x;
+        container.rotation.y = 0;
+        container.position.y = this.watermillRadius * Math.sin(container.userData.angle);
+        container.position.z = this.watermillRadius * Math.cos(container.userData.angle);
+      });
     }
-  }  
+
+    // 🔒 Skip update if animation guard is active
+    if (this.isAnimating) return;
+
+    // 📐 Normalize angles to avoid over-rotation or drift
+    const twoPi = Math.PI * 2;
+    const normalize = angle => ((angle % twoPi) + twoPi) % twoPi;
+
+    const current = normalize(this.itemGroup.rotation.x);
+    const target = normalize(this.targetRotation);
+    const diff = target - current;
+
+    const threshold = 0.005;
+
+    if (Math.abs(diff) > threshold) {
+      this.itemGroup.rotation.x += diff * this.rotationSpeed;
+      this.isSpinning = true;
+    } else if (this.isSpinning) {
+      this.itemGroup.rotation.x = this.targetRotation; // lock hard
+      this.isSpinning = false;
+
+      // 🛡️ Final override protection
+      const recentlySelected = (Date.now() - (this.lastSelectTimestamp || 0)) < 500;
+
+      if (
+        !this.selectionInProgress &&
+        !this.selectItemLock &&
+        !this.forceLockedIndex &&
+        !this.isTransitioning &&
+        !this.targetRotationLocked &&
+        !gsap.isTweening(this.itemGroup.rotation) &&
+        !recentlySelected
+      ) {
+        const frontIndex = this.getFrontIndex();
+        if (frontIndex !== -1 && frontIndex !== this.currentIndex) {
+          console.log(`[🌀 highlight override] ${this.currentIndex} → ${frontIndex}`);
+          this.currentIndex = frontIndex;
+          this.highlightItemAtIndex(frontIndex);
+        }
+      }
+    }
+
+    // 🎨 Shader sync
+    const currentMesh = this.itemMeshes?.[this.currentIndex];
+    if (currentMesh?.material?.uniforms?.time) {
+      currentMesh.material.uniforms.time.value = performance.now() * 0.001;
+    }
+
+    // ⛔ Close button alignment to camera
+    if (this.closeButton) {
+      const cameraPosWorld = new THREE.Vector3(0, 0, 10);
+      this.closeButton.parent.worldToLocal(cameraPosWorld);
+      this.closeButton.lookAt(cameraPosWorld);
+      this.closeButton.rotateZ(Math.PI / 2);
+    }
+
+    // 🌀 Floating preview manager sync
+    if (this.previewManager && this.parentItem?.parent) {
+      if (this.parentItem.parent.rotation.y !== this.lastParentRotation) {
+        this.previewManager.updateRotation(this.parentItem.parent.rotation.y);
+      } else if (!this.isSpinning && this.showingPreview) {
+        this.previewManager.startSpin();
+      }
+      this.lastParentRotation = this.parentItem.parent.rotation.y;
+    }
+
+  } catch (error) {
+    console.error("Error in Carousel3DSubmenu update():", error);
+    this.isErrorState = true;
+  }
+}
+
 
   /**
    * Updates the visual highlight for the carousel item designated as the "front" item.
@@ -1737,18 +1599,9 @@ export class Carousel3DSubmenu extends THREE.Group { // Class definition for Car
    * @returns {void}
    */
   updateFrontItemHighlight(force = false) { // Update the highlight of the item currently at the front (3 o'clock position)
-    if (this.ignoreHighlightOverride) return; // 🛡️ Protect against hijack
-    // <<< ADD isTransitioning CHECK & CONSOLIDATE LOCKS >>>
-    if (this.isTransitioning || this.selectItemLock || this.forceLockedIndex !== null || this.ignoreHighlightOverride) return; // Skip highlight update if transitioning, locked, or hijacked
-    if ((this.isAnimating && !force)) return; // Keep existing isAnimating check too
-    let closestItem = null; // <<< FIX 1: Initialize closestItem
-    // <<< FIX 1: Override closestItem and newIndex if forceLockedIndex is set
-    // Keep this logic to respect forced index, but the angle-based finding above is commented out
-    if (this.forceLockedIndex !== null && this.forceLockedIndex >= 0 && this.forceLockedIndex < this.itemMeshes.length) { // 
-      // Lock highlight strictly to selected item
-      closestItem = this.itemMeshes[this.forceLockedIndex]; // <<< FIX 1: Use forceLockedIndex if set
-    } else if (closestItem) { // If we found a closest item (from the commented-out logic), use its index
-    }
+    if (!this.guard.canUpdateHighlight(force)) return;
+
+    // ... existing highlight logic ...
   }
 
   /**
@@ -1876,122 +1729,10 @@ export class Carousel3DSubmenu extends THREE.Group { // Class definition for Car
       });
       this.floatingPreview = null; // Clear reference to floating preview
     }
-  }
-
-  /**
-   * Starts a continuous spinning animation for the floating preview object.
-   *
-   * This function first checks if the `floatingPreview` object exists. If it does,
-   * it cancels any ongoing rotation animations on the object using GSAP's `killTweensOf`.
-   * It then sets the `isSpinning` flag to true, resets the object's rotation to zero,
-   * and initiates an infinite rotation animation around the Y-axis using GSAP.
-   * The rotation is relative, continuous (`repeat: -1`), linear (`ease: "none"`),
-   * and has a duration of 12 seconds per full revolution.
-   *
-   * @returns {void} This function does not return a value.
-   */
-  startFloatingPreviewSpin() { // <<< FIX 3: Add isBeingDisposed check
-    if (!this.floatingPreview) return; // <<< FIX 3: Check if isBeingDisposed is true
-    // Kill any existing rotation tweens first
-    gsap.killTweensOf(this.floatingPreview.rotation); // 
-    this.isSpinning = true; // 
-    this.floatingPreview.rotation.set(0, 0, 0); // Reset rotation before starting
-    // Spin only around Y axis, relative to current rotation
-    gsap.to(this.floatingPreview.rotation, {
-      y: "+=" + Math.PI * 2, // Use relative rotation
-      duration: 12,          // Slower spin
-      repeat: -1,            // Infinite loop
-      ease: "none"           // Linear spin
-    });
-  }
-
-  /**
-   * Stops the spinning animation of the floating preview element.
-   * Checks if the `floatingPreview` exists before proceeding.
-   * Sets the `isSpinning` flag to false and cancels any ongoing GSAP rotation animations
-   * targeting the `floatingPreview`'s rotation property.
-   */
-  stopFloatingPreviewSpin() { // <<< FIX 3: Add isBeingDisposed check
-    if (!this.floatingPreview) return; // <<< FIX 3: Check if isBeingDisposed is true
-    this.isSpinning = false; // 
-    gsap.killTweensOf(this.floatingPreview.rotation); // Stop any ongoing rotation animations
-  }
-
-  /**
-  * Updates the floating preview element to display the item at the specified index.
-  * If a preview already exists, it fades out the current preview before creating
-  * and fading in the new one. If the requested index is already displayed or invalid,
-  * the function returns early.
-  *
-  * @param {number} index - The index of the item in `itemMeshes` to display in the floating preview.
-  * @returns {void}
-  */
-  updateFloatingPreview(index) { // // <<< FIX 3: Add isBeingDisposed check
-    // Don't update if the preview already shows this index
-    if (this.floatingPreview && this.floatingPreview.userData.index === index) {
-      return;
+    // Dispose of preview manager
+    if (this.previewManager) {
+      this.previewManager.dispose();
+      this.previewManager = null;
     }
-    if (index < 0 || index >= this.itemMeshes.length) return; // Ensure index is valid
-    // Fade out current preview
-    if (this.floatingPreview) { // Check if floatingPreview exists
-      gsap.to(this.floatingPreview.scale, { // 
-        x: 0, y: 0, z: 0, // Scale down to zero
-        duration: 0.3, // 
-        ease: "power2.in", // 
-        onComplete: () => { //  
-          // Remove old preview
-          if (this.floatingPreview && this.floatingPreview.parent) { // Check if floatingPreview has a parent
-            this.floatingPreview.parent.remove(this.floatingPreview); // Remove floating preview from its parent
-          }
-          // Create new preview
-          this.createFloatingPreview(index); // 
-        }
-      });
-    } else {
-      this.createFloatingPreview(index); // Create new preview if none exists
-    }
-  }
-
-  /**
-   * Closes the floating preview element.
-   * This method stops any ongoing animations, sets the preview visibility flag to false,
-   * and initiates a GSAP animation to scale the preview down to zero.
-   * Upon completion of the animation, it removes the preview object from its parent,
-   * traverses the preview object's hierarchy to dispose of all associated geometries
-   * and materials to free up resources, and finally sets the `floatingPreview` reference to null.
-   * Includes a check to ensure the floating preview exists before attempting operations.
-   * @returns {void}
-   */
-  closeFloatingPreview() { // <<< FIX 3: Add isBeingDisposed check
-    if (!this.floatingPreview) return; // <<< FIX 3: Check if isBeingDisposed is true
-    // Stop the spinning animation
-    this.stopFloatingPreviewSpin(); // 
-    this.showingPreview = false; // 
-    // Animate out
-    gsap.to(this.floatingPreview.scale, { // 
-      x: 0, y: 0, z: 0, // Scale down to zero
-      duration: 0.4, // 
-      ease: "back.in", // 
-      onComplete: () => { //
-        // Remove from parent
-        if (this.floatingPreview && this.floatingPreview.parent) { // Check if floatingPreview has a parent
-          this.floatingPreview.parent.remove(this.floatingPreview); // 
-        }
-        // Dispose resources
-        if (this.floatingPreview) { //  
-          this.floatingPreview.traverse(obj => { // 
-            if (obj.geometry) obj.geometry.dispose(); // Dispose geometry
-            if (obj.material) { // 
-              if (Array.isArray(obj.material)) { // 
-                obj.material.forEach(m => m.dispose()); // Dispose each material in array
-              } else { // 
-                obj.material.dispose(); // Dispose single material
-              }
-            }
-          });
-          this.floatingPreview = null; // Clear reference to floating preview
-        }
-      }
-    });
   }
 }

@@ -70,7 +70,9 @@ import { Group } from 'three';
 import { TextGeometry } from 'three/examples/jsm/geometries/TextGeometry.js';
 import { FontLoader } from 'three/examples/jsm/loaders/FontLoader.js';
 import { getGlowShaderMaterial } from './CarouselShaderFX.js';
-import { defaultCarouselStyle } from './CarouselStyleConfig.js'
+import { defaultCarouselStyle } from './CarouselStyleConfig.js';
+import { SelectionGuard, withSelectionLock } from './modules/selectionGuards.js';
+
 
 import gsap from 'gsap';
 // const gsap = typeof window !== 'undefined' && window.gsap ? window.gsap : null;
@@ -86,8 +88,14 @@ export class Carousel3DPro extends Group {
     this.targetRotation = 0;
     this.rotationSpeed = 0.05;
     this.cylinderRadius = 5;
-    this.isAnimating = false; // Flag for GSAP animation in selectItem
     this.isSpinning = false; // Flag for smooth scroll animation in update
+
+    this.guard = new SelectionGuard();
+    // For backward compatibility, keep the main isAnimating flag synced
+    Object.defineProperty(this, 'isAnimating', {
+      get: () => this.guard.isAnimating,
+      set: (value) => { this.guard.isAnimating = value; }
+    });
 
     this.itemGroup = new THREE.Group();
     this.add(this.itemGroup);
@@ -369,227 +377,89 @@ setupEventListeners() {
  * // Select the third item without animation
  * carousel.selectItem(2, false);
  */
-// selectItem(index, animate = true) {
-//   if (index < 0 || index >= this.itemMeshes.length) return;
-
-//   const gsapAvailable = typeof gsap !== 'undefined' && gsap !== null;
-
-//   // Always kill existing GSAP animations when selectItem is called
-//   // This prevents new selections from interfering with ongoing GSAP animations.
-//   // It does NOT stop the update loop's smooth interpolation for scrolling.
-//   if (gsapAvailable) {
-//     gsap.killTweensOf(this.itemGroup.rotation);
-//     this.itemMeshes.forEach(mesh => gsap.killTweensOf(mesh.scale));
-//     console.log(`[selectItem] Killed existing GSAP tweens.`); // Debug log
-//   }
-
-//   this.lastInteractionType = 'click'; // Mark interaction as click
-//   this.currentIndex = index; // Update the current index immediately
-
-//   if (typeof localStorage !== 'undefined') {
-//     localStorage.setItem('carouselIndex', index.toString());
-//   }
-
-//   // Apply highlight and scale visuals (animated or instant based on 'animate')
-//   this.itemMeshes.forEach((mesh, meshIndex) => {
-//     const isSelected = (meshIndex === index);
-//     mesh.userData.isSelected = isSelected; // Ensure userData flag is synced
-
-//     if (isSelected) {
-//       // Apply highlight appearance (glow)
-//       if (!(mesh.material instanceof THREE.ShaderMaterial)) {
-//         const glowMaterial = getGlowShaderMaterial();
-//         glowMaterial.uniforms.glowColor.value = new THREE.Color(this.config.glowColor);
-//         mesh.material = glowMaterial;
-//       } else {
-//         // If it already has glow material, just update the color uniform
-//         mesh.material.uniforms.glowColor.value = new THREE.Color(this.config.glowColor);
-//       }
-
-//       const targetScale = new THREE.Vector3().copy(mesh.userData.originalScale).multiplyScalar(1.2);
-
-//       if (animate && gsapAvailable) {
-//         // Animate scale up
-//         gsap.to(mesh.scale, {
-//           x: targetScale.x,
-//           y: targetScale.y,
-//           z: targetScale.z,
-//           duration: 0.3
-//         });
-//       } else {
-//         // Set scale instantly
-//         mesh.scale.copy(targetScale);
-//       }
-
-//     } else {
-//       // Remove highlight (revert to standard material)
-//       // Check if the current material is the glow shader before replacing
-//       if (mesh.material instanceof THREE.ShaderMaterial) {
-//         mesh.material = new THREE.MeshStandardMaterial({
-//           color: this.config.textColor,
-//           transparent: true,
-//           opacity: this.config.opacity
-//         });
-//       }
-
-
-//       if (animate && gsapAvailable) {
-//         // Animate scale back to original
-//         gsap.to(mesh.scale, {
-//           x: mesh.userData.originalScale.x,
-//           y: mesh.userData.originalScale.y,
-//           z: mesh.userData.originalScale.z,
-//           duration: 0.3
-//         });
-//       } else {
-//         // Set scale instantly
-//         mesh.scale.copy(mesh.userData.originalScale);
-//       }
-//     }
-//   });
-
-//   const selectedMesh = this.itemMeshes[index]; // Get the mesh for the selected item
-//   if (!selectedMesh) return; // Safety check
-
-//   // Calculate the target rotation for the carousel group
-//   const angleStep = (2 * Math.PI) / this.items.length;
-//   // Target rotation to bring the selected item to the front (0 radians relative to the group)
-//   this.targetRotation = -index * angleStep;
-
-//   if (animate && gsapAvailable) {
-//     // Animate the carousel group rotation using GSAP
-//     this.isAnimating = true; // Set animating flag for click animation
-//     console.log(`[selectItem] Starting GSAP rotation animation to ${this.targetRotation.toFixed(2)}`); // Debug log
-//     let rotationComplete = false; // Flag to prevent onComplete from running multiple times
-//     gsap.to(this.itemGroup.rotation, {
-//       y: this.targetRotation,
-//       duration: 0.8, // Duration of the rotation animation
-//       ease: "power2.out", // Easing function for smooth deceleration
-//       onComplete: () => {
-//         if (!rotationComplete) {
-//           // Ensure final rotation is exact by snapping to the closest equivalent angle
-//           // This prevents floating point issues after animation
-//           const twoPi = Math.PI * 2;
-//           let current = this.itemGroup.rotation.y;
-//           let target = this.targetRotation;
-//           // Normalize both to handle multiple rotations
-//           let normalizedTarget = ((target % twoPi) + twoPi) % twoPi;
-//           let normalizedCurrent = ((current % twoPi) + twoPi) % twoPi;
-//           let diff = normalizedTarget - normalizedCurrent;
-//           if (diff > Math.PI) diff -= twoPi;
-//           if (diff < -Math.PI) diff += twoPi;
-//           this.itemGroup.rotation.y = current + diff;
-
-
-//           // --- Ensure Correct Highlight AFTER Animation ---
-//           // Forcefully re-apply highlight visuals to the intended currentIndex
-//           // This overrides any potential mismatch from geometric calculations immediately after.
-//           this.applyHighlightVisuals(this.currentIndex); // <-- Add this call
-
-//           this.isAnimating = false; // Reset animating flag after rotation completes
-//           rotationComplete = true;
-//           console.log(`[selectItem] GSAP Animation complete. Final rotation: ${this.itemGroup.rotation.y.toFixed(2)}, currentIndex: ${this.currentIndex}`); // Debug log
-//         }
-//       }
-//     });
-//   } else {
-//     // Set rotation instantly
-//     this.itemGroup.rotation.y = this.targetRotation;
-//     this.isAnimating = false; // Not animating with GSAP
-//     // Apply highlight visuals instantly
-//     this.applyHighlightVisuals(this.currentIndex); // Apply visuals based on the current index
-//     console.log(`[selectItem] Instant state set for index: ${index}. rotation: ${this.itemGroup.rotation.y.toFixed(2)}, currentIndex: ${this.currentIndex}`); // Debug log
-//   }
-//   console.log(`[selectItem] Called for index: ${index}, Animate: ${animate}, Target Rotation: ${this.targetRotation.toFixed(2)}`); // Debug log
-
-// }
-
 selectItem(index, animate = true) {
   if (index < 0 || index >= this.itemMeshes.length) return;
 
-  const angleStep = (2 * Math.PI) / this.itemMeshes.length;
-  const currentRotation = this.itemGroup.rotation.y;
-  const targetAngle = -index * angleStep;
+  // Use the withSelectionLock helper to ensure safe state transitions
+  return withSelectionLock(this.guard, index, () => {
+    const angleStep = (2 * Math.PI) / this.itemMeshes.length;
+    const currentRotation = this.itemGroup.rotation.y;
+    const targetAngle = -index * angleStep;
 
-  // Shortest angular distance (modulo 2π)
-  const twoPi = Math.PI * 2;
-  let current = ((currentRotation % twoPi) + twoPi) % twoPi;
-  let target = ((targetAngle % twoPi) + twoPi) % twoPi;
-  let delta = target - current;
+    // Shortest angular distance (modulo 2π)
+    const twoPi = Math.PI * 2;
+    let current = ((currentRotation % twoPi) + twoPi) % twoPi;
+    let target = ((targetAngle % twoPi) + twoPi) % twoPi;
+    let delta = target - current;
 
-  if (delta > Math.PI) delta -= twoPi;
-  if (delta < -Math.PI) delta += twoPi;
+    if (delta > Math.PI) delta -= twoPi;
+    if (delta < -Math.PI) delta += twoPi;
 
-  const newRotation = currentRotation + delta;
-  this.targetRotation = newRotation;
-  this.currentIndex = index;
+    const newRotation = currentRotation + delta;
+    this.targetRotation = newRotation;
+    this.currentIndex = index;
 
-  // Persist selection
-  if (typeof localStorage !== 'undefined') {
-    localStorage.setItem('carouselIndex', index.toString());
-  }
-
-  // Highlight visuals
-  this.itemMeshes.forEach((mesh, i) => {
-    const isSelected = (i === index);
-    mesh.userData.isSelected = isSelected;
-
-    if (isSelected) {
-      if (!(mesh.material instanceof THREE.ShaderMaterial)) {
-        const glowMaterial = getGlowShaderMaterial();
-        glowMaterial.uniforms.glowColor.value = new THREE.Color(this.config.glowColor);
-        mesh.material = glowMaterial;
-      } else {
-        mesh.material.uniforms.glowColor.value = new THREE.Color(this.config.glowColor);
-      }
-
-      const targetScale = mesh.userData.originalScale.clone().multiplyScalar(1.2);
-      if (animate) {
-        gsap.to(mesh.scale, { x: targetScale.x, y: targetScale.y, z: targetScale.z, duration: 0.3 });
-      } else {
-        mesh.scale.copy(targetScale);
-      }
-    } else {
-      if (mesh.material instanceof THREE.ShaderMaterial) {
-        mesh.material = new THREE.MeshStandardMaterial({
-          color: this.config.textColor,
-          transparent: true,
-          opacity: this.config.opacity
-        });
-      }
-      if (animate) {
-        gsap.to(mesh.scale, {
-          x: mesh.userData.originalScale.x,
-          y: mesh.userData.originalScale.y,
-          z: mesh.userData.originalScale.z,
-          duration: 0.3
-        });
-      } else {
-        mesh.scale.copy(mesh.userData.originalScale);
-      }
+    // Persist selection
+    if (typeof localStorage !== 'undefined') {
+      localStorage.setItem('carouselIndex', index.toString());
     }
-  });
 
-  if (animate) {
-    this.isAnimating = true;
-    gsap.to(this.itemGroup.rotation, {
-      y: newRotation,
-      duration: 0.6,
-      ease: "power2.out",
-      onComplete: () => {
-        this.isAnimating = false;
-        this.applyHighlightVisuals(this.currentIndex);
+    // Highlight visuals logic remains the same
+    this.itemMeshes.forEach((mesh, i) => {
+      const isSelected = (i === index);
+      mesh.userData.isSelected = isSelected;
+
+      if (isSelected) {
+        if (!(mesh.material instanceof THREE.ShaderMaterial)) {
+          const glowMaterial = getGlowShaderMaterial();
+          glowMaterial.uniforms.glowColor.value = new THREE.Color(this.config.glowColor);
+          mesh.material = glowMaterial;
+        } else {
+          mesh.material.uniforms.glowColor.value = new THREE.Color(this.config.glowColor);
+        }
+
+        const targetScale = mesh.userData.originalScale.clone().multiplyScalar(1.2);
+        if (animate) {
+          gsap.to(mesh.scale, { x: targetScale.x, y: targetScale.y, z: targetScale.z, duration: 0.3 });
+        } else {
+          mesh.scale.copy(targetScale);
+        }
+      } else {
+        if (mesh.material instanceof THREE.ShaderMaterial) {
+          mesh.material = new THREE.MeshStandardMaterial({
+            color: this.config.textColor,
+            transparent: true,
+            opacity: this.config.opacity
+          });
+        }
+        if (animate) {
+          gsap.to(mesh.scale, {
+            x: mesh.userData.originalScale.x,
+            y: mesh.userData.originalScale.y,
+            z: mesh.userData.originalScale.z,
+            duration: 0.3
+          });
+        } else {
+          mesh.scale.copy(mesh.userData.originalScale);
+        }
       }
     });
-  } else {
-    this.itemGroup.rotation.y = newRotation;
-    this.applyHighlightVisuals(this.currentIndex);
-  }
+
+    if (animate) {
+      gsap.to(this.itemGroup.rotation, {
+        y: newRotation,
+        duration: 0.6,
+        ease: "power2.out",
+        onComplete: () => {
+          this.applyHighlightVisuals(this.currentIndex);
+        }
+      });
+    } else {
+      this.itemGroup.rotation.y = newRotation;
+      this.applyHighlightVisuals(this.currentIndex);
+    }
+  }, { lockRotation: true });
 }
-
-
-
-
 
 /**
  * Applies visual highlight effects to a specific item in the 3D carousel.
@@ -673,12 +543,11 @@ applyHighlightVisuals(indexToHighlight) {
 handleWheel(event) {
   event.preventDefault(); // Prevent default browser scroll behavior
 
-  // Block wheel input if a click-based selection animation is in progress
-  if (this.isAnimating) {
-    console.log('[handleWheel] Wheel input blocked: isAnimating is true.'); // Debug log
-    return; // Prevent wheel input if currently animating via selectItem
+  // Use the guard to check if wheel input is allowed
+  if (!this.guard.canScroll()) {
+    console.log('[handleWheel] Wheel input blocked: animation or transition in progress.');
+    return;
   }
-
 
   this.lastInteractionType = 'scroll'; // <<< Mark interaction as scroll by setting the flag
 
@@ -717,98 +586,9 @@ handleWheel(event) {
  * proper synchronization between the visual carousel position and the internal
  * currentIndex state.
  */
-// update() {
-//   // Only apply wheel-scroll rotation smoothing if not currently animating via selectItem (click)
-//   if (!this.isAnimating) { // Check the GSAP animation flag
-//     const currentRotation = this.itemGroup.rotation.y;
-//     const twoPi = Math.PI * 2;
-
-//     // --- Calculate Shortest Rotation Path ---
-//     let diff = this.targetRotation - currentRotation;
-//     // Normalize the difference to the range [-PI, PI]
-//     diff = (diff + Math.PI) % twoPi - Math.PI;
-//     if (diff <= -Math.PI) diff += twoPi;
-
-//     // --- Smooth Rotation vs. Snap ---
-//     const threshold = 0.005; // Slightly increased threshold for snapping to allow more smooth movement
-
-
-//     if (Math.abs(diff) > threshold) {
-//       // --- Apply Smooth Rotation (for scrolling) ---
-//       const rotationAmount = diff * this.rotationSpeed; // Interpolation step
-//       this.itemGroup.rotation.y += rotationAmount;
-//       this.isSpinning = true; // Indicate smooth spinning is active
-
-//       // --- Update Highlight During Smooth Scroll ---
-//       // Continuously update highlight based on current visual rotation during smooth scroll
-//       this.updateCurrentItemFromRotation(); // Call updateCurrentItemFromRotation here
-
-//     } else if (this.isSpinning || Math.abs(diff) > 0) { // Snap if currently spinning OR very close but not exact
-//       // --- Snap to Target ---
-//       this.itemGroup.rotation.y = this.targetRotation;
-//       this.isSpinning = false; // Spinning has stopped
-//       console.log(`[Update] Snap to target. Final rotation: ${this.itemGroup.rotation.y.toFixed(2)}`); // Debug log
-
-
-//       // --- Sync currentIndex and Visuals After Snap ---
-//       // After snapping, calculate the final index based on the rotation
-//       const finalIndex = this.calculateIndexFromRotation(this.itemGroup.rotation.y);
-//       if (finalIndex !== undefined && finalIndex !== this.currentIndex) {
-//         // Update the official index ONLY when scroll stops visually at a new item
-//         this.currentIndex = finalIndex;
-//         console.log(`[Update] Synced currentIndex to: ${this.currentIndex} after snap.`); // Debug log
-//         // Ensure visuals match the new official index
-//         this.applyHighlightVisuals(this.currentIndex);
-//       } else if (finalIndex !== undefined) {
-//         // Even if index didn't change, ensure visuals are correct
-//         this.applyHighlightVisuals(finalIndex);
-//         console.log(`[Update] Snap settled. Visuals confirmed for currentIndex: ${this.currentIndex}`); // Debug log
-//       }
-
-//       // Reset interaction type after scroll has fully settled and snapped
-//       if (this.lastInteractionType === 'scroll') {
-//         this.lastInteractionType = 'idle';
-//         console.log(`[Update] Scroll settled. Interaction type reset.`); // Debug log
-//       }
-//     } else {
-//       // If truly idle (no diff and current == target)
-//       this.isSpinning = false; // Ensure isSpinning is false when truly idle
-//       this.lastInteractionType = 'idle'; // Ensure idle state is set
-//     }
-//   } else {
-//     // If isAnimating is true (click animation in progress via GSAP)
-//     this.isSpinning = false; // Not smoothly spinning if a click animation is running
-
-//     // Reset interaction type once click animation finishes (isAnimating becomes false in selectItem's onComplete)
-//     // This condition will be true *one* frame after isAnimating is set to false by GSAP
-//     if (!this.isAnimating && this.lastInteractionType === 'click') {
-//       this.lastInteractionType = 'idle';
-//       console.log(`[Update] Click animation finished. Interaction type reset.`); // Debug log
-//     }
-//   }
-
-//   // --- Update Glow Shader Time ---
-//   // Check if the current index is valid and the mesh exists
-//   if (this.currentIndex >= 0 && this.currentIndex < this.itemMeshes.length) {
-//     const selectedMesh = this.itemMeshes[this.currentIndex];
-//     // Check if the mesh exists, is marked as selected, and has the necessary shader uniforms
-//     if (selectedMesh?.userData?.isSelected && selectedMesh?.material?.uniforms?.time) { // Add checks for existence
-//       // Update the time uniform for the glow animation effect
-//       selectedMesh.material.uniforms.time.value = performance.now() * 0.001;
-//     }
-//     // Added checks for state mismatch and attempt to correct
-//     else if (selectedMesh && !selectedMesh.userData?.isSelected) {
-//       // If the mesh exists but is somehow not marked as selected despite being at currentIndex.
-//       if (selectedMesh.material instanceof THREE.ShaderMaterial) { // Check if it currently has the glow material
-//         console.warn(`[Update] Item at currentIndex ${this.currentIndex} unexpectedly has glow material but is not selected. Correcting visuals.`);
-//         this.applyHighlightVisuals(this.currentIndex); // Force re-application of visuals for the current index
-//       }
-//     }
-//   }
-// } // End of update() method
-
 update() {
-  if (!this.isAnimating) {
+  // Only handle smooth rotation if not in a locked state
+  if (this.guard.canAnimate()) {
     const current = this.itemGroup.rotation.y;
     const diff = this.targetRotation - current;
     const twoPi = Math.PI * 2;
@@ -822,15 +602,22 @@ update() {
     if (Math.abs(shortest) > threshold) {
       this.itemGroup.rotation.y += shortest * this.rotationSpeed;
       this.isSpinning = true;
-      this.updateCurrentItemFromRotation();
+      
+      // Only update highlighting if not locked
+      if (this.guard.canUpdateHighlight()) {
+        this.updateCurrentItemFromRotation();
+      }
     } else if (this.isSpinning) {
       this.itemGroup.rotation.y = this.targetRotation;
       this.isSpinning = false;
 
-      const finalIndex = this.calculateIndexFromRotation(this.itemGroup.rotation.y);
-      if (finalIndex !== this.currentIndex) {
-        this.currentIndex = finalIndex;
-        this.applyHighlightVisuals(finalIndex);
+      // Only update the current index if not locked
+      if (this.guard.canUpdateHighlight()) {
+        const finalIndex = this.calculateIndexFromRotation(this.itemGroup.rotation.y);
+        if (finalIndex !== this.currentIndex) {
+          this.currentIndex = finalIndex;
+          this.applyHighlightVisuals(finalIndex);
+        }
       }
     }
   }
@@ -849,8 +636,8 @@ update() {
  * The official `this.currentIndex` is updated only when the scroll snaps to a final position.
  */
 updateCurrentItemFromRotation() {
-  // Only proceed if the carousel is actively spinning due to scroll and not animating via click
-  if (!this.isSpinning || this.isAnimating) {
+  // Only proceed if the carousel is actively spinning due to scroll and the guard allows highlighting
+  if (!this.isSpinning || !this.guard.canUpdateHighlight()) {
     return;
   }
 
@@ -964,11 +751,11 @@ spin(deltaAngle) {
  * @returns {void}
  */
 goToNext() {
-  // goToNext now simply calculates the next index and calls selectItem to animate
-  if (this.isAnimating) return; // Prevent if a click animation is running
+  // Check if any animation is allowed
+  if (!this.guard.canSelect()) return;
 
   const nextIndex = (this.currentIndex + 1) % this.items.length;
-  this.selectItem(nextIndex, true); // Delegate animation to selectItem
+  this.selectItem(nextIndex, true);
   console.log(`[goToNext] Selected index: ${nextIndex}, calling selectItem(..., true)`); // Debug log
 }
 
@@ -983,11 +770,11 @@ goToNext() {
  * @throws {never} This method does not throw exceptions
  */
 goToPrev() {
-  // goToPrev now simply calculates the previous index and calls selectItem to animate
-  if (this.isAnimating) return; // Prevent if a click animation is running
+  // Check if any animation is allowed
+  if (!this.guard.canSelect()) return;
 
   const prevIndex = (this.currentIndex - 1 + this.items.length) % this.items.length;
-  this.selectItem(prevIndex, true); // Delegate animation to selectItem
+  this.selectItem(prevIndex, true);
   console.log(`[goToPrev] Selected index: ${prevIndex}, calling selectItem(..., true)`); // Debug log
 }
 

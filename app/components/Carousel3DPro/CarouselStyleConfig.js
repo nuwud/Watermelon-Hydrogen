@@ -16,7 +16,7 @@ export const defaultCarouselStyle = {
   glowColor: 0xffffff,
   textColor: 0xcccccc,
   selectedTextColor: 0xffffff,
-  backgroundColor: 0x111122,
+  backgroundColor: 0x96bf48,
   
   // Transparency
   opacity: 0.8,
