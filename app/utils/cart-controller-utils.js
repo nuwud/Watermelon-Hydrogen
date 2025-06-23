@@ -1,6 +1,6 @@
 // app/utils/cart-controller-utils.js
 
-import { SceneRegistry } from '../../../src/cart/SceneRegistry';
+import { SceneRegistry } from './cart/SceneRegistry';
 
 /**
  * Creates a controller object with drawer control methods

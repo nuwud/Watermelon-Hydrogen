@@ -1,7 +1,7 @@
 // app\components\cart-drawers\CartToggle3D.jsx
 import { useEffect } from 'react';
-import { SceneRegistry } from '../../../src/cart/SceneRegistry';
-import { createCartToggleSphere } from '../../../src/cart/initCartToggleSphere';
+import { SceneRegistry } from '../../utils/cart/SceneRegistry';
+import { createCartToggleSphere } from '../../utils/cart/initCartToggleSphere';
 
 export default function CartToggle3D({ position = [3, 1.5, 0] }) {
   useEffect(() => {

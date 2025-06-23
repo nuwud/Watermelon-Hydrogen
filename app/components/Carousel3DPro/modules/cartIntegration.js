@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import gsap from 'gsap';
-import { createCartToggleSphere } from '../../../../src/cart/initCartToggleSphere';
+import { createCartToggleSphere } from '../../../utils/cart/initCartToggleSphere';
 //import { SceneRegistry } from '../../../../src/cart/SceneRegistry';
 
 // Wait for the drawer controller event to be ready

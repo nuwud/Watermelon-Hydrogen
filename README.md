@@ -2,6 +2,11 @@
 
 A fully immersive 3D-powered Shopify storefront built with **Hydrogen**, **Three.js**, and **Oxygen**, featuring a dynamic 3D carousel menu and future-ready admin HUD.
 
+> 📚 **NEW: Comprehensive Documentation Available**  
+> For detailed technical documentation of all 3D systems, see [`docs/3D_SYSTEMS_COMPREHENSIVE_DOCUMENTATION.md`](docs/3D_SYSTEMS_COMPREHENSIVE_DOCUMENTATION.md)  
+> For implementation planning, see [`docs/SHOPIFY_SECTIONS_3D_INTEGRATION_PLAN.md`](docs/SHOPIFY_SECTIONS_3D_INTEGRATION_PLAN.md)  
+> For complete analysis summary, see [`docs/ANALYSIS_SUMMARY_FINAL.md`](docs/ANALYSIS_SUMMARY_FINAL.md)
+
 ---
 
 ## **🚀 What Is This?**
