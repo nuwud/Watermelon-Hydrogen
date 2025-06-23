@@ -213,6 +213,53 @@ export const HEADER_QUERY = `#graphql
   ${MENU_FRAGMENT}
 `;
 
+// Fragment for fetching Shopify page content
+export const PAGE_FRAGMENT = `#graphql
+  fragment Page on Page {
+    id
+    title
+    handle
+    body
+    bodySummary
+    seo {
+      description
+      title
+    }
+    createdAt
+    updatedAt
+  }
+`;
+
+// Query for fetching a single page by handle
+export const PAGE_QUERY = `#graphql
+  query Page(
+    $language: LanguageCode
+    $country: CountryCode
+    $handle: String!
+  ) @inContext(language: $language, country: $country) {
+    page(handle: $handle) {
+      ...Page
+    }
+  }
+  ${PAGE_FRAGMENT}
+`;
+
+// Query for fetching multiple pages by handles
+export const PAGES_QUERY = `#graphql
+  query Pages(
+    $language: LanguageCode
+    $country: CountryCode
+    $query: String!
+  ) @inContext(language: $language, country: $country) {
+    pages(first: 50, query: $query) {
+      nodes {
+        ...Page
+      }
+    }
+  }
+  ${PAGE_FRAGMENT}
+`;
+
 export const FOOTER_QUERY = `#graphql
   query Footer(
     $country: CountryCode

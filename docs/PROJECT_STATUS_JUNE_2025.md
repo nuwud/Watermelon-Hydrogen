@@ -208,4 +208,27 @@ The project is in excellent shape - it just needs focused cleanup and the big pu
 
 ---
 
+## 🎯 Recent Critical Fixes - January 2025
+
+### ✅ **Submenu Click-to-Highlight Fix** 
+**Status**: COMPLETED ✅ **Priority**: HIGH
+
+**Issue**: Clicking on non-highlighted submenu items was not animating/snapping those items to the 3 o'clock highlight position.
+
+**Root Cause**: Complex angle calculation in `selectItem` method differed from proven scroll logic, causing incorrect target rotations.
+
+**Solution**: 
+- Simplified angle calculation to match scroll method logic
+- Changed from complex modulo arithmetic to direct index-based calculation: `target = index * angleStep`
+- Added proper animation logging and validation
+
+**Impact**: Restored core user interaction - submenu items now smoothly animate to correct position when clicked.
+
+**Files Modified**: 
+- `app/components/Carousel3DPro/Carousel3DSubmenu.js` - Main fix
+- `docs/3D_SUBMENU_CLICK_FIX.md` - Comprehensive documentation
+- `final-submenu-validation.js` - Validation script
+
+---
+
 *Focus on the cleanup phase first - it will make the Shopify integration much smoother and more enjoyable to implement.*

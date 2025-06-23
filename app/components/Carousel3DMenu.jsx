@@ -2,8 +2,11 @@
 import {useEffect, useRef} from 'react';
 import ClientOnly from './ClientOnly';
 import Carousel3DProWrapper from './Carousel3DPro/Carousel3DProWrapper';
+import * as menuTransformUtils from '../utils/menuTransform';
+import '../utils/menuTestUtils'; // Import test utilities
+import '../utils/integrationTests'; // Import integration tests
 
-export function Carousel3DMenu() {
+export function Carousel3DMenu({ menuData }) {
   const containerRef = useRef(null);
   const carouselInstanceRef = useRef(null);
 
@@ -37,8 +40,17 @@ export function Carousel3DMenu() {
         window.OrbitControls = OrbitControlsModule.OrbitControls;
 
         if (containerRef.current && !carouselInstanceRef.current) {
-          carouselInstanceRef.current = setupCarousel(containerRef.current);
+          // Pass menuData to setupCarousel
+          carouselInstanceRef.current = setupCarousel(containerRef.current, menuData);
           window.debugCarousel = carouselInstanceRef.current;
+          
+          // Expose menu transform utilities for testing
+          window.menuTransformUtils = menuTransformUtils;
+          
+          console.warn('[🍉 Menu] Carousel initialized with menu data:', {
+            hasMenuData: !!menuData,
+            itemCount: menuData?.items?.length || 0
+          });
         }
       } catch (err) {
         console.error('🚨 Error loading carousel:', err);
@@ -53,9 +65,10 @@ export function Carousel3DMenu() {
         carouselInstanceRef.current = null;
       }
     };
-  }, []);
+  }, [menuData]); // Add menuData to dependency array
 
-  const items = ['Item 1', 'Item 2', 'Item 3'];
+  // Use dynamic menu items if available, otherwise fallback
+  const items = menuData?.items || ['Item 1', 'Item 2', 'Item 3'];
   
   return (
     <ClientOnly fallback={<div style={{ color: 'orange' }}>🌀 Hydrating Client View…</div>}>
