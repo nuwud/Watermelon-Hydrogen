@@ -15,11 +15,10 @@ export const CUSTOMER_ORDER_QUERY = `#graphql
       }
     }
   }
-  fragment OrderLineItemFull on LineItem {
-    id
+  fragment OrderLineItemFull on OrderLineItem {
     title
     quantity
-    price {
+    originalTotalPrice {
       ...OrderMoney
     }
     discountAllocations {
@@ -30,35 +29,20 @@ export const CUSTOMER_ORDER_QUERY = `#graphql
         ...DiscountApplication
       }
     }
-    totalDiscount {
-      ...OrderMoney
+    variant {
+      title
     }
-    image {
-      altText
-      height
-      url
-      id
-      width
-    }
-    variantTitle
   }
   fragment Order on Order {
     id
     name
-    statusPageUrl
+    statusUrl
     processedAt
-    fulfillments(first: 1) {
-      nodes {
-        status
-      }
-    }
+    fulfillmentStatus
     totalTax {
       ...OrderMoney
     }
     totalPrice {
-      ...OrderMoney
-    }
-    subtotal {
       ...OrderMoney
     }
     shippingAddress {
@@ -78,7 +62,7 @@ export const CUSTOMER_ORDER_QUERY = `#graphql
     }
   }
   query Order($orderId: ID!) {
-    order(id: $orderId) {
+    node(id: $orderId) {
       ... on Order {
         ...Order
       }
