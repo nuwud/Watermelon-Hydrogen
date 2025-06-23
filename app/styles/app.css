@@ -1,3 +1,6 @@
+/* Import Watermelon Admin Panel & Template System Styles */
+@import './admin-templates.css';
+
 :root {
   --aside-width: 400px;
   --cart-aside-summary-height-with-discount: 300px;

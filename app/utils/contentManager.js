@@ -3,6 +3,8 @@
  * Handles loading and transforming Shopify content for 3D display
  */
 
+import { contentTemplates } from './contentTemplates.js';
+
 // Content mapping for your Nuwud Multimedia menu structure
 export const NUWUD_CONTENT_MAP = {
   // 1. Home section
@@ -614,6 +616,28 @@ export class ContentManager {
       url: contentInfo.url,
       isPlaceholder: true
     };
+  }
+
+  /**
+   * Enhanced content rendering with template system
+   */
+  renderContentWithTemplate(contentData) {
+    // Use the template system for enhanced rendering
+    const templatedHtml = contentTemplates.renderContent(contentData);
+    
+    return {
+      ...contentData,
+      templatedHtml,
+      hasTemplate: true
+    };
+  }
+
+  /**
+   * Get template-aware content data
+   */
+  async getTemplatedContentData(itemTitle) {
+    const contentData = await this.getContentData(itemTitle);
+    return this.renderContentWithTemplate(contentData);
   }
 
   // Utility methods

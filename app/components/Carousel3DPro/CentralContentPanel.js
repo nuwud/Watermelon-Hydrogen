@@ -6,6 +6,7 @@
 import * as THREE from 'three';
 import { CSS3DRenderer, CSS3DObject } from 'three/examples/jsm/renderers/CSS3DRenderer.js';
 import gsap from 'gsap';
+import { contentTemplates } from '../../utils/contentTemplates.js';
 
 export class CentralContentPanel extends THREE.Group {
   constructor(config = {}) {
@@ -402,6 +403,88 @@ export class CentralContentPanel extends THREE.Group {
         }
       });
     });
+  }
+  
+  /**
+   * Enhanced content loading with template system
+   */
+  async loadTemplatedContent(contentData) {
+    try {
+      // Use the template system to render content
+      const templatedHtml = contentTemplates.renderContent(contentData);
+      
+      // Create enhanced content with template
+      const enhancedContent = {
+        ...contentData,
+        templatedHtml,
+        hasTemplate: true
+      };
+      
+      await this.showContent(enhancedContent);
+      
+      // Add template-specific interactions
+      this.setupTemplateInteractions();
+      
+    } catch (error) {
+      console.error('[CentralContentPanel] Template loading error:', error);
+      // Fallback to regular content loading
+      await this.showContent(contentData);
+    }
+  }
+
+  /**
+   * Setup interactions for templated content
+   */
+  setupTemplateInteractions() {
+    if (!this.htmlContent) return;
+    
+    // Add click handlers for template buttons
+    const buttons = this.htmlContent.querySelectorAll('[data-action]');
+    buttons.forEach(button => {
+      button.addEventListener('click', (e) => {
+        const action = e.target.getAttribute('data-action');
+        const url = e.target.getAttribute('data-url');
+        
+        this.handleTemplateAction(action, url, e.target);
+      });
+    });
+  }
+
+  /**
+   * Handle template button actions
+   */
+  handleTemplateAction(action, url, element) {
+    console.log(`[CentralContentPanel] Template action: ${action}`, { url, element });
+    
+    switch (action) {
+      case 'open-page':
+        if (url) {
+          window.open(url, '_blank');
+        }
+        break;
+      case 'view-cart':
+        // Trigger cart drawer
+        if (window.drawerController?.openCartDrawer) {
+          window.drawerController.openCartDrawer();
+        }
+        break;
+      case 'view-gallery':
+        // Load gallery content
+        if (window.loadContentForItem) {
+          window.loadContentForItem('Gallery');
+        }
+        break;
+      case 'view-product':
+        // Handle product view
+        console.log('Product view requested');
+        break;
+      case 'cta':
+        // Handle call-to-action
+        console.log('CTA clicked');
+        break;
+      default:
+        console.log(`Unknown template action: ${action}`);
+    }
   }
   
   update(time) {

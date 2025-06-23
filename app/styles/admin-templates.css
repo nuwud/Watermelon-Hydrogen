@@ -1,0 +1,563 @@
+/* 
+ * Watermelon Hydrogen Admin Panel & Template System Styles 
+ */
+
+/* ================================
+   ADMIN PANEL STYLES
+   ================================ */
+
+.watermelon-admin-panel {
+  font-family: 'Courier New', monospace;
+  background: rgba(0, 0, 0, 0.95);
+  border: 2px solid #00ff00;
+  color: #00ff00;
+  box-shadow: 0 0 20px rgba(0, 255, 0, 0.3);
+}
+
+.watermelon-admin-panel h3 {
+  margin: 0 0 8px 0;
+  color: #00ffcc;
+  font-size: 14px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.watermelon-admin-button {
+  background: transparent;
+  border: 1px solid #00ff00;
+  color: #00ff00;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-family: inherit;
+}
+
+.watermelon-admin-button:hover {
+  background: #00ff00;
+  color: #000;
+  box-shadow: 0 0 10px rgba(0, 255, 0, 0.5);
+}
+
+.watermelon-admin-button.active {
+  background: #00ff00;
+  color: #000;
+}
+
+/* ================================
+   CONTENT TEMPLATE STYLES
+   ================================ */
+
+.content-template {
+  background: rgba(0, 0, 0, 0.85);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 12px;
+  padding: 24px;
+  color: #fff;
+  font-family: 'Arial', sans-serif;
+  max-width: 600px;
+  margin: 0 auto;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(10px);
+}
+
+/* ================================
+   PAGE TEMPLATE
+   ================================ */
+
+.page-template .content-header {
+  margin-bottom: 20px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  padding-bottom: 16px;
+}
+
+.page-template .content-title {
+  font-size: 28px;
+  margin: 0 0 8px 0;
+  color: #00ffcc;
+  text-shadow: 0 0 10px rgba(0, 255, 204, 0.3);
+}
+
+.page-template .content-summary {
+  font-size: 16px;
+  color: #ccc;
+  margin: 0 0 12px 0;
+  line-height: 1.5;
+}
+
+.content-meta {
+  display: flex;
+  gap: 16px;
+  font-size: 12px;
+  color: #888;
+}
+
+.meta-item {
+  padding: 4px 8px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 4px;
+}
+
+.content-body {
+  margin: 20px 0;
+}
+
+.content-block {
+  margin: 0 0 16px 0;
+  line-height: 1.6;
+  color: #e0e0e0;
+}
+
+.content-actions {
+  margin-top: 24px;
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+}
+
+/* ================================
+   PRODUCT TEMPLATE
+   ================================ */
+
+.product-template .product-header {
+  text-align: center;
+  margin-bottom: 20px;
+}
+
+.product-template .product-title {
+  font-size: 24px;
+  margin: 0 0 8px 0;
+  color: #ffaa00;
+}
+
+.product-template .product-price {
+  font-size: 20px;
+  font-weight: bold;
+  color: #00ff00;
+  text-shadow: 0 0 8px rgba(0, 255, 0, 0.4);
+}
+
+.product-description {
+  text-align: center;
+  margin: 16px 0;
+  color: #ccc;
+  line-height: 1.5;
+}
+
+.product-features {
+  margin: 16px 0;
+}
+
+.feature-item {
+  margin: 8px 0;
+  padding: 8px 12px;
+  background: rgba(0, 255, 0, 0.1);
+  border-left: 3px solid #00ff00;
+  color: #e0e0e0;
+}
+
+.product-actions {
+  text-align: center;
+  margin-top: 20px;
+}
+
+/* ================================
+   GALLERY TEMPLATE
+   ================================ */
+
+.gallery-template .gallery-header {
+  text-align: center;
+  margin-bottom: 20px;
+}
+
+.gallery-template .gallery-title {
+  font-size: 24px;
+  margin: 0 0 8px 0;
+  color: #ff6699;
+}
+
+.gallery-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+  margin: 20px 0;
+}
+
+.gallery-item {
+  aspect-ratio: 1;
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.gallery-item:hover {
+  background: rgba(255, 102, 153, 0.2);
+  border-color: #ff6699;
+  transform: scale(1.05);
+}
+
+.gallery-preview {
+  font-size: 12px;
+  text-align: center;
+  color: #ccc;
+}
+
+.gallery-more {
+  grid-column: span 3;
+  text-align: center;
+  color: #888;
+  font-style: italic;
+  padding: 16px;
+}
+
+.gallery-actions {
+  text-align: center;
+  margin-top: 20px;
+}
+
+/* ================================
+   DASHBOARD TEMPLATE
+   ================================ */
+
+.dashboard-template .dashboard-header {
+  text-align: center;
+  margin-bottom: 24px;
+}
+
+.dashboard-template .dashboard-title {
+  font-size: 26px;
+  margin: 0;
+  color: #00ccff;
+  text-shadow: 0 0 10px rgba(0, 204, 255, 0.3);
+}
+
+.dashboard-stats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+  margin: 20px 0;
+}
+
+.stat-card {
+  background: rgba(0, 204, 255, 0.1);
+  border: 1px solid rgba(0, 204, 255, 0.3);
+  border-radius: 8px;
+  padding: 16px;
+  text-align: center;
+}
+
+.stat-value {
+  font-size: 24px;
+  font-weight: bold;
+  color: #00ccff;
+  margin-bottom: 4px;
+}
+
+.stat-label {
+  font-size: 12px;
+  color: #888;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.dashboard-actions {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+  margin: 20px 0;
+}
+
+.action-card {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 8px;
+  padding: 12px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #fff;
+  text-align: left;
+}
+
+.action-card:hover {
+  background: rgba(255, 255, 255, 0.1);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+.action-icon {
+  font-size: 20px;
+}
+
+.action-title {
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.activity-feed {
+  margin-top: 20px;
+}
+
+.activity-feed h3 {
+  font-size: 16px;
+  margin: 0 0 12px 0;
+  color: #00ccff;
+}
+
+.activity-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.activity-item {
+  padding: 8px 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  font-size: 14px;
+  color: #ccc;
+}
+
+.activity-item:last-child {
+  border-bottom: none;
+}
+
+/* ================================
+   CART TEMPLATE
+   ================================ */
+
+.cart-template .cart-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.cart-template .cart-title {
+  font-size: 24px;
+  margin: 0;
+  color: #ffaa00;
+}
+
+.cart-count {
+  font-size: 14px;
+  color: #888;
+}
+
+.cart-total {
+  font-size: 18px;
+  font-weight: bold;
+  color: #00ff00;
+}
+
+.cart-items {
+  margin: 20px 0;
+}
+
+.cart-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.cart-item:last-child {
+  border-bottom: none;
+}
+
+.item-title {
+  flex: 1;
+  color: #e0e0e0;
+}
+
+.item-quantity {
+  margin: 0 16px;
+  color: #888;
+  font-size: 14px;
+}
+
+.item-price {
+  color: #00ff00;
+  font-weight: 500;
+}
+
+.cart-more {
+  text-align: center;
+  color: #888;
+  font-style: italic;
+  padding: 16px 0;
+}
+
+.empty-cart {
+  text-align: center;
+  color: #888;
+  font-style: italic;
+  padding: 40px 0;
+}
+
+.cart-actions {
+  text-align: center;
+  margin-top: 20px;
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+}
+
+/* ================================
+   SHARED BUTTON STYLES
+   ================================ */
+
+.cta-button {
+  background: linear-gradient(45deg, #00ff00, #00cc88);
+  border: none;
+  color: #000;
+  padding: 12px 24px;
+  border-radius: 6px;
+  font-weight: bold;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  font-size: 14px;
+}
+
+.cta-button:hover {
+  background: linear-gradient(45deg, #00cc88, #00ff00);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(0, 255, 0, 0.3);
+}
+
+.secondary-button {
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  color: #fff;
+  padding: 10px 20px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  font-size: 14px;
+}
+
+.secondary-button:hover {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.5);
+}
+
+/* ================================
+   FALLBACK TEMPLATE
+   ================================ */
+
+.fallback-template {
+  text-align: center;
+  padding: 40px 20px;
+}
+
+.fallback-template h1 {
+  color: #ffaa00;
+  margin: 0 0 16px 0;
+}
+
+.fallback-template p {
+  color: #ccc;
+  margin: 0 0 24px 0;
+}
+
+/* ================================
+   RESPONSIVE DESIGN
+   ================================ */
+
+@media (max-width: 768px) {
+  .content-template {
+    padding: 16px;
+    margin: 10px;
+  }
+  
+  .dashboard-stats {
+    grid-template-columns: 1fr;
+  }
+  
+  .dashboard-actions {
+    grid-template-columns: 1fr;
+  }
+  
+  .gallery-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  
+  .cart-actions {
+    flex-direction: column;
+  }
+  
+  .content-actions {
+    flex-direction: column;
+  }
+}
+
+/* ================================
+   ANIMATIONS
+   ================================ */
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.content-template {
+  animation: fadeInUp 0.5s ease-out;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.05);
+  }
+}
+
+.cta-button:focus {
+  animation: pulse 0.5s ease-in-out;
+}
+
+/* ================================
+   ACCESSIBILITY
+   ================================ */
+
+.content-template button:focus {
+  outline: 2px solid #00ff00;
+  outline-offset: 2px;
+}
+
+.gallery-item:focus {
+  outline: 2px solid #ff6699;
+  outline-offset: 2px;
+}
+
+.action-card:focus {
+  outline: 2px solid #00ccff;
+  outline-offset: 2px;
+}
+
+/* High contrast mode support */
+@media (prefers-contrast: high) {
+  .content-template {
+    border: 2px solid #fff;
+  }
+  
+  .cta-button {
+    border: 2px solid #000;
+  }
+}

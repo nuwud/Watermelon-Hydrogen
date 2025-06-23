@@ -122,6 +122,7 @@ import {
 import gsap from 'gsap';
 import { getItemAngles } from '../../utils/carouselAngleUtils.js';
 import { globalGuard, withTransition, SelectionGuard } from './modules/selectionGuards.js';
+import { ContentManager } from '../../utils/contentManager.js';
 // import { getHomeAngleRadians } from '@/utils/homePositionUtils';
 
 /**
@@ -129,7 +130,7 @@ import { globalGuard, withTransition, SelectionGuard } from './modules/selection
  * @param {HTMLElement} container - DOM element to mount the canvas to
  * @returns {Object} - carousel controls and diagnostics
  */
-export function setupCarousel(container) {
+export function setupCarousel(container, menuData = null) {
     if (typeof window === 'undefined') return null; // Ensure we're in a browser environment
     let animationFrameId = null; // Declare animationFrameId
     const timeoutIds = []; // Array to store timeout IDs
@@ -328,19 +329,209 @@ export function setupCarousel(container) {
     function enableWheelHandler() { // Re-attach wheel event listener
         // Set the wheel handler active flag
         isWheelHandlerActive = true; // Enable wheel handler for main carousel
-    }
-    // Initial setup: attach event listeners
+    }    // Initial setup: attach event listeners
     enableAllEventHandlers(); // Attach all event listeners initially
-    const items = ['Home', 'Products', 'Contact', 'About', 'Gallery', 'Store']; // Define the main carousel items
-    const submenus = { // Define the submenus for each main item
-        Home: ['Dashboard', 'Activity', 'Settings', 'Profile'], // Submenu items for Home
-        Products: ['Electronics', 'Clothing', 'Books', 'Home & Garden', 'Toys', 'Sports'], // Submenu items for Products
-        Services: ['Consulting', 'Training', 'Support', 'Installation', 'Maintenance'], // Submenu items for Services
-        About: ['Company', 'Team', 'History', 'Mission', 'Values'], // Submenu items for About
-        Contact: ['Email', 'Phone', 'Chat', 'Social Media', 'Office Locations'], // Submenu items for Contact
-        Gallery: ['Photos', 'Videos', '3D Models', 'Artwork', 'Animations', 'Virtual Tours'], // Submenu items for Gallery
-        Store: ['Cart', 'Wishlist', 'Orders', 'Account', 'Gift Cards'], // Submenu items for Store
+    
+    // =======================
+    // MENU TOGGLE SYSTEM
+    // =======================
+    
+    // Check for menu mode toggle (can be controlled via localStorage, URL param, or global var)
+    const getMenuMode = () => {
+        // Priority: URL param > localStorage > default to 'auto'
+        const urlParams = new URLSearchParams(window.location.search);
+        const urlMode = urlParams.get('menuMode');
+        if (urlMode && ['dummy', 'dynamic', 'auto'].includes(urlMode)) {
+            return urlMode;
+        }
+        
+        const storedMode = localStorage.getItem('watermelon-menu-mode');
+        if (storedMode && ['dummy', 'dynamic', 'auto'].includes(storedMode)) {
+            return storedMode;
+        }
+        
+        return 'auto'; // default mode
     };
+    
+    // Set up menu toggle controls
+    const menuMode = getMenuMode();
+    console.warn('[🍉 Setup] Menu mode:', menuMode);
+    
+    // Expose menu toggle function globally for admin/debug use
+    window.toggleMenuMode = (mode) => {
+        if (!['dummy', 'dynamic', 'auto'].includes(mode)) {
+            console.error('[Menu Toggle] Invalid mode. Use: dummy, dynamic, or auto');
+            return;
+        }
+        localStorage.setItem('watermelon-menu-mode', mode);
+        console.warn(`[Menu Toggle] Mode set to ${mode}. Reload page to apply.`);
+        window.location.reload();
+    };
+    
+    // Expose current mode for debugging
+    window.getMenuMode = getMenuMode;
+    
+    // Define dummy/fallback menu data
+    const dummyMenuData = {
+        items: ['Home', 'Products', 'Contact', 'About', 'Gallery', 'Store'],
+        submenus: {
+            Home: ['Dashboard', 'Activity', 'Settings', 'Profile'],
+            Products: ['Electronics', 'Clothing', 'Books', 'Home & Garden', 'Toys', 'Sports'],
+            Services: ['Consulting', 'Training', 'Support', 'Installation', 'Maintenance'],
+            About: ['Company', 'Team', 'History', 'Mission', 'Values'],
+            Contact: ['Email', 'Phone', 'Chat', 'Social Media', 'Office Locations'],
+            Gallery: ['Photos', 'Videos', '3D Models', 'Artwork', 'Animations', 'Virtual Tours'],
+            Store: ['Cart', 'Wishlist', 'Orders', 'Account', 'Gift Cards'],
+        }
+    };
+    
+    // Determine which menu data to use
+    let finalMenuData;
+    let menuSource;
+    
+    switch (menuMode) {
+        case 'dummy':
+            finalMenuData = dummyMenuData;
+            menuSource = 'dummy (forced)';
+            break;
+        case 'dynamic':
+            if (menuData && menuData.items && menuData.submenus) {
+                finalMenuData = menuData;
+                menuSource = 'dynamic (forced)';
+            } else {
+                console.warn('[🍉 Setup] Dynamic mode forced but no valid menuData provided, falling back to dummy');
+                finalMenuData = dummyMenuData;
+                menuSource = 'dummy (dynamic failed)';
+            }
+            break;
+        case 'auto':
+        default:
+            if (menuData && menuData.items && menuData.submenus) {
+                finalMenuData = menuData;
+                menuSource = 'dynamic (auto)';
+            } else {
+                finalMenuData = dummyMenuData;
+                menuSource = 'dummy (auto fallback)';
+            }
+            break;
+    }
+    
+    // Extract items and submenus from final menu data
+    const items = finalMenuData.items;
+    const submenus = finalMenuData.submenus;
+      console.warn('[🍉 Setup] Using menu data:', {
+        source: menuSource,
+        itemCount: items.length,
+        hasSubmenus: Object.keys(submenus).length,
+        items
+    });
+      // Expose menu data globally for debugging
+    window.debugMenuData = {
+        mode: menuMode,
+        source: menuSource,
+        data: finalMenuData,
+        toggle: window.toggleMenuMode
+    };
+    
+    // =======================
+    // CONTENT MANAGER INTEGRATION
+    // =======================
+    
+    // Initialize Content Manager for contextual content
+    const contentManager = new ContentManager();
+    
+    // Expose globally for debugging and external access
+    window.contentManager = contentManager;
+    
+    // Function to load content for a selected menu item
+    const loadContentForItem = async (itemTitle, submenuItem = null) => {
+        try {
+            console.warn(`[🍉 Content] Loading content for: ${itemTitle}${submenuItem ? ` > ${submenuItem}` : ''}`);            
+            // Determine what content to load
+            const targetItem = submenuItem || itemTitle;
+            const contentData = await contentManager.getContentData(targetItem);
+            
+            if (contentData) {
+                console.warn(`[🍉 Content] Loaded content:`, {
+                    type: contentData.type,
+                    title: contentData.title,
+                    hasContent: !!contentData.content,
+                    isPlaceholder: !!contentData.isPlaceholder
+                });
+                
+                // Try to display content in central panel if available
+                if (window.centralPanel) {
+                    // Use new template system if available
+                    if (window.centralPanel.loadTemplatedContent) {
+                        await window.centralPanel.loadTemplatedContent(contentData);
+                    } else if (window.centralPanel.loadContent) {
+                        window.centralPanel.loadContent(contentData.type, contentData);
+                    }
+                } else {
+                    console.warn('[🍉 Content] Central panel not available yet, storing content for later');
+                    window._pendingContent = contentData;
+                }
+                return contentData;
+            }
+        } catch (error) {
+            console.error(`[🍉 Content] Error loading content for ${itemTitle}:`, error);
+        }
+        
+        return null;
+    };
+      // Expose content loading function globally
+    window.loadContentForItem = loadContentForItem;
+    
+    // =======================
+    // ADMIN PANEL / DEBUG INTERFACE
+    // =======================
+    
+    // Create admin interface for testing and debugging
+    window.watermelonAdmin = {
+        // Menu mode controls
+        setMenuMode: (mode) => window.toggleMenuMode(mode),
+        getMenuMode: () => getMenuMode(),
+        getCurrentMenuData: () => window.debugMenuData,
+        
+        // Content management
+        loadContent: loadContentForItem,
+        getContentManager: () => window.contentManager,
+        clearContentCache: () => window.contentManager?.clearCache(),
+        
+        // Carousel controls
+        getCarousel: () => carousel,
+        getActiveSubmenu: () => activeSubmenu,
+        closeSubmenu: () => closeSubmenu(),
+        
+        // Debug helpers
+        repairState: () => repairBrokenState(),
+        showHelp: () => {
+            console.group('🍉 Watermelon Admin Commands');
+            console.log('Menu Controls:');
+            console.log('  watermelonAdmin.setMenuMode("dummy")    - Use hardcoded menu');
+            console.log('  watermelonAdmin.setMenuMode("dynamic")  - Use Shopify menu');
+            console.log('  watermelonAdmin.setMenuMode("auto")     - Auto-detect best menu');
+            console.log('  watermelonAdmin.getMenuMode()           - Check current mode');
+            console.log('');
+            console.log('Content Controls:');
+            console.log('  watermelonAdmin.loadContent("Home")     - Load content for item');
+            console.log('  watermelonAdmin.clearContentCache()     - Clear content cache');
+            console.log('');
+            console.log('Debug Controls:');
+            console.log('  watermelonAdmin.getCarousel()           - Get carousel instance');
+            console.log('  watermelonAdmin.repairState()           - Fix broken states');
+            console.log('  watermelonAdmin.closeSubmenu()          - Close active submenu');
+            console.groupEnd();
+        }
+    };
+    
+    console.group('🍉 Watermelon Hydrogen 3D Menu System');
+    console.log('✅ System initialized successfully');
+    console.log(`📊 Menu Mode: ${menuSource}`);
+    console.log(`📋 Items: ${items.length} (${items.join(', ')})`);
+    console.log(`📁 Submenus: ${Object.keys(submenus).length}`);
+    console.log('🔧 Admin: Type watermelonAdmin.showHelp() for commands');
+    console.groupEnd();
     let activeSubmenu = null; // Track the currently active submenu
     let isTransitioning = false; // New flag for async handling, initially false
     const carousel = new Carousel3DPro(items, currentTheme); // Create the carousel instance
@@ -686,24 +877,36 @@ export function setupCarousel(container) {
                     if (!item) {
                         console.warn('[Watermelon] No item found for submenu index:', index); // Debug log
                         return; // Exit if no item is found
-                    }
-                    // Force index sync
+                    }                    // Force index sync
                     activeSubmenu.currentIndex = index; // Sync the current index of the submenu to the clicked index
-                    // Handle specific items to trigger floating content
-                    // Check for specific items FIRST
-                    if (item === 'About' || item === 'Favorites' || item === 'Product' || item === 'Shopify' || item === 'Cart') { // Added 'Cart' here too
-                        const id = item.toLowerCase(); // e.g., 'about', 'favorites', 'cart'
-                        // <<< FIX: Call selectItem to show preview BEFORE triggering panel
-                        activeSubmenu.selectItem(index, true, true); // Show preview
-                        // Replace the direct call with the waitForWindowWM function
-                        waitForWindowWM(id); // Wait for window.__wm__ to be ready before triggering content
-                        console.warn(`🍉 Attempting to trigger floating panel: ${id}`);
-                        // Optionally close the submenu after triggering content
-                        // closeSubmenu();
-                    } else {
-                        // Fallback/default behavior for other submenu items
-                        activeSubmenu.selectItem(index, true, true); // <- preview true
-                    }
+                    
+                    // Load contextual content for the selected submenu item
+                    const parentItem = activeSubmenu.parentItem?.userData?.item || 'Unknown';
+                    console.warn(`[🍉 Content] Submenu item selected: ${parentItem} > ${item}`);
+                    
+                    // Show the submenu item preview first
+                    activeSubmenu.selectItem(index, true, true); // Show preview
+                    
+                    // Load content asynchronously
+                    loadContentForItem(parentItem, item).then(contentData => {
+                        if (contentData) {
+                            console.warn(`[🍉 Content] Successfully loaded content for ${parentItem} > ${item}`);
+                            
+                            // Handle special content types that might need floating panels
+                            if (contentData.type === 'cart' || 
+                                contentData.type === 'dashboard' || 
+                                item.toLowerCase().includes('cart') ||
+                                item.toLowerCase().includes('about') ||
+                                item.toLowerCase().includes('favorites')) {
+                                
+                                const id = item.toLowerCase();
+                                waitForWindowWM(id); // Wait for window.__wm__ to be ready before triggering content
+                                console.warn(`🍉 Attempting to trigger floating panel: ${id}`);
+                            }
+                        }
+                    }).catch(error => {
+                        console.error(`[🍉 Content] Failed to load content for ${parentItem} > ${item}:`, error);
+                    });
                 } else if (obj.userData?.isCloseButton || obj.parent?.userData?.isCloseButton) { // Check if the clicked object or its parent is the close button
                     // Handle close button click
                     closeSubmenu(); // Call the closeSubmenu function to close the active submenu
@@ -746,15 +949,24 @@ export function setupCarousel(container) {
             while (current && current.parent !== carousel.itemGroup) {
                 current = current.parent;
             }
-            
-            if (current && current.userData.index !== undefined) {
+              if (current && current.userData.index !== undefined) {
                 const i = current.userData.index;
+                const itemName = items[i];
                 
-                console.warn(`[🍉 Click] Clicked main carousel item at index ${i}: ${items[i]}`);
-                console.warn(`[🍉 Click] This item has submenu: ${!!submenus[items[i]]}`);
+                console.warn(`[🍉 Click] Clicked main carousel item at index ${i}: ${itemName}`);
+                console.warn(`[🍉 Click] This item has submenu: ${!!submenus[itemName]}`);
+                
+                // Load content for the main carousel item
+                loadContentForItem(itemName).then(contentData => {
+                    if (contentData) {
+                        console.warn(`[🍉 Content] Loaded content for main item: ${itemName}`);
+                    }
+                }).catch(error => {
+                    console.error(`[🍉 Content] Failed to load content for main item ${itemName}:`, error);
+                });
                 
                 // Call the item click handler on the carousel
-                carousel.onItemClick?.(i, items[i]);
+                carousel.onItemClick?.(i, itemName);
                 carousel.selectItem(i, true);
                 break;
             }
