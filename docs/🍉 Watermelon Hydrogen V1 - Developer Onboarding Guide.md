@@ -79,7 +79,7 @@ Carousel3DPro.js + Carousel3DSubmenu.js
 
 *   **Cart Context:** [`app/components/context/cart-ui.jsx`](c:\Users\Nuwud\Projects\watermelon-hydrogen\app\components\context\cart-ui.jsx) - Manages cart UI state (open/closed, drawer switching)
 *   **Cart Controller:** [`app/components/cart-drawers/CartDrawerController.jsx`](c:\Users\Nuwud\Projects\watermelon-hydrogen\app\components\cart-drawers\CartDrawerController.jsx) - Coordinates between Hydrogen cart data and drawer UI
-*   **3D Cart Toggle:** [`src/cart/initCartToggleSphere.js`](c:\Users\Nuwud\Projects\watermelon-hydrogen\src\cart\initCartToggleSphere.js) - Creates the floating cart sphere
+*   **3D Cart Toggle:** [`app/utils/cart/initCartToggleSphere.js`](c:\Users\Nuwud\Projects\watermelon-hydrogen\app\utils\cart\initCartToggleSphere.js) - Creates the floating cart sphere
 *   **HUD Cart Icon:** [`app/components/cart-drawers/CartHUDIcon3D.js`](c:\Users\Nuwud\Projects\watermelon-hydrogen\app\components\cart-drawers\CartHUDIcon3D.js) - Camera-relative cart icon with GLTF model loading
 *   **Cart Integration Module:** [`app/components/Carousel3DPro/modules/cartIntegration.js`](c:\Users\Nuwud\Projects\watermelon-hydrogen\app\components\Carousel3DPro\modules\cartIntegration.js) - Bridges cart functionality with main 3D scene
 
@@ -118,7 +118,7 @@ CartUIContext (cart-ui.jsx) ← UI State Management
     - Hooks: `useCartUI()`, `useDrawerOpen(id)`, `useDrawerToggle(id)`
 
 *   **3D Cart Triggers:**
-    - **Cart Sphere:** [`src/cart/initCartToggleSphere.js`](c:\Users\Nuwud\Projects\watermelon-hydrogen\src\cart\initCartToggleSphere.js) creates floating cart sphere
+    - **Cart Sphere:** [`app/utils/cart/initCartToggleSphere.js`](c:\Users\Nuwud\Projects\watermelon-hydrogen\app\utils\cart\initCartToggleSphere.js) creates floating cart sphere
     - **HUD Icon:** [`app/components/cart-drawers/CartHUDIcon3D.js`](c:\Users\Nuwud\Projects\watermelon-hydrogen\app\components\cart-drawers\CartHUDIcon3D.js) creates camera-relative cart icon
     - **Integration:** [`app/components/Carousel3DPro/modules/cartIntegration.js`](c:\Users\Nuwud\Projects\watermelon-hydrogen\app\components\Carousel3DPro\modules\cartIntegration.js) handles cart sphere setup and click detection
 
@@ -273,70 +273,222 @@ A visual editor for 3D scenes would be valuable for:
 
 ---
 
-## 8. File Cleanup Recommendations
+## 8. WatermelonOS Development Methodology & Debugging
 
-### 🗂️ Current File Structure Analysis
+The Watermelon project follows an **investigation-first** approach to development and debugging. This methodology ensures stable, maintainable code and helps prevent the introduction of subtle bugs in complex 3D systems.
 
-Based on the project structure analysis, here are the key findings:
+### 🧠 **Investigation-First Engineering**
 
-**Active Entry Points:**
-- `app/routes/($locale)._index.jsx` → `app/components/Carousel3DMenu.jsx` → `app/components/Carousel3DPro/main.js`
+#### **✅ Core Development Principles**
 
-**Core Active Files:**
-- `app/components/Carousel3DPro/main.js` - Main orchestrator
-- `app/components/Carousel3DPro/Carousel3DPro.js` - Main carousel logic
-- `app/components/Carousel3DPro/Carousel3DSubmenu.js` - Submenu system
-- `app/components/Carousel3DMenu.jsx` - React entry point
+| Principle | Description |
+|-----------|-------------|
+| 🔍 **Investigate First** | Use Copilot Chat and `console.warn()` to trace logic *before* changing code |
+| 🔁 **Run it Backwards** | When something breaks, trace from the symptom back to its origin |
+| 🧪 **Test Before Patch** | Ask "Why is this breaking?" before asking "How do I fix it?" |
+| 🛠 **Surgical Commits** | Apply only *one focused patch* at a time, especially for animations |
+| 🧼 **Keep `main.js` Sacred** | All visual modules should plug in cleanly without global state pollution |
+| 🧩 **Isolate with Async** | Use `async/await` for transitions to keep UI fluid and predictable |
+| 🪓 **Destroy Responsibly** | Every `create()` should have a matching `dispose()` method |
 
-**Cart System (Multiple Implementations Found):**
-- `app/components/cart-drawers/CartDrawer3D.jsx` - Main cart component
-- `app/components/cart-drawers/CartDrawerRenderer.jsx` - Alternative renderer
-- `app/components/cart-drawers/CartDrawerController.jsx` - Controller bridge
-- `app/components/cart-drawers/CartHUDIcon3D.js` - HUD cart icon
-- `app/components/context/cart-ui.jsx` - UI state management
-- `src/cart/initCartToggleSphere.js` - Cart sphere creation
+#### **📘 WatermelonOS Debug Rituals**
 
-### 🧹 Files to Review/Consolidate
+1. **Symptom Observed?**
+   - Add `console.warn('[Watermelon]')` markers at error points
+   - Use Copilot to trace what components touched the failing system
+   - Check the browser console for Three.js warnings or React errors
 
-**Potential Duplicates:**
-- `Carousel3DSubmenu.js` (root level) vs `app/components/Carousel3DPro/Carousel3DSubmenu.js` - Root level file appears unused
-- Multiple cart drawer implementations need consolidation
-- `app/components/Carousel3DPro/Carousel3DProWrapper.jsx` vs direct main.js usage
+2. **State Stuck?**
+   - Verify transition flags like `isTransitioning` or `submenuTransitioning` aren't stale
+   - Check if event listeners are properly cleaned up
+   - Ensure proper state reset in cleanup methods
 
-**Legacy Files to Investigate:**
-- `src/animate.js` - Appears to be old GLTFLoader implementation
-- `src/createItems.js` - May be superseded by Carousel3DPro
-- `src/hoverLogic.js` - Potential legacy hover implementation
+3. **Geometry Issues?**
+   - Confirm `.geometry.center()` and `.userData.originalScale` are applied after creation
+   - Check if materials and textures are properly disposed
+   - Verify font loading is complete before creating TextGeometry
 
-**Cart System Overlaps:**
-- `CartDrawer3D.jsx` vs `CartDrawerRenderer.jsx` - Different approaches to same functionality
-- Multiple cart event systems that could be unified
-- Various unused components in `cart-drawers/` directory
+4. **Animation Lockups?**
+   - Use async transition chains: `await closeSubmenuAsync(); await spawnSubmenuAsync(...);`
+   - Check GSAP timeline completion before starting new animations
+   - Verify animation targets still exist in the scene
 
-### 🧹 Cleanup Strategy
+5. **Memory Leaks?**
+   - Check Three.js object disposal in browser DevTools
+   - Monitor `scene.children.length` over time
+   - Verify all geometries, materials, and textures are disposed
 
-1. **Identify Active Code Paths**: Use the entry point flow to trace which files are actually used
-2. **Archive Unused Files**: Move experimental/unused files to a `legacy/` directory
-3. **Consolidate Overlapping Functionality**: Merge similar components where appropriate
-4. **Document Dependencies**: Create clear dependency map for remaining files
+### 🛠 **Common Issues & Solutions**
 
-### 📋 Recommended Cleanup Tasks
+#### **SSR Hydration Issues**
+**Symptom:** React hydration errors, blank screens, "window is not defined"
 
-**High Priority:**
-1. Remove or relocate root-level `Carousel3DSubmenu.js` if unused
-2. Consolidate cart drawer implementations into single approach
-3. Remove legacy files in `src/` directory if superseded
+**Debug Steps:**
+```javascript
+// Check if Three.js code is properly wrapped
+if (typeof window !== "undefined") {
+  // Safe browser code here
+}
+```
 
-**Medium Priority:**
-1. Standardize cart event system
-2. Remove unused components in `cart-drawers/`
-3. Consolidate wrapper components
+**Fix:** Ensure all Three.js code is inside `ClientOnly` components or `useEffect` hooks.
 
-**Low Priority:**
-1. Organize utility files
-2. Clean up experimental shader files
-3. Standardize naming conventions
+#### **Submenu Click/Scroll Issues**
+**Symptom:** Submenu items don't respond to clicks or scroll incorrectly
+
+**Debug Steps:**
+```javascript
+// Add debugging to click handler
+console.warn('[Watermelon] Click detected:', intersection.object.userData);
+console.warn('[Watermelon] Active submenu:', activeSubmenu?.isSubmenuItem);
+```
+
+**Common Causes:**
+- Race conditions between selection guards
+- Stale submenu references after menu changes
+- Incorrect raycaster intersection handling
+
+#### **3D Text Stretching/Scaling Issues**
+**Symptom:** Text appears stretched, too large, or incorrectly positioned
+
+**Debug Steps:**
+```javascript
+// Check scaling application
+console.warn('[Watermelon] Original scale:', mesh.userData.originalScale);
+console.warn('[Watermelon] Current scale:', mesh.scale);
+```
+
+**Fix:** Ensure `geometry.center()` is called before setting `userData.originalScale`.
+
+#### **Memory Leaks in 3D Scenes**
+**Symptom:** Performance degrades over time, especially with submenu usage
+
+**Debug Steps:**
+```javascript
+// Monitor scene complexity
+console.warn('[Watermelon] Scene children count:', scene.children.length);
+console.warn('[Watermelon] Renderer info:', renderer.info);
+```
+
+**Fix:** Implement comprehensive `dispose()` methods for all 3D objects.
+
+### 🔧 **Debug Tools & Commands**
+
+#### **Browser Console Commands**
+Access these through the browser console when the app is running:
+
+```javascript
+// Admin panel controls
+window.watermelonAdmin.getSystemStatus()    // Check system health
+window.watermelonAdmin.clearCache()         // Clear content cache
+window.watermelonAdmin.repairState()        // Fix common state issues
+
+// Content management
+window.contentManager.loadContent('home')   // Load specific content
+window.contentManager.getTemplates()        // List available templates
+
+// Carousel debugging
+window.__wm__.testSubmenu('Gallery')        // Test submenu functionality
+window.__wm__.getSubmenuState()             // Check submenu state
+window.__wm__.closeSubmenu()                // Force close submenu
+```
+
+#### **Development Environment Setup**
+Enable additional debugging in development:
+
+```javascript
+// In main.js or relevant component
+if (process.env.NODE_ENV === 'development') {
+  window.debugWatermelon = {
+    scene,
+    carousel,
+    submenuManager,
+    contentManager
+  };
+}
+```
+
+### 🚑 **Emergency Recovery Procedures**
+
+#### **Complete System Reset**
+If the 3D system becomes unresponsive:
+
+```javascript
+// Emergency reset sequence
+window.watermelonAdmin.emergencyReset();
+
+// Or manual reset
+window.location.reload(); // Last resort
+```
+
+#### **Submenu System Recovery**
+If submenus stop working:
+
+```javascript
+// Reset submenu system
+window.__wm__.resetSubmenuSystem();
+window.__wm__.closeAllSubmenus();
+```
+
+#### **Cart System Recovery**
+If cart integration fails:
+
+```javascript
+// Reset cart state
+window.drawerController?.reset();
+window.dispatchEvent(new Event('cart-reset'));
+```
+
+### 📊 **Performance Monitoring**
+
+#### **Key Metrics to Watch**
+- **FPS**: Should maintain 60fps during animations
+- **Memory Usage**: Monitor WebGL memory in DevTools
+- **Scene Complexity**: Track `scene.children.length`
+- **Animation Performance**: Watch for dropped frames during transitions
+
+#### **Performance Debug Commands**
+```javascript
+// Performance monitoring
+console.log('Renderer info:', renderer.info);
+console.log('Scene stats:', {
+  objects: scene.children.length,
+  meshes: scene.children.filter(c => c.isMesh).length,
+  lights: scene.children.filter(c => c.isLight).length
+});
+```
 
 ---
 
-Happy building! If you encounter issues, check the [`docs/README-troubleshooting.md`](c:\Users\Nuwud\Projects\watermelon-hydrogen\docs\README-troubleshooting.md) or ask a team member.
+## 9. Troubleshooting Common Issues
+
+### 🐛 **Quick Fixes for Common Problems**
+
+#### **App Won't Start**
+1. Check Node.js version: `node --version` (requires ≥18)
+2. Clear cache: `npm run clean` or `rm -rf node_modules && npm install`
+3. Check Shopify connection: `npx shopify hydrogen link --storefront "Your Store Name"`
+
+#### **3D Scene Doesn't Load**
+1. Check browser console for errors
+2. Verify fonts are loading: Check Network tab for `helvetiker_regular.typeface.json`
+3. Test with `window.watermelonAdmin.getSystemStatus()`
+
+#### **Submenus Not Working**
+1. Clear submenu state: `window.__wm__.resetSubmenuSystem()`
+2. Check for JavaScript errors in console
+3. Verify menu data: `window.watermelonAdmin.getMenuData()`
+
+#### **Cart Integration Issues**
+1. Test cart state: `window.drawerController?.getState()`
+2. Check Shopify cart hooks: Verify `useCart()` is returning data
+3. Reset cart system: `window.drawerController?.reset()`
+
+### 📞 **Getting Help**
+
+1. **Check Documentation**: Start with this guide and the comprehensive documentation
+2. **Debug Tools**: Use the built-in debug commands and admin panel
+3. **Community Resources**: Reference the strategic roadmap for known issues and priorities
+4. **Code Investigation**: Follow the investigation-first methodology for systematic debugging
+
+---

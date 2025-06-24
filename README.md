@@ -2,10 +2,12 @@
 
 A fully immersive 3D-powered Shopify storefront built with **Hydrogen**, **Three.js**, and **Oxygen**, featuring a dynamic 3D carousel menu and future-ready admin HUD.
 
-> 📚 **NEW: Comprehensive Documentation Available**  
-> For detailed technical documentation of all 3D systems, see [`docs/3D_SYSTEMS_COMPREHENSIVE_DOCUMENTATION.md`](docs/3D_SYSTEMS_COMPREHENSIVE_DOCUMENTATION.md)  
-> For implementation planning, see [`docs/SHOPIFY_SECTIONS_3D_INTEGRATION_PLAN.md`](docs/SHOPIFY_SECTIONS_3D_INTEGRATION_PLAN.md)  
-> For complete analysis summary, see [`docs/ANALYSIS_SUMMARY_FINAL.md`](docs/ANALYSIS_SUMMARY_FINAL.md)
+> 📚 **DOCUMENTATION HUB**  
+> **Complete documentation index**: [`docs/README.md`](docs/README.md) - Navigate all project documentation  
+> - **📋 Strategic Roadmap**: [`docs/STRATEGIC_ROADMAP_2025.md`](docs/STRATEGIC_ROADMAP_2025.md) - Complete development roadmap and priorities  
+> - **🎯 Developer Onboarding**: [`docs/🍉 Watermelon Hydrogen V1 - Developer Onboarding Guide.md`](docs/🍉%20Watermelon%20Hydrogen%20V1%20-%20Developer%20Onboarding%20Guide.md) - Comprehensive setup and development guide  
+> - **🏗️ Technical Architecture**: [`docs/3D_SYSTEMS_COMPREHENSIVE_DOCUMENTATION.md`](docs/3D_SYSTEMS_COMPREHENSIVE_DOCUMENTATION.md) - Complete 3D systems documentation  
+> - **🛒 Shopify Integration**: [`docs/SHOPIFY_SECTIONS_3D_INTEGRATION_PLAN.md`](docs/SHOPIFY_SECTIONS_3D_INTEGRATION_PLAN.md) - Shopify sections integration planning
 
 ---
 

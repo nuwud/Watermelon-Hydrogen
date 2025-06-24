@@ -69,7 +69,7 @@ app/utils/
 ├── carouselAngleUtils.js   # Angle calculations
 └── homePositionUtils.js    # Position utilities
 
-src/cart/
+app/utils/cart/
 ├── initCartToggleSphere.js # Cart sphere creation
 ├── SceneRegistry.js        # Scene management
 └── DrawerControllerRegistry.js # Controller management
@@ -236,7 +236,7 @@ const items = menuData.menu.items.map(item => ({
 #### 🟡 Active but Needs Review
 - `app/components/Carousel3DMenu.jsx` (entry point)
 - `app/components/cart-drawers/CartDrawer3D.jsx`
-- `src/cart/*` (utility modules)
+- `app/utils/cart/*` (utility modules)
 
 #### 🔴 Potentially Redundant
 - `app/components/Carousel3DProWrapper.jsx`

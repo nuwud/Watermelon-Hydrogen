@@ -62,7 +62,7 @@ CartUIContext (cart-ui.jsx)
 - `app/components/Carousel3DPro/Carousel3DPro.js` - Main carousel
 - `app/components/Carousel3DPro/Carousel3DSubmenu.js` - Submenu system
 - `app/components/context/cart-ui.jsx` - Cart state management
-- `src/cart/initCartToggleSphere.js` - Cart sphere
+- `app/utils/cart/initCartToggleSphere.js` - Cart sphere
 
 #### ⚠️ **Multiple Implementations (Need Consolidation)**
 - `app/components/cart-drawers/CartDrawer3D.jsx` vs `CartDrawerRenderer.jsx`
@@ -169,7 +169,7 @@ Cart System:
 ├── app/components/cart-drawers/CartDrawerController.jsx (bridge)
 ├── app/components/cart-drawers/CartDrawer3D.jsx (primary UI)
 ├── app/components/cart-drawers/CartHUDIcon3D.js (3D icon)
-└── src/cart/initCartToggleSphere.js (3D sphere)
+└── app/utils/cart/initCartToggleSphere.js (3D sphere)
 
 Utilities:
 ├── app/utils/cart-controller-utils.js
