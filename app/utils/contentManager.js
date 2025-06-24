@@ -467,17 +467,73 @@ export class ContentManager {
   }
 
   async fetchProductContent(contentInfo) {
+    // Extract product handle from URL or use title as handle
+    const productHandle = contentInfo.url.replace('/pages/', '').replace('/products/', '') || 
+                          contentInfo.title.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
+    
+    try {
+      // Use new API route for product data
+      const response = await fetch(`/api/product?handle=${encodeURIComponent(productHandle)}`, {
+        headers: {
+          'Accept': 'application/json',
+          'Content-Type': 'application/json'
+        }
+      });
+      
+      if (response.ok) {
+        const apiResult = await response.json();
+        
+        if (apiResult.success && apiResult.product) {
+          const product = apiResult.product;
+          
+          console.log(`[ContentManager] ✅ Real product loaded: ${productHandle}`, {
+            title: product.title,
+            price: product.selectedOrFirstAvailableVariant?.price?.amount
+          });
+          
+          return {
+            type: 'product',
+            title: product.title,
+            content: this.formatProductContent(product, contentInfo),
+            handle: product.handle,
+            id: product.id,
+            price: product.selectedOrFirstAvailableVariant?.price,
+            compareAtPrice: product.selectedOrFirstAvailableVariant?.compareAtPrice,
+            description: product.description,
+            descriptionHtml: product.descriptionHtml,
+            images: product.images,
+            selectedVariant: product.selectedOrFirstAvailableVariant,
+            icon: contentInfo.icon,
+            shape: contentInfo.shape,
+            isShopifyProduct: true,
+            shopifyData: product
+          };
+        } else {
+          console.warn(`[ContentManager] Product not found via API: ${productHandle}`, apiResult.error);
+          return this.createDummyProductContent(contentInfo);
+        }
+      } else {
+        console.warn(`[ContentManager] API response not ok: ${response.status} for ${productHandle}`);
+        return this.createDummyProductContent(contentInfo);
+      }
+    } catch (error) {
+      console.warn(`[ContentManager] Error fetching product ${productHandle}:`, error);
+      return this.createDummyProductContent(contentInfo);
+    }
+  }
+
+  createDummyProductContent(contentInfo) {
     return {
       type: 'product',
       title: contentInfo.title,
+      content: this.formatDummyProductContent(contentInfo),
+      handle: contentInfo.title.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, ''),
+      price: contentInfo.price || '$0.00',
       description: contentInfo.description,
-      price: contentInfo.price,
-      image: `/assets/products/${contentInfo.title.toLowerCase().replace(/\s+/g, '-')}.jpg`,
       icon: contentInfo.icon,
       shape: contentInfo.shape,
-      url: contentInfo.url,
-      inStock: true,
-      features: this.generateProductFeatures(contentInfo)
+      isShopifyProduct: false,
+      isDummy: true
     };
   }
 
@@ -515,15 +571,247 @@ export class ContentManager {
   }
 
   async fetchCartContent(contentInfo) {
-    // This would integrate with Hydrogen's cart system
+    try {
+      // Enhanced cart data detection from multiple sources
+      if (typeof window !== 'undefined') {
+        
+        // Check multiple cart data sources
+        const cartSources = [
+          () => window.cartData,
+          () => window.hydrogenCart,
+          () => window.__HYDROGEN_CART__,
+          () => {
+            // Try to get cart data from React context (if available)
+            const cartElements = document.querySelectorAll('[data-cart-data]');
+            if (cartElements.length > 0) {
+              try {
+                return JSON.parse(cartElements[0].dataset.cartData);
+              } catch {
+                return null;
+              }
+            }
+            return null;
+          }
+        ];
+        
+        for (const getCart of cartSources) {
+          try {
+            const cartData = getCart();
+            if (cartData && (cartData.lines || cartData.totalQuantity !== undefined)) {
+              console.log('[ContentManager] ✅ Real cart data found:', {
+                source: getCart.name || 'unknown',
+                itemCount: cartData.totalQuantity || 0,
+                linesCount: cartData.lines?.length || 0
+              });
+              
+              return {
+                type: 'cart',
+                title: contentInfo.title,
+                content: this.formatCartContent(cartData),
+                items: cartData.lines || [],
+                total: cartData.cost?.totalAmount?.amount ? 
+                  `${cartData.cost.totalAmount.amount} ${cartData.cost.totalAmount.currencyCode}` : 
+                  '$0.00',
+                itemCount: cartData.totalQuantity || 0,
+                cartId: cartData.id,
+                checkoutUrl: cartData.checkoutUrl,
+                isEmpty: !cartData.lines || cartData.lines.length === 0,
+                isShopifyCart: true,
+                cartData
+              };
+            }
+          } catch (error) {
+            // Silent fail, try next source
+            console.warn('[ContentManager] Cart source failed:', error);
+          }
+        }
+      }
+      
+      // Fallback to dummy cart content
+      console.log('[ContentManager] 💡 No real cart data found, using dummy content');
+      return this.createDummyCartContent(contentInfo);
+      
+    } catch (error) {
+      console.warn('[ContentManager] Error fetching cart content:', error);
+      return this.createDummyCartContent(contentInfo);
+    }
+  }
+
+  createDummyCartContent(contentInfo) {
     return {
       type: 'cart',
       title: contentInfo.title,
-      items: [],
-      total: '$0.00',
-      itemCount: 0,
-      recommendedProducts: []
+      content: this.formatDummyCartContent(),
+      items: [
+        {
+          id: 'dummy-1',
+          title: 'Shopify Hydrogen 3D Guide',
+          price: '$97.00',
+          quantity: 1,
+          image: '/placeholder-product.jpg'
+        },
+        {
+          id: 'dummy-2', 
+          title: 'Build Like Nuwud: Systems Book',
+          price: '$197.00',
+          quantity: 1,
+          image: '/placeholder-product.jpg'
+        }
+      ],
+      total: '$294.00',
+      itemCount: 2,
+      isEmpty: false,
+      isShopifyCart: false,
+      isDummy: true
     };
+  }
+
+  formatCartContent(cartData) {
+    if (!cartData.lines || cartData.lines.length === 0) {
+      return `
+        <div class="cart-content empty-cart">
+          <div class="cart-header">
+            <span class="cart-icon">🛒</span>
+            <h2>Your Cart</h2>
+          </div>
+          
+          <div class="empty-cart-message">
+            <p>Your cart is currently empty</p>
+            <button class="browse-products-btn">Browse Products</button>
+          </div>
+        </div>
+      `;
+    }
+
+    const itemsHtml = cartData.lines.map(line => `
+      <div class="cart-item" data-line-id="${line.id}">
+        <div class="item-image">
+          ${line.merchandise.image ? 
+            `<img src="${line.merchandise.image.url}" alt="${line.merchandise.image.altText || line.merchandise.title}" />` : 
+            '<div class="placeholder-image">📦</div>'
+          }
+        </div>
+        <div class="item-details">
+          <h4>${line.merchandise.product.title}</h4>
+          <p class="item-variant">${line.merchandise.title}</p>
+          <div class="item-price">
+            ${line.cost.amountPerQuantity.amount} ${line.cost.amountPerQuantity.currencyCode}
+          </div>
+        </div>
+        <div class="item-quantity">
+          <button class="qty-decrease" data-line-id="${line.id}">-</button>
+          <span class="qty-number">${line.quantity}</span>
+          <button class="qty-increase" data-line-id="${line.id}">+</button>
+        </div>
+        <div class="item-total">
+          ${line.cost.totalAmount.amount} ${line.cost.totalAmount.currencyCode}
+        </div>
+        <button class="remove-item" data-line-id="${line.id}">×</button>
+      </div>
+    `).join('');
+
+    return `
+      <div class="cart-content">
+        <div class="cart-header">
+          <span class="cart-icon">🛒</span>
+          <h2>Your Cart (${cartData.totalQuantity})</h2>
+        </div>
+        
+        <div class="cart-items">
+          ${itemsHtml}
+        </div>
+        
+        <div class="cart-summary">
+          <div class="subtotal">
+            <span>Subtotal:</span>
+            <span>${cartData.cost.subtotalAmount.amount} ${cartData.cost.subtotalAmount.currencyCode}</span>
+          </div>
+          ${cartData.cost.totalTaxAmount ? `
+            <div class="tax">
+              <span>Tax:</span>
+              <span>${cartData.cost.totalTaxAmount.amount} ${cartData.cost.totalTaxAmount.currencyCode}</span>
+            </div>
+          ` : ''}
+          <div class="total">
+            <span><strong>Total:</strong></span>
+            <span><strong>${cartData.cost.totalAmount.amount} ${cartData.cost.totalAmount.currencyCode}</strong></span>
+          </div>
+        </div>
+        
+        <div class="cart-actions">
+          <button class="checkout-btn" data-checkout-url="${cartData.checkoutUrl}">
+            Proceed to Checkout
+          </button>
+          <button class="continue-shopping-btn">
+            Continue Shopping
+          </button>
+        </div>
+      </div>
+    `;
+  }
+
+  formatDummyCartContent() {
+    return `
+      <div class="cart-content dummy-cart">
+        <div class="cart-header">
+          <span class="cart-icon">🛒</span>
+          <h2>Your Cart (2)</h2>
+          <span class="dummy-badge">Demo Mode</span>
+        </div>
+        
+        <div class="cart-items">
+          <div class="cart-item">
+            <div class="item-image placeholder-image">📖</div>
+            <div class="item-details">
+              <h4>Shopify Hydrogen 3D Guide</h4>
+              <p class="item-variant">Digital Download</p>
+              <div class="item-price">$97.00</div>
+            </div>
+            <div class="item-quantity">
+              <span class="qty-number">1</span>
+            </div>
+            <div class="item-total">$97.00</div>
+          </div>
+          
+          <div class="cart-item">
+            <div class="item-image placeholder-image">📋</div>
+            <div class="item-details">
+              <h4>Build Like Nuwud: Systems Book</h4>
+              <p class="item-variant">Digital Download</p>
+              <div class="item-price">$197.00</div>
+            </div>
+            <div class="item-quantity">
+              <span class="qty-number">1</span>
+            </div>
+            <div class="item-total">$197.00</div>
+          </div>
+        </div>
+        
+        <div class="cart-summary">
+          <div class="subtotal">
+            <span>Subtotal:</span>
+            <span>$294.00</span>
+          </div>
+          <div class="total">
+            <span><strong>Total:</strong></span>
+            <span><strong>$294.00</strong></span>
+          </div>
+        </div>
+        
+        <div class="cart-actions">
+          <button class="checkout-btn" disabled>
+            Checkout (Demo Mode)
+          </button>
+          <button class="continue-shopping-btn">
+            Continue Shopping
+          </button>
+        </div>
+        
+        <p class="demo-notice">
+          <em>This is demo cart content. Connect to real Shopify cart for live functionality.</em>
+        </p>
+      </div>
+    `;
   }
 
   /**
@@ -737,53 +1025,76 @@ export class ContentManager {
     `;
   }
 
-  generateProductFeatures(contentInfo) {
-    const baseFeatures = [
-      'Professional implementation',
-      'Full documentation included',
-      'Ongoing support',
-      'Money-back guarantee'
-    ];
+  formatProductContent(product, contentInfo) {
+    const formattedPrice = product.selectedOrFirstAvailableVariant?.price 
+      ? `$${product.selectedOrFirstAvailableVariant.price.amount}`
+      : contentInfo.price || 'Price TBD';
 
-    const specificFeatures = {
-      'Shopify Hydrogen 3D Guide': [
-        'Step-by-step setup instructions',
-        'Complete source code examples',
-        'Three.js integration tutorials',
-        'Performance optimization guides'
-      ],
-      'Watermelon OS Theme': [
-        'Complete 3D theme package',
-        'Easy installation',
-        'Customizable components',
-        'Mobile responsive design'
-      ]
-    };
-
-    return [...baseFeatures, ...(specificFeatures[contentInfo.title] || [])];
+    return `
+      <div class="product-content">
+        <div class="product-header">
+          <span class="product-icon">${contentInfo.icon}</span>
+          <h2>${product.title}</h2>
+          <div class="product-price">${formattedPrice}</div>
+        </div>
+        
+        <div class="product-description">
+          ${product.descriptionHtml || product.description || contentInfo.description}
+        </div>
+        
+        <div class="product-actions">
+          <button class="add-to-cart-btn" data-variant-id="${product.selectedOrFirstAvailableVariant?.id}">
+            Add to Cart
+          </button>
+          <button class="view-product-btn" data-handle="${product.handle}">
+            View Details
+          </button>
+        </div>
+        
+        <div class="product-meta">
+          <p><strong>Type:</strong> Digital Product</p>
+          <p><strong>Delivery:</strong> Instant Download</p>
+          <p><strong>Category:</strong> ${contentInfo.shape || 'Digital Resource'}</p>
+        </div>
+      </div>
+    `;
   }
 
-  generateGalleryItems(contentInfo) {
-    const galleries = {
-      'Site Launches': [
-        { title: 'TechCorp Website', image: '/gallery/techcorp.jpg', type: 'website' },
-        { title: 'StartupXYZ Platform', image: '/gallery/startupxyz.jpg', type: 'platform' },
-        { title: 'E-commerce Store', image: '/gallery/ecommerce.jpg', type: 'store' }
-      ],
-      '3D Demos': [
-        { title: 'Product Visualizer', image: '/gallery/3d-product.jpg', type: '3d-demo' },
-        { title: 'Interactive Carousel', image: '/gallery/3d-carousel.jpg', type: '3d-demo' },
-        { title: 'Virtual Showroom', image: '/gallery/3d-showroom.jpg', type: '3d-demo' }
-      ]
-    };
-
-    return galleries[contentInfo.title] || [
-      { title: 'Sample Item 1', image: '/gallery/sample1.jpg', type: 'sample' },
-      { title: 'Sample Item 2', image: '/gallery/sample2.jpg', type: 'sample' },
-      { title: 'Sample Item 3', image: '/gallery/sample3.jpg', type: 'sample' }
-    ];
+  formatDummyProductContent(contentInfo) {
+    return `
+      <div class="product-content dummy-product">
+        <div class="product-header">
+          <span class="product-icon">${contentInfo.icon}</span>
+          <h2>${contentInfo.title}</h2>
+          <div class="product-price">${contentInfo.price || 'Coming Soon'}</div>
+        </div>
+        
+        <div class="product-description">
+          <p>${contentInfo.description}</p>
+          <p><em>This is a preview of an upcoming product. Real Shopify integration pending.</em></p>
+        </div>
+        
+        <div class="product-actions">
+          <button class="add-to-cart-btn" disabled>
+            Coming Soon
+          </button>
+          <button class="notify-btn">
+            Notify When Available
+          </button>
+        </div>
+        
+        <div class="product-meta">
+          <p><strong>Status:</strong> In Development</p>
+          <p><strong>Expected:</strong> Soon</p>
+          <p><strong>Category:</strong> ${contentInfo.shape || 'Digital Resource'}</p>
+        </div>
+      </div>
+    `;
   }
 
+  /**
+   * Create fallback content when Shopify page is not found
+   */
   createFallbackContent(itemTitle) {
     return {
       type: 'page',

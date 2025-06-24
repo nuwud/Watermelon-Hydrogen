@@ -123,6 +123,9 @@ import gsap from 'gsap';
 import { getItemAngles } from '../../utils/carouselAngleUtils.js';
 import { globalGuard, withTransition, SelectionGuard } from './modules/selectionGuards.js';
 import { ContentManager } from '../../utils/contentManager.js';
+import enhanceCartIntegration from '../../utils/cartIntegrationEnhancer.js';
+import watermelonIntegrationTests from '../../utils/watermelonIntegrationTests.js';
+import cartTestUtils from '../../utils/cartTestUtils.js';
 // import { getHomeAngleRadians } from '@/utils/homePositionUtils';
 
 /**
@@ -436,12 +439,17 @@ export function setupCarousel(container, menuData = null) {
     // =======================
     // CONTENT MANAGER INTEGRATION
     // =======================
-    
-    // Initialize Content Manager for contextual content
+      // Initialize Content Manager for contextual content
     const contentManager = new ContentManager();
-    
-    // Expose globally for debugging and external access
+      // Expose globally for debugging and external access
     window.contentManager = contentManager;
+    
+    // Initialize enhanced cart integration
+    enhanceCartIntegration();
+    
+    // Initialize testing utilities
+    window.integrationTests = watermelonIntegrationTests;
+    window.cartTestUtils = cartTestUtils;
     
     // Function to load content for a selected menu item
     const loadContentForItem = async (itemTitle, submenuItem = null) => {
