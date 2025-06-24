@@ -71,17 +71,17 @@ The 3D submenu system provides nested navigation within the main carousel. When 
 - `processClick(pointerCoords)` - Routes click events to active submenu or main carousel
 - `processScroll(deltaY)` - Routes scroll events to active submenu
 
-#### 3. SubMenuItem
-**File:** `app/components/Carousel3DPro/modules/SubMenuItem.js`
+#### 3. FloatingPreview
+**File:** `app/components/Carousel3DPro/modules/FloatingPreview.js`
 
-**Purpose:** Individual submenu item class with enhanced functionality
+**Purpose:** Manages floating 3D previews for selected carousel items
 
 **Key Features:**
-- Unique ID generation for each item
-- Shopify data integration support
-- Object ownership checking for raycasting
-- Highlight/unhighlight methods with GSAP animations
-- Template system integration for enhanced rendering
+- Dynamic preview creation and lifecycle management
+- Camera-facing orientation with automatic positioning
+- Smooth animation transitions (scale, rotation)
+- Resource cleanup and disposal methods
+- Integration with submenu selection system
 
 #### 4. Selection Guards & Locks
 **File:** `app/components/Carousel3DPro/modules/selectionGuards.js`
@@ -92,6 +92,11 @@ The 3D submenu system provides nested navigation within the main carousel. When 
 - `SelectionGuard` - Manages selection state and prevents conflicts
 - `withSelectionLock` - Higher-order function that wraps operations with locks
 - Animation flags: `selectItemLock`, `isAnimating`, `isTransitioning`
+
+#### 5. Archived Components
+**Location:** `app/components/Carousel3DPro/modules/archive/`
+
+**Note:** Several experimental modules (SubMenuItem, animations utilities, carouselManager factory) have been archived after architectural evaluation. See archive documentation for details.
 
 ### Animation & Interaction Systems
 

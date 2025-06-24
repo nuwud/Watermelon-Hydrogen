@@ -46,6 +46,13 @@
 - [**🧹 Cleanup Completion Report**](CLEANUP_COMPLETION_REPORT.md) - Recent codebase cleanup documentation
 - [**📚 Documentation Harmonization Plan**](DOCUMENTATION_HARMONIZATION_PLAN.md) - Documentation standardization and maintenance plan
 - [**🔍 Codebase Analysis**](CODEBASE_ANALYSIS_JUNE_2025.md) - Comprehensive codebase analysis
+- [**🏆 Final Audit Summary**](FINAL_AUDIT_SUMMARY.md) - ✨ **NEW** Comprehensive documentation audit completion report
+
+### 🏗️ **Architectural Improvements**
+- [**📁 Improvements Folder**](improvements/) - 17+ architectural improvement proposals and analysis documents
+- [**🏛️ Documentation & Architectural Audit Complete**](improvements/DOCUMENTATION_ARCHITECTURAL_AUDIT_COMPLETE.md) - Final audit report with complete architecture overview
+- [**🎠 Carousel3DPro Architectural Audit**](improvements/CAROUSEL3DPRO_ARCHITECTURAL_AUDIT.md) - Component-by-component analysis
+- [**🔧 Advanced Components Documentation**](improvements/CAROUSEL3DPRO_ADVANCED_COMPONENTS.md) - Technical documentation for experimental features
 
 ---
 
