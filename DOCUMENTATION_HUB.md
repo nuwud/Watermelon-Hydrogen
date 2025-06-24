@@ -48,6 +48,11 @@
 - **[TESTING_FRAMEWORK_PROPOSAL.md](./docs/improvements/TESTING_FRAMEWORK_PROPOSAL.md)** - Advanced testing systems
 - **[3D_SUBMENU_ARCHITECTURAL_AUDIT.md](./docs/improvements/3D_SUBMENU_ARCHITECTURAL_AUDIT.md)** - Submenu system analysis
 
+### Three.js Enhancement Analysis
+- **[THREE_JS_EXAMPLES_ENHANCEMENT_OPPORTUNITIES.md](./docs/improvements/THREE_JS_EXAMPLES_ENHANCEMENT_OPPORTUNITIES.md)** - Analysis of Three.js examples for future enhancements
+- **[THREE_JS_ENHANCEMENT_IMPLEMENTATION_GUIDE.md](./docs/improvements/THREE_JS_ENHANCEMENT_IMPLEMENTATION_GUIDE.md)** - Practical implementation code for Three.js enhancements
+- **[THREE_JS_WATERMELON_SPECIFIC_ENHANCEMENTS.md](./docs/improvements/THREE_JS_WATERMELON_SPECIFIC_ENHANCEMENTS.md)** - Targeted enhancement ideas specific to your current Watermelon Hydrogen architecture
+
 ---
 
 ## 🛠️ **Development Tools & Scripts**
