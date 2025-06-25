@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🍉 Green Ring Toggle Test</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background: #0a0a0a;
+            color: #00ff00;
+            font-family: 'Courier New', monospace;
+        }
+        .controls {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: rgba(0, 50, 0, 0.8);
+            border: 1px solid #00ff00;
+            padding: 15px;
+            border-radius: 5px;
+            z-index: 1000;
+        }
+        button {
+            background: #003300;
+            color: #00ff00;
+            border: 1px solid #00ff00;
+            padding: 8px 15px;
+            margin: 5px;
+            cursor: pointer;
+            border-radius: 3px;
+            display: block;
+            width: 100%;
+        }
+        button:hover {
+            background: #005500;
+        }
+        .status {
+            margin: 10px 0;
+            padding: 8px;
+            border: 1px solid #333;
+            background: rgba(0, 0, 0, 0.5);
+        }
+        .result {
+            color: #ffff00;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <div class="controls">
+        <h3>🍉 Green Ring Control</h3>
+        <button onclick="testToggleRing()">Toggle Green Ring</button>
+        <button onclick="showRing()">Show Ring</button>
+        <button onclick="hideRing()">Hide Ring</button>
+        <button onclick="checkStatus()">Check Status</button>
+        
+        <div class="status">
+            <strong>Status:</strong><br>
+            <span id="status">Loading...</span>
+        </div>
+        
+        <div class="status">
+            <strong>Admin Controls:</strong><br>
+            <span id="admin-status">Checking...</span>
+        </div>
+        
+        <div class="status">
+            <strong>Instructions:</strong><br>
+            1. Load main page first<br>
+            2. Click "Toggle Green Ring"<br>
+            3. Watch center for changes<br>
+            4. Ring should disappear/appear
+        </div>
+    </div>
+
+    <script>
+        let checkInterval;
+        
+        function updateStatus(message) {
+            document.getElementById('status').innerHTML = message;
+            console.log('🍉 Status:', message);
+        }
+        
+        function updateAdminStatus(message) {
+            document.getElementById('admin-status').innerHTML = message;
+        }
+        
+        function testToggleRing() {
+            if (typeof window.toggleGreenRing === 'function') {
+                const result = window.toggleGreenRing();
+                updateStatus(`Ring toggled: ${result ? 'SHOWN' : 'HIDDEN'}`);
+            } else if (typeof window.watermelonAdmin?.toggleCenterFrame === 'function') {
+                const result = window.watermelonAdmin.toggleCenterFrame();
+                updateStatus(`Ring toggled via admin: ${result ? 'SHOWN' : 'HIDDEN'}`);
+            } else {
+                updateStatus('❌ Toggle function not available');
+            }
+        }
+        
+        function showRing() {
+            if (typeof window.watermelonAdmin?.toggleCenterFrame === 'function') {
+                const result = window.watermelonAdmin.toggleCenterFrame(true);
+                updateStatus(`Ring forced ON: ${result ? 'SUCCESS' : 'FAILED'}`);
+            } else {
+                updateStatus('❌ Admin function not available');
+            }
+        }
+        
+        function hideRing() {
+            if (typeof window.watermelonAdmin?.toggleCenterFrame === 'function') {
+                const result = window.watermelonAdmin.toggleCenterFrame(false);
+                updateStatus(`Ring forced OFF: ${result ? 'FAILED' : 'SUCCESS'}`);
+            } else {
+                updateStatus('❌ Admin function not available');
+            }
+        }
+        
+        function checkStatus() {
+            const status = {
+                centralPanel: !!window.centralPanel,
+                toggleFunction: !!window.toggleGreenRing,
+                adminFunction: !!window.watermelonAdmin?.toggleCenterFrame,
+                frame: window.centralPanel?.frame ? 'EXISTS' : 'NONE',
+                frameVisible: window.centralPanel?.frame?.visible || false
+            };
+            
+            updateStatus(`
+                Central Panel: ${status.centralPanel ? '✅' : '❌'}<br>
+                Toggle Function: ${status.toggleFunction ? '✅' : '❌'}<br>
+                Admin Function: ${status.adminFunction ? '✅' : '❌'}<br>
+                Frame Object: ${status.frame}<br>
+                Frame Visible: ${status.frameVisible ? '✅ ON' : '❌ OFF'}
+            `);
+        }
+        
+        // Auto-check status
+        function autoCheck() {
+            // Check if we're on the main site or need to navigate
+            if (window.location.pathname.includes('test-green-ring.html')) {
+                updateAdminStatus('⚠️ Navigate to main site first');
+                return;
+            }
+            
+            if (window.centralPanel && window.watermelonAdmin) {
+                updateAdminStatus('✅ Ready to test');
+                clearInterval(checkInterval);
+                checkStatus();
+            } else {
+                updateAdminStatus('⏳ Waiting for systems to load...');
+            }
+        }
+        
+        // Start auto-checking
+        checkInterval = setInterval(autoCheck, 1000);
+        
+        // Initial check
+        setTimeout(autoCheck, 100);
+        
+        // Provide easy navigation
+        if (window.location.pathname.includes('test-green-ring.html')) {
+            setTimeout(() => {
+                if (!window.centralPanel) {
+                    updateStatus('Please visit the main page: <a href="/" style="color: #00ffff;">Go to Main Site</a>');
+                }
+            }, 2000);
+        }
+        
+        console.log('🍉 Green Ring Test Interface Loaded');
+        console.log('🍉 Available functions:', {
+            toggleGreenRing: !!window.toggleGreenRing,
+            watermelonAdmin: !!window.watermelonAdmin
+        });
+    </script>
+</body>
+</html>

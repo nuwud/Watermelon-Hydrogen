@@ -16,8 +16,6 @@ export class CentralContentPanel extends THREE.Group {
       radius: 3, // Distance from carousel center
       width: 6,
       height: 4,
-      // Admin control for frame ring visibility
-      showFrame: false, // Default OFF per user request
       ...config
     };
     
@@ -30,19 +28,14 @@ export class CentralContentPanel extends THREE.Group {
   }
   
   setupPanel() {
-    // Create base 3D frame/border for the content area (conditionally)
-    if (this.config.showFrame) {
-      this.createFrame();
-    }
+    // Create base 3D frame/border for the content area
+    this.createFrame();
     
     // Setup CSS3D renderer for HTML content
     this.setupCSS3DRenderer();
     
     // Position at center of carousel
     this.position.set(0, 0, 0);
-    
-    // Add admin toggle for frame
-    this.setupFrameToggle();
   }
   
   createFrame() {
@@ -660,40 +653,6 @@ export class CentralContentPanel extends THREE.Group {
         }
       });
       this.productModels = [];
-    }
-  }
-  
-  /**
-   * Setup admin toggle for the frame ring
-   */
-  setupFrameToggle() {
-    if (typeof window !== 'undefined') {
-      if (!window.watermelonAdmin) {
-        window.watermelonAdmin = {};
-      }
-      
-      // Frame toggle control - allows user to show/hide the green ring
-      window.watermelonAdmin.toggleCenterFrame = (show = !this.config.showFrame) => {
-        this.config.showFrame = show;
-        if (show && !this.frame) {
-          this.createFrame();
-        } else if (!show && this.frame) {
-          this.remove(this.frame);
-          this.frame = null;
-          // Also remove glow if it exists
-          if (this.glow) {
-            this.remove(this.glow);
-            this.glow = null;
-          }
-        }
-        console.log(`[CentralContentPanel] 🍉 Frame ring ${show ? 'enabled' : 'disabled'}`);
-        return show;
-      };
-      
-      // Make it available in console for testing
-      window.toggleGreenRing = window.watermelonAdmin.toggleCenterFrame;
-      
-      console.log('[CentralContentPanel] 🍉 Admin controls ready. Try: window.toggleGreenRing()');
     }
   }
 }
