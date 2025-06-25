@@ -1,0 +1,338 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test 3D Product System</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background: #222;
+            color: #fff;
+        }
+        .test-section {
+            margin: 20px 0;
+            padding: 15px;
+            border: 1px solid #555;
+            border-radius: 5px;
+        }
+        .test-button {
+            background: #007acc;
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            margin: 5px;
+            border-radius: 3px;
+            cursor: pointer;
+        }
+        .test-button:hover {
+            background: #005a9e;
+        }
+        .output {
+            background: #111;
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 3px;
+            font-family: monospace;
+            white-space: pre-wrap;
+        }
+        .error { color: #ff6b6b; }
+        .success { color: #51cf66; }
+        .warning { color: #ffd43b; }
+        .info { color: #74c0fc; }
+    </style>
+</head>
+<body>
+    <h1>🛍️ 3D Product Display System Test</h1>
+    
+    <div class="test-section">
+        <h2>1. Content Manager Test</h2>
+        <button class="test-button" onclick="testContentManager()">Test Content Manager</button>
+        <button class="test-button" onclick="testProductShapes()">Test Product Shapes</button>
+        <div id="content-output" class="output"></div>
+    </div>
+    
+    <div class="test-section">
+        <h2>2. Product Display Integration Test</h2>
+        <button class="test-button" onclick="testProductDisplay()">Test Product Display</button>
+        <button class="test-button" onclick="testSubmenuIntegration()">Test Submenu Integration</button>
+        <div id="product-output" class="output"></div>
+    </div>
+    
+    <div class="test-section">
+        <h2>3. 3D System Test</h2>
+        <button class="test-button" onclick="test3DSystem()">Test 3D System</button>
+        <button class="test-button" onclick="testProductButtons()">Test Product Buttons</button>
+        <div id="system-output" class="output"></div>
+    </div>
+    
+    <div class="test-section">
+        <h2>4. GLB Model Loading Test</h2>
+        <button class="test-button" onclick="testGLBModels()">Test GLB Models</button>
+        <button class="test-button" onclick="testSubmenuIcons()">Test Submenu Icons</button>
+        <div id="glb-output" class="output"></div>
+    </div>
+
+    <script>
+        function log(message, type = 'info', targetId = 'content-output') {
+            const output = document.getElementById(targetId);
+            const timestamp = new Date().toLocaleTimeString();
+            const logEntry = `[${timestamp}] ${message}\n`;
+            output.innerHTML += `<span class="${type}">${logEntry}</span>`;
+            output.scrollTop = output.scrollHeight;
+        }
+
+        function clearOutput(targetId) {
+            document.getElementById(targetId).innerHTML = '';
+        }
+
+        async function testContentManager() {
+            clearOutput('content-output');
+            log('🔄 Testing Content Manager...', 'info', 'content-output');
+            
+            try {
+                if (!window.contentManager) {
+                    log('❌ Content manager not found on window', 'error', 'content-output');
+                    return;
+                }
+                
+                log('✅ Content manager found', 'success', 'content-output');
+                
+                // Test sync method
+                const syncData = window.contentManager.getContentDataSync('Watermelon OS Theme (Download)');
+                if (syncData) {
+                    log(`✅ Sync data: ${JSON.stringify(syncData, null, 2)}`, 'success', 'content-output');
+                    log(`✅ Shape found: ${syncData.shape}`, 'success', 'content-output');
+                } else {
+                    log('❌ No sync data returned', 'error', 'content-output');
+                }
+                
+                // Test async method
+                const asyncData = await window.contentManager.getContentData('Watermelon OS Theme (Download)');
+                if (asyncData) {
+                    log(`✅ Async data loaded, type: ${asyncData.type}`, 'success', 'content-output');
+                } else {
+                    log('❌ No async data returned', 'error', 'content-output');
+                }
+                
+            } catch (error) {
+                log(`❌ Error: ${error.message}`, 'error', 'content-output');
+            }
+        }
+
+        async function testProductShapes() {
+            clearOutput('content-output');
+            log('🔄 Testing Product Shapes...', 'info', 'content-output');
+            
+            const products = [
+                'Shopify Hydrogen 3D Guide',
+                'Build Like Nuwud: Systems Book', 
+                'Watermelon OS Theme (Download)',
+                'eCommerce Templates',
+                '3D Product Viewer Kit',
+                'Audio + HUD FX Packs'
+            ];
+            
+            for (const product of products) {
+                try {
+                    const data = window.contentManager?.getContentDataSync(product);
+                    if (data && data.shape) {
+                        log(`✅ ${product}: shape="${data.shape}"`, 'success', 'content-output');
+                    } else {
+                        log(`⚠️ ${product}: no shape data`, 'warning', 'content-output');
+                    }
+                } catch (error) {
+                    log(`❌ ${product}: error - ${error.message}`, 'error', 'content-output');
+                }
+            }
+        }
+
+        async function testProductDisplay() {
+            clearOutput('product-output');
+            log('🔄 Testing Product Display...', 'info', 'product-output');
+            
+            try {
+                if (!window.productDisplay) {
+                    log('❌ Product display not found on window', 'error', 'product-output');
+                    return;
+                }
+                
+                log('✅ Product display found', 'success', 'product-output');
+                log(`✅ Is visible: ${window.productDisplay.isVisible}`, 'info', 'product-output');
+                
+                // Test displaying a product
+                const testProduct = window.contentManager?.getContentDataSync('Watermelon OS Theme (Download)');
+                if (testProduct) {
+                    log('🔄 Attempting to display test product...', 'info', 'product-output');
+                    await window.productDisplay.displayProduct(testProduct);
+                    log('✅ Product display attempted', 'success', 'product-output');
+                } else {
+                    log('❌ No test product data available', 'error', 'product-output');
+                }
+                
+            } catch (error) {
+                log(`❌ Error: ${error.message}`, 'error', 'product-output');
+            }
+        }
+
+        async function testSubmenuIntegration() {
+            clearOutput('product-output');
+            log('🔄 Testing Submenu Integration...', 'info', 'product-output');
+            
+            try {
+                // Check if main carousel is available
+                if (!window.debugCarousel) {
+                    log('❌ Main carousel not found', 'error', 'product-output');
+                    return;
+                }
+                
+                log('✅ Main carousel found', 'success', 'product-output');
+                
+                // Check content loading function
+                if (window.loadContentForItem) {
+                    log('✅ Content loading function available', 'success', 'product-output');
+                    
+                    // Test loading Digital Products submenu content
+                    log('🔄 Testing submenu content loading...', 'info', 'product-output');
+                    const result = await window.loadContentForItem('Digital Products', 'Watermelon OS Theme (Download)');
+                    if (result) {
+                        log(`✅ Content loaded: ${result.title}`, 'success', 'product-output');
+                    } else {
+                        log('⚠️ No content returned', 'warning', 'product-output');
+                    }
+                } else {
+                    log('❌ Content loading function not found', 'error', 'product-output');
+                }
+                
+            } catch (error) {
+                log(`❌ Error: ${error.message}`, 'error', 'product-output');
+            }
+        }
+
+        async function test3DSystem() {
+            clearOutput('system-output');
+            log('🔄 Testing 3D System...', 'info', 'system-output');
+            
+            try {
+                // Check Three.js
+                if (typeof THREE !== 'undefined') {
+                    log('✅ Three.js available', 'success', 'system-output');
+                } else {
+                    log('❌ Three.js not found', 'error', 'system-output');
+                }
+                
+                // Check scene
+                if (window.debugCarousel && window.debugCarousel.scene) {
+                    log('✅ 3D scene available', 'success', 'system-output');
+                    log(`✅ Scene children: ${window.debugCarousel.scene.children.length}`, 'info', 'system-output');
+                } else {
+                    log('❌ 3D scene not found', 'error', 'system-output');
+                }
+                
+                // Check product display in scene
+                if (window.productDisplay && window.productDisplay.scene) {
+                    log('✅ Product display has scene reference', 'success', 'system-output');
+                } else {
+                    log('❌ Product display missing scene reference', 'error', 'system-output');
+                }
+                
+            } catch (error) {
+                log(`❌ Error: ${error.message}`, 'error', 'system-output');
+            }
+        }
+
+        async function testProductButtons() {
+            clearOutput('system-output');
+            log('🔄 Testing Product Buttons...', 'info', 'system-output');
+            
+            try {
+                if (!window.productDisplay) {
+                    log('❌ Product display not available', 'error', 'system-output');
+                    return;
+                }
+                
+                log('✅ Product display available', 'success', 'system-output');
+                log(`✅ Button count: ${window.productDisplay.buttons?.length || 0}`, 'info', 'system-output');
+                
+                // Test button click handling
+                if (window.productDisplay.handleButtonClick) {
+                    log('✅ Button click handler available', 'success', 'system-output');
+                } else {
+                    log('❌ Button click handler missing', 'error', 'system-output');
+                }
+                
+            } catch (error) {
+                log(`❌ Error: ${error.message}`, 'error', 'system-output');
+            }
+        }
+
+        async function testGLBModels() {
+            clearOutput('glb-output');
+            log('🔄 Testing GLB Model Loading...', 'info', 'glb-output');
+            
+            const testModels = [
+                'watermelon-usb',
+                '3d-book-hydrogen', 
+                'floating-blueprint',
+                'stacked-website-cards',
+                'hologram-box',
+                'waveform-emitter'
+            ];
+            
+            for (const model of testModels) {
+                try {
+                    const response = await fetch(`/assets/models/${model}.glb`);
+                    if (response.ok) {
+                        log(`✅ ${model}.glb found (${response.status})`, 'success', 'glb-output');
+                    } else {
+                        log(`⚠️ ${model}.glb not found (${response.status})`, 'warning', 'glb-output');
+                    }
+                } catch (error) {
+                    log(`❌ ${model}.glb error: ${error.message}`, 'error', 'glb-output');
+                }
+            }
+        }
+
+        async function testSubmenuIcons() {
+            clearOutput('glb-output');
+            log('🔄 Testing Submenu Icon Integration...', 'info', 'glb-output');
+            
+            try {
+                // Check if watermelon admin is available
+                if (window.watermelonAdmin) {
+                    log('✅ Watermelon admin available', 'success', 'glb-output');
+                    
+                    const menuData = window.watermelonAdmin.getCurrentMenuData();
+                    if (menuData && menuData.data) {
+                        log('✅ Menu data available', 'success', 'glb-output');
+                        log(`✅ Digital Products submenu: ${JSON.stringify(menuData.data.submenus['Digital Products'] || [], null, 2)}`, 'info', 'glb-output');
+                    } else {
+                        log('❌ No menu data available', 'error', 'glb-output');
+                    }
+                } else {
+                    log('❌ Watermelon admin not available', 'error', 'glb-output');
+                }
+                
+                // Check active submenu
+                if (window.watermelonAdmin?.getActiveSubmenu()) {
+                    const submenu = window.watermelonAdmin.getActiveSubmenu();
+                    log('✅ Active submenu found', 'success', 'glb-output');
+                    log(`✅ Submenu items: ${submenu.items?.length || 0}`, 'info', 'glb-output');
+                } else {
+                    log('ℹ️ No active submenu (normal if not opened)', 'info', 'glb-output');
+                }
+                
+            } catch (error) {
+                log(`❌ Error: ${error.message}`, 'error', 'glb-output');
+            }
+        }
+
+        // Auto-run basic tests when page loads
+        window.addEventListener('load', () => {
+            setTimeout(() => {
+                log('🚀 Auto-testing basic systems...', 'info', 'content-output');
+                testContentManager();
+            }, 2000);
+        });
+    </script>
+</body>
+</html>

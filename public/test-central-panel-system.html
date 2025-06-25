@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Central Panel Content System</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            background: #0a0a0a;
+            color: #ffffff;
+            font-family: Arial, sans-serif;
+        }
+        
+        #carousel-container {
+            width: 100vw;
+            height: 80vh;
+            background: linear-gradient(45deg, #1a1a2e, #16213e);
+        }
+        
+        .controls {
+            margin: 20px 0;
+            background: rgba(255, 255, 255, 0.1);
+            padding: 15px;
+            border-radius: 8px;
+        }
+        
+        .controls button {
+            margin: 5px;
+            padding: 8px 16px;
+            background: #007acc;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        
+        .controls button:hover {
+            background: #005a9e;
+        }
+        
+        .status {
+            margin: 10px 0;
+            padding: 10px;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 4px;
+            font-family: monospace;
+            font-size: 12px;
+        }
+        
+        .test-log {
+            height: 200px;
+            overflow-y: auto;
+            background: rgba(0, 0, 0, 0.5);
+            padding: 10px;
+            border-radius: 4px;
+            font-family: monospace;
+            font-size: 11px;
+        }
+    </style>
+</head>
+<body>
+    <h1>🍉 Watermelon 3D Menu - Central Panel Content Test</h1>
+    
+    <div class="controls">
+        <h3>Test Controls</h3>
+        <button onclick="testMainItemClick()">Test Main Item Content</button>
+        <button onclick="testSubmenuItemClick()">Test Submenu Item Content</button>
+        <button onclick="testProductDisplay()">Test Product Display</button>
+        <button onclick="clearTestLog()">Clear Log</button>
+        <button onclick="inspectCentralPanel()">Inspect Central Panel</button>
+    </div>
+    
+    <div class="status">
+        <div>Status: <span id="status">Initializing...</span></div>
+        <div>Central Panel: <span id="central-panel-status">Not Available</span></div>
+        <div>Active Submenu: <span id="submenu-status">None</span></div>
+        <div>Current Content: <span id="content-status">None</span></div>
+    </div>
+    
+    <div id="carousel-container"></div>
+    
+    <div class="controls">
+        <h3>Test Log</h3>
+        <div id="test-log" class="test-log"></div>
+    </div>
+
+    <script type="module">
+        import { setupCarousel } from '/app/components/Carousel3DPro/main.js';
+        
+        // Test logging
+        function log(message) {
+            const logEl = document.getElementById('test-log');
+            const timestamp = new Date().toLocaleTimeString();
+            logEl.innerHTML += `[${timestamp}] ${message}\n`;
+            logEl.scrollTop = logEl.scrollHeight;
+            console.log(`[Test] ${message}`);
+        }
+        
+        window.clearTestLog = () => {
+            document.getElementById('test-log').innerHTML = '';
+        };
+        
+        // Enhanced status monitoring
+        function updateStatus() {
+            document.getElementById('status').textContent = 'Running';
+            document.getElementById('central-panel-status').textContent = 
+                window.centralPanel ? 'Available' : 'Not Available';
+            document.getElementById('submenu-status').textContent = 
+                window.watermelonAdmin?.getActiveSubmenu() ? 'Active' : 'None';
+            document.getElementById('content-status').textContent = 
+                window.centralPanel?.currentContent ? 'Loaded' : 'None';
+        }
+        
+        // Test functions
+        window.testMainItemClick = async () => {
+            log('Testing main item click...');
+            try {
+                const result = await window.loadContentForItem('Products');
+                log(`Main item content loaded: ${result ? 'Success' : 'Failed'}`);
+                if (result) {
+                    log(`Content type: ${result.type}, title: ${result.title}`);
+                }
+                updateStatus();
+            } catch (error) {
+                log(`Error loading main item content: ${error.message}`);
+            }
+        };
+        
+        window.testSubmenuItemClick = async () => {
+            log('Testing submenu item click...');
+            try {
+                const result = await window.loadContentForItem('Products', 'Electronics');
+                log(`Submenu item content loaded: ${result ? 'Success' : 'Failed'}`);
+                if (result) {
+                    log(`Content type: ${result.type}, title: ${result.title}`);
+                    if (result.shape) {
+                        log(`Has 3D model: ${result.shape}`);
+                    }
+                }
+                updateStatus();
+            } catch (error) {
+                log(`Error loading submenu item content: ${error.message}`);
+            }
+        };
+        
+        window.testProductDisplay = async () => {
+            log('Testing product display with 3D model...');
+            try {
+                // Test a known product with 3D model
+                const result = await window.loadContentForItem('Products', 'cart-3d-model-demo');
+                log(`Product content loaded: ${result ? 'Success' : 'Failed'}`);
+                if (result) {
+                    log(`Type: ${result.type}, shape: ${result.shape || 'No 3D model'}`);
+                    if (result.isShopifyProduct) {
+                        log('✅ Shopify product detected');
+                    }
+                }
+                updateStatus();
+            } catch (error) {
+                log(`Error loading product content: ${error.message}`);
+            }
+        };
+        
+        window.inspectCentralPanel = () => {
+            log('Inspecting central panel...');
+            if (window.centralPanel) {
+                log(`Central panel position: ${window.centralPanel.position.x}, ${window.centralPanel.position.y}, ${window.centralPanel.position.z}`);
+                log(`Has current content: ${!!window.centralPanel.currentContent}`);
+                log(`Product models count: ${window.centralPanel.productModels?.length || 0}`);
+                log(`Is transitioning: ${window.centralPanel.isTransitioning}`);
+                
+                // Check if panel is in scene
+                const inScene = window.centralPanel.parent !== null;
+                log(`In scene: ${inScene}`);
+                
+                if (window.centralPanel.currentContent) {
+                    log(`Current content scale: ${window.centralPanel.currentContent.scale.x}`);
+                }
+            } else {
+                log('❌ Central panel not available');
+            }
+            updateStatus();
+        };
+        
+        // Initialize carousel
+        log('Initializing 3D carousel...');
+        const container = document.getElementById('carousel-container');
+        
+        try {
+            const carouselControls = setupCarousel(container);
+            log('✅ Carousel initialized successfully');
+            
+            // Wait a bit for initialization
+            setTimeout(() => {
+                updateStatus();
+                log('System ready for testing');
+                
+                // Set up periodic status updates
+                setInterval(updateStatus, 2000);
+            }, 1000);
+            
+        } catch (error) {
+            log(`❌ Failed to initialize carousel: ${error.message}`);
+            document.getElementById('status').textContent = 'Error';
+        }
+        
+        // Monitor content loading
+        const originalLoadContent = window.loadContentForItem;
+        if (originalLoadContent) {
+            window.loadContentForItem = async (...args) => {
+                log(`Loading content for: ${args.join(' > ')}`);
+                try {
+                    const result = await originalLoadContent(...args);
+                    if (result) {
+                        log(`✅ Content loaded successfully`);
+                    } else {
+                        log(`⚠️ No content returned`);
+                    }
+                    return result;
+                } catch (error) {
+                    log(`❌ Content loading failed: ${error.message}`);
+                    throw error;
+                }
+            };
+        }
+    </script>
+</body>
+</html>

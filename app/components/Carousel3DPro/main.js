@@ -113,6 +113,7 @@ import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { Carousel3DPro } from './Carousel3DPro.js';
 import { Carousel3DSubmenu } from './Carousel3DSubmenu';
 import { spawnSubmenuAsync } from './SubmenuManager.js'; // Import the extracted function
+import { CentralContentPanel } from './CentralContentPanel.js'; // Import central content panel system
 import {
     defaultCarouselStyle,
     darkTheme,
@@ -442,9 +443,7 @@ export function setupCarousel(container, menuData = null) {
       // Initialize Content Manager for contextual content
     const contentManager = new ContentManager();
       // Expose globally for debugging and external access
-    window.contentManager = contentManager;
-    
-    // Initialize enhanced cart integration
+    window.contentManager = contentManager;    // Initialize enhanced cart integration
     enhanceCartIntegration();
     
     // Initialize testing utilities
@@ -539,12 +538,33 @@ export function setupCarousel(container, menuData = null) {
     console.log(`📋 Items: ${items.length} (${items.join(', ')})`);
     console.log(`📁 Submenus: ${Object.keys(submenus).length}`);
     console.log('🔧 Admin: Type watermelonAdmin.showHelp() for commands');
-    console.groupEnd();
-    let activeSubmenu = null; // Track the currently active submenu
+    console.groupEnd();    let activeSubmenu = null; // Track the currently active submenu
     let isTransitioning = false; // New flag for async handling, initially false
     const carousel = new Carousel3DPro(items, currentTheme); // Create the carousel instance
     carousel.userData = { camera }; // Store camera reference in userData for later access
     carousel.isAnimating = false; // Track animation state
+    
+    // Initialize Central Content Panel system
+    const centralPanel = new CentralContentPanel({
+        radius: 3,
+        width: 6,
+        height: 4
+    });
+    
+    // Store references to Three.js objects in the panel
+    centralPanel.scene = scene;
+    centralPanel.camera = camera;
+    centralPanel.renderer = renderer;
+    
+    // Add central panel to scene
+    scene.add(centralPanel);
+    
+    // Expose central panel globally for content loading
+    window.centralPanel = centralPanel;
+    
+    console.warn("[Watermelon] Added central content panel to scene");
+    console.warn("[Watermelon] Central panel available:", !!window.centralPanel);
+    
     // Fix 1: Ensure carousel is added to scene
     scene.add(carousel);
     console.warn("[Watermelon] Added main carousel to scene:", scene.children.includes(carousel));
@@ -911,36 +931,12 @@ export function setupCarousel(container, menuData = null) {
                                 waitForWindowWM(id); // Wait for window.__wm__ to be ready before triggering content
                                 console.warn(`🍉 Attempting to trigger floating panel: ${id}`);
                             }
-                        }
-                    }).catch(error => {
+                        }                    }).catch(error => {
                         console.error(`[🍉 Content] Failed to load content for ${parentItem} > ${item}:`, error);
                     });
                 } else if (obj.userData?.isCloseButton || obj.parent?.userData?.isCloseButton) { // Check if the clicked object or its parent is the close button
                     // Handle close button click
                     closeSubmenu(); // Call the closeSubmenu function to close the active submenu
-                }
-                if (activeSubmenu) {
-                    const hits = raycaster.intersectObject(activeSubmenu, true); // Check for intersections with the active submenu
-                    if (hits.length > 0) { // If there are hits, handle the click within the submenu
-                        const obj = hits[0].object; // Check the first hit object
-                        let submenuItemData = null; // Initialize submenuItemData to null
-                        if (obj.userData?.isSubmenuItem) { // Check if the clicked object is a submenu item
-                            submenuItemData = obj.userData; // Assign the userData of the clicked object to submenuItemData
-                        } else if (obj.parent?.userData?.isSubmenuItem) { // Check if the parent of the clicked object is a submenu item
-                            submenuItemData = obj.parent.userData; // Assign the userData of the parent object to submenuItemData
-                        }
-                        if (submenuItemData && typeof submenuItemData.index === 'number') { // Check if submenuItemData is valid and has a numeric index
-                            const index = submenuItemData.index; // Get the index of the clicked submenu item
-                            console.log(`🖱️ [main.js] Clicked submenu index=${index}, name=${submenuItemData.name || "Unknown"}`);
-                            console.log(`🖱️ [main.js] About to call activeSubmenu.selectItem(${index})`);
-                            activeSubmenu.intendedClickIndex = index; // Preserve the clicked index
-                            activeSubmenu.selectItem(index, true, true); // Show preview
-                        } else if (obj.userData?.isCloseButton || obj.parent?.userData?.isCloseButton) { // Check if the clicked object or its parent is the close button
-                            console.log('🖱️ [main.js] Close button clicked.');
-                            closeSubmenu(); // Call the closeSubmenu function to close the active submenu
-                        }
-                        return; // Exit after handling submenu click or close button
-                    }
                 }
                 return; // Exit after handling submenu click or close button
             }
@@ -1046,12 +1042,16 @@ export function setupCarousel(container, menuData = null) {
                 }
             }
         }
-        
-        // Skip heavy updates during transitions to improve performance
+          // Skip heavy updates during transitions to improve performance
         if (!isTransitioning) {
             // Wrap in try-catch to prevent animation loop from breaking if an update fails
             try {
                 carousel.update(); 
+                
+                // Update central content panel
+                if (centralPanel && centralPanel.update) {
+                    centralPanel.update(Date.now());
+                }
                 
                 // Add more robust submenu update logic with debugging
                 if (canUpdateSubmenu) {

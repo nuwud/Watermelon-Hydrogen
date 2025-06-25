@@ -222,21 +222,38 @@ export class CentralContentPanel extends THREE.Group {
   }
   
   createProductContent(data) {
+    // Create HTML content for product display
     const contentDiv = document.createElement('div');
     contentDiv.className = 'central-panel-content product-content';
+    
+    // Use enhanced product content with pricing and actions
+    const productContent = data.content || data.formatted || '';
+    const price = data.price || (data.selectedVariant?.price ? `$${data.selectedVariant.price.amount}` : 'Price TBD');
+    
     contentDiv.innerHTML = `
       <div class="product-wrapper">
-        <div class="product-image">
-          <img src="${data.image}" alt="${data.title}" />
+        <div class="product-header">
+          <h1 class="product-title">${data.title}</h1>
+          <div class="product-price">${price}</div>
         </div>
-        <div class="product-info">
-          <h2>${data.title}</h2>
-          <p class="price">${data.price}</p>
-          <p class="description">${data.description}</p>
-          <div class="product-actions">
-            <button class="add-to-cart">Add to Cart</button>
-            <button class="view-details">View Details</button>
-          </div>
+        <div class="product-content">
+          ${typeof productContent === 'string' ? productContent : productContent.html || data.description || ''}
+        </div>
+        <div class="product-actions">
+          <button class="add-to-cart-btn" data-product-handle="${data.handle}">
+            Add to Cart
+          </button>
+          <button class="view-details-btn" data-product-url="${data.url}">
+            View Details
+          </button>
+          <button class="buy-now-btn" data-product-handle="${data.handle}">
+            Buy Now
+          </button>
+        </div>
+        <div class="product-meta">
+          <span class="product-type">${data.type === 'product' ? 'Digital Product' : data.type}</span>
+          ${data.isShopifyProduct ? '<span class="shopify-badge">✅ Shopify</span>' : ''}
+          ${data.isDummy ? '<span class="demo-badge">⚠️ Demo</span>' : ''}
         </div>
       </div>
     `;
@@ -246,6 +263,11 @@ export class CentralContentPanel extends THREE.Group {
     const cssObject = new CSS3DObject(contentDiv);
     cssObject.position.set(0, 0, 0);
     cssObject.scale.set(0.01, 0.01, 0.01);
+    
+    // Add 3D GLB model if product has a shape
+    if (data.shape && data.shape !== 'null') {
+      this.add3DProductModel(data.shape);
+    }
     
     return cssObject;
   }
@@ -390,6 +412,9 @@ export class CentralContentPanel extends THREE.Group {
   async hideContent() {
     if (!this.currentContent) return;
     
+    // Clear any product models
+    this.clearProductModels();
+    
     return new Promise((resolve) => {
       gsap.to(this.currentContent.scale, {
         x: 0,
@@ -492,6 +517,15 @@ export class CentralContentPanel extends THREE.Group {
     if (this.glow && this.glow.material.uniforms) {
       this.glow.material.uniforms.time.value = time * 0.001;
     }
+    
+    // Update floating animations for product models
+    if (this.productModels) {
+      this.productModels.forEach(model => {
+        if (model.userData.floatAnimation) {
+          model.userData.floatAnimation();
+        }
+      });
+    }
   }
   
   dispose() {
@@ -503,6 +537,9 @@ export class CentralContentPanel extends THREE.Group {
       this.remove(this.currentContent);
     }
     
+    // Clear product models
+    this.clearProductModels();
+    
     // Dispose materials and geometries
     this.traverse((child) => {
       if (child.material) {
@@ -512,5 +549,110 @@ export class CentralContentPanel extends THREE.Group {
         child.geometry.dispose();
       }
     });
+  }
+  
+  /**
+   * Add a floating 3D GLB model for a product
+   * @param {string} glbPath - Path to the GLB model file
+   */
+  async add3DProductModel(glbPath) {
+    try {
+      console.warn(`[🍉 3D Model] Loading GLB model: ${glbPath}`);
+      
+      // Import GLTFLoader dynamically
+      const { GLTFLoader } = await import('three/examples/jsm/loaders/GLTFLoader.js');
+      const loader = new GLTFLoader();
+      
+      // Load the GLB model
+      const gltf = await new Promise((resolve, reject) => {
+        loader.load(
+          glbPath,
+          (gltf) => resolve(gltf),
+          (progress) => {
+            console.warn(`[🍉 3D Model] Loading progress: ${(progress.loaded / progress.total * 100)}%`);
+          },
+          (error) => reject(error)
+        );
+      });
+      
+      const model = gltf.scene;
+      
+      // Position the model floating next to the content
+      model.position.set(-2, 1, 0); // Left side of content panel
+      model.scale.setScalar(1); // Adjust scale as needed
+      
+      // Add floating animation
+      const floatAnimation = () => {
+        const time = Date.now() * 0.001;
+        model.position.y = 1 + Math.sin(time * 2) * 0.2; // Gentle floating motion
+        model.rotation.y = time * 0.5; // Slow rotation
+      };
+      
+      // Store animation function for updates
+      model.userData.floatAnimation = floatAnimation;
+      
+      // Add the model to the central panel
+      this.add(model);
+      
+      // Store reference for cleanup
+      if (!this.productModels) this.productModels = [];
+      this.productModels.push(model);
+      
+      console.warn(`[🍉 3D Model] Successfully added GLB model to central panel`);
+      
+      return model;
+      
+    } catch (error) {
+      console.error(`[🍉 3D Model] Failed to load GLB model ${glbPath}:`, error);
+      
+      // Create a fallback 3D shape if GLB loading fails
+      const fallbackGeometry = new THREE.BoxGeometry(1, 1, 1);
+      const fallbackMaterial = new THREE.MeshBasicMaterial({
+        color: 0x00ffff,
+        wireframe: true
+      });
+      const fallbackMesh = new THREE.Mesh(fallbackGeometry, fallbackMaterial);
+      
+      fallbackMesh.position.set(-2, 1, 0);
+      fallbackMesh.scale.setScalar(0.8);
+      
+      // Add floating animation to fallback
+      const floatAnimation = () => {
+        const time = Date.now() * 0.001;
+        fallbackMesh.position.y = 1 + Math.sin(time * 2) * 0.2;
+        fallbackMesh.rotation.y = time * 0.5;
+      };
+      
+      fallbackMesh.userData.floatAnimation = floatAnimation;
+      
+      this.add(fallbackMesh);
+      
+      if (!this.productModels) this.productModels = [];
+      this.productModels.push(fallbackMesh);
+      
+      console.warn(`[🍉 3D Model] Added fallback wireframe cube instead of GLB`);
+      
+      return fallbackMesh;
+    }
+  }
+
+  /**
+   * Clear all product models from the panel
+   */
+  clearProductModels() {
+    if (this.productModels) {
+      this.productModels.forEach(model => {
+        this.remove(model);
+        if (model.geometry) model.geometry.dispose();
+        if (model.material) {
+          if (Array.isArray(model.material)) {
+            model.material.forEach(mat => mat.dispose());
+          } else {
+            model.material.dispose();
+          }
+        }
+      });
+      this.productModels = [];
+    }
   }
 }

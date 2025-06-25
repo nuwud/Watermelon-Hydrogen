@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>🍉 Product Connection Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; background: #000; color: #00ff00; }
+        .test-section { border: 1px solid #333; padding: 15px; margin: 10px 0; }
+        .success { color: #00ff00; }
+        .error { color: #ff4444; }
+        .warning { color: #ffaa00; }
+        button { padding: 10px 15px; margin: 5px; background: #333; color: #00ff00; border: 1px solid #555; }
+        button:hover { background: #444; }
+        #results { margin-top: 20px; }
+        .product-result { margin: 10px 0; padding: 10px; border-left: 3px solid #555; }
+    </style>
+</head>
+<body>
+    <h1>🍉 Watermelon Product Connection Test</h1>
+    
+    <div class="test-section">
+        <h2>1. API Tests</h2>
+        <button onclick="testAPI()">Test Product API</button>
+        <button onclick="testSpecificProduct()">Test Specific Product</button>
+        <div id="api-results"></div>
+    </div>
+    
+    <div class="test-section">
+        <h2>2. Content Manager Tests</h2>
+        <button onclick="testContentManager()">Test Content Manager</button>
+        <button onclick="testCentralPanel()">Test Central Panel</button>
+        <div id="content-results"></div>
+    </div>
+    
+    <div class="test-section">
+        <h2>3. Manual Product Tests</h2>
+        <button onclick="loadProduct('audio-hud-fx-packs')">Load Audio FX Pack</button>
+        <button onclick="loadProduct('shopify-hydrogen-3d-guide')">Load Hydrogen Guide</button>
+        <button onclick="loadProduct('watermelonos-theme-download')">Load Theme Download</button>
+        <div id="manual-results"></div>
+    </div>
+    
+    <div id="results"></div>
+
+    <script>
+        // Test functions
+        async function testAPI() {
+            const results = document.getElementById('api-results');
+            results.innerHTML = '<p>🔄 Testing API endpoints...</p>';
+            
+            const testHandles = [
+                'audio-hud-fx-packs',
+                'shopify-hydrogen-3d-guide', 
+                'watermelonos-theme-download',
+                'e-commerce-templates-collection',
+                'build-like-nuwud-systems-book',
+                '3d-product-viewer-kit'
+            ];
+            
+            let output = '';
+            
+            for (const handle of testHandles) {
+                try {
+                    const response = await fetch(`/api/product?handle=${handle}`);
+                    const data = await response.json();
+                    
+                    if (data.success && data.product) {
+                        output += `<div class="product-result success">✅ ${handle}: ${data.product.title} - $${data.product.selectedOrFirstAvailableVariant?.price?.amount || 'N/A'}</div>`;
+                    } else {
+                        output += `<div class="product-result error">❌ ${handle}: ${data.error || 'Not found'}</div>`;
+                    }
+                } catch (error) {
+                    output += `<div class="product-result error">❌ ${handle}: ${error.message}</div>`;
+                }
+            }
+            
+            results.innerHTML = output;
+        }
+        
+        async function testSpecificProduct() {
+            const handle = 'audio-hud-fx-packs';
+            try {
+                const response = await fetch(`/api/product?handle=${handle}`);
+                const data = await response.json();
+                
+                console.log('🧪 Detailed product data:', data);
+                
+                const results = document.getElementById('api-results');
+                results.innerHTML = `
+                    <h3>Detailed Test: ${handle}</h3>
+                    <pre>${JSON.stringify(data, null, 2)}</pre>
+                `;
+            } catch (error) {
+                console.error('API test error:', error);
+            }
+        }
+        
+        function testContentManager() {
+            const results = document.getElementById('content-results');
+            
+            if (typeof window.contentManager === 'undefined') {
+                results.innerHTML = '<p class="error">❌ Content Manager not available. Load the 3D menu first.</p>';
+                return;
+            }
+            
+            results.innerHTML = '<p class="success">✅ Content Manager is available!</p>';
+        }
+        
+        function testCentralPanel() {
+            const results = document.getElementById('content-results');
+            
+            if (typeof window.centralPanel === 'undefined') {
+                results.innerHTML += '<p class="error">❌ Central Panel not available. Load the 3D menu first.</p>';
+                return;
+            }
+            
+            results.innerHTML += '<p class="success">✅ Central Panel is available!</p>';
+        }
+        
+        async function loadProduct(handle) {
+            const results = document.getElementById('manual-results');
+            results.innerHTML = `<p>🔄 Loading product: ${handle}...</p>`;
+            
+            try {
+                if (typeof window.contentManager === 'undefined') {
+                    results.innerHTML = '<p class="error">❌ Content Manager not available. Load the 3D menu first.</p>';
+                    return;
+                }
+                
+                // Map handles to content manager keys
+                const handleToKey = {
+                    'audio-hud-fx-packs': 'Audio + HUD FX Packs',
+                    'shopify-hydrogen-3d-guide': 'Shopify Hydrogen 3D Guide',
+                    'watermelonos-theme-download': 'Watermelon OS Theme (Download)',
+                    'e-commerce-templates-collection': 'eCommerce Templates',
+                    'build-like-nuwud-systems-book': 'Build Like Nuwud: Systems Book',
+                    '3d-product-viewer-kit': '3D Product Viewer Kit'
+                };
+                
+                const contentKey = handleToKey[handle];
+                if (!contentKey) {
+                    results.innerHTML = `<p class="error">❌ No content mapping for handle: ${handle}</p>`;
+                    return;
+                }
+                
+                const contentData = await window.contentManager.getContentData(contentKey);
+                
+                if (contentData) {
+                    if (contentData.isShopifyProduct) {
+                        results.innerHTML = `
+                            <div class="success">
+                                <h3>✅ Real Shopify Product Loaded!</h3>
+                                <p><strong>Title:</strong> ${contentData.title}</p>
+                                <p><strong>Handle:</strong> ${contentData.handle}</p>
+                                <p><strong>Price:</strong> $${contentData.price?.amount || 'N/A'}</p>
+                                <p><strong>Description:</strong> ${contentData.description || 'N/A'}</p>
+                            </div>
+                        `;
+                        
+                        // Try to load into central panel
+                        if (window.centralPanel && window.centralPanel.loadTemplatedContent) {
+                            window.centralPanel.loadTemplatedContent(contentData);
+                            results.innerHTML += '<p class="success">✅ Content loaded into Central Panel!</p>';
+                        }
+                    } else {
+                        results.innerHTML = `<p class="warning">⚠️ Using dummy/fallback content for ${contentKey}</p>`;
+                    }
+                } else {
+                    results.innerHTML = `<p class="error">❌ No content data returned for ${contentKey}</p>`;
+                }
+                
+            } catch (error) {
+                results.innerHTML = `<p class="error">❌ Error: ${error.message}</p>`;
+                console.error('Product loading error:', error);
+            }
+        }
+        
+        // Auto-run basic tests on load
+        window.addEventListener('load', () => {
+            setTimeout(() => {
+                console.log('🍉 Auto-running product connection tests...');
+                testContentManager();
+                testCentralPanel();
+            }, 2000);
+        });
+    </script>
+</body>
+</html>

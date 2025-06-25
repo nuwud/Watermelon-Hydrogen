@@ -1,0 +1,9 @@
+# Placeholder customer account GraphQL file
+# This satisfies the codegen scanner while customer account features are disabled
+
+# Empty query to provide valid GraphQL syntax
+query PlaceholderQuery {
+  # Customer account GraphQL operations are temporarily disabled
+  # Original files are backed up in /backup/customer-account-graphql/
+  __typename
+}

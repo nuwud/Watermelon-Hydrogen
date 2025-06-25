@@ -116,7 +116,8 @@ export const NUWUD_CONTENT_MAP = {
   },
   'Shopify Hydrogen 3D Guide': {
     type: 'product',
-    url: '/pages/shopify-hydrogen-3d-guide',
+    url: '/products/shopify-hydrogen-3d-guide',
+    handle: 'shopify-hydrogen-3d-guide',
     title: 'Shopify Hydrogen 3D Guide',
     description: 'Complete guide to 3D Shopify development',
     icon: '📖',
@@ -125,7 +126,8 @@ export const NUWUD_CONTENT_MAP = {
   },
   'Build Like Nuwud: Systems Book': {
     type: 'product',
-    url: '/pages/build-like-nuwud-systems-book',
+    url: '/products/build-like-nuwud-systems-book',
+    handle: 'build-like-nuwud-systems-book',
     title: 'Build Like Nuwud: Systems Book',
     description: 'Complete business systems methodology',
     icon: '📋',
@@ -134,7 +136,8 @@ export const NUWUD_CONTENT_MAP = {
   },
   'Watermelon OS Theme (Download)': {
     type: 'product',
-    url: '/pages/watermelon-os-theme-download',
+    url: '/products/watermelonos-theme-download',
+    handle: 'watermelonos-theme-download',
     title: 'Watermelon OS Theme',
     description: 'Complete 3D theme package download',
     icon: '🍉',
@@ -143,7 +146,8 @@ export const NUWUD_CONTENT_MAP = {
   },
   'eCommerce Templates': {
     type: 'product',
-    url: '/pages/ecommerce-templates',
+    url: '/products/e-commerce-templates-collection',
+    handle: 'e-commerce-templates-collection',
     title: 'eCommerce Templates',
     description: 'Ready-to-use store designs',
     icon: '🛒',
@@ -152,7 +156,8 @@ export const NUWUD_CONTENT_MAP = {
   },
   '3D Product Viewer Kit': {
     type: 'product',
-    url: '/pages/3d-product-viewer-kit',
+    url: '/products/3d-product-viewer-kit',
+    handle: '3d-product-viewer-kit',
     title: '3D Product Viewer Kit',
     description: 'Three.js product visualization toolkit',
     icon: '📦',
@@ -161,7 +166,8 @@ export const NUWUD_CONTENT_MAP = {
   },
   'Audio + HUD FX Packs': {
     type: 'product',
-    url: '/pages/audio-hud-fx-packs',
+    url: '/products/audio-hud-fx-packs',
+    handle: 'audio-hud-fx-packs',
     title: 'Audio + HUD FX Packs',
     description: 'Sound effects and UI components',
     icon: '🎧',
@@ -423,6 +429,32 @@ export class ContentManager {
     }
   }
 
+  /**
+   * Get content data synchronously (for submenu creation)
+   * Returns basic content info from the mapping without fetching external data
+   */
+  getContentDataSync(itemTitle) {
+    const contentInfo = NUWUD_CONTENT_MAP[itemTitle];
+    
+    if (!contentInfo) {
+      console.warn(`[ContentManager] No content mapping found for: ${itemTitle}`);
+      return null;
+    }
+
+    // Return the basic info immediately (no async operations)
+    return {
+      type: contentInfo.type,
+      title: contentInfo.title || itemTitle,
+      description: contentInfo.description,
+      icon: contentInfo.icon,
+      shape: contentInfo.shape,
+      url: contentInfo.url,
+      handle: contentInfo.handle,
+      price: contentInfo.price,
+      isSync: true // Flag to indicate this is sync data
+    };
+  }
+
   async fetchPageContent(contentInfo) {
     // Extract page handle from URL (e.g., "/pages/home" -> "home")
     const pageHandle = contentInfo.url.replace('/pages/', '');
@@ -467,8 +499,9 @@ export class ContentManager {
   }
 
   async fetchProductContent(contentInfo) {
-    // Extract product handle from URL or use title as handle
-    const productHandle = contentInfo.url.replace('/pages/', '').replace('/products/', '') || 
+    // Use explicit handle if available, otherwise extract from URL or derive from title
+    const productHandle = contentInfo.handle || 
+                          contentInfo.url.replace('/pages/', '').replace('/products/', '') || 
                           contentInfo.title.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
     
     try {

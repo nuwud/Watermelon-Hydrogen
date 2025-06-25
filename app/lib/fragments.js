@@ -215,7 +215,7 @@ export const HEADER_QUERY = `#graphql
 
 // Fragment for fetching Shopify page content
 export const PAGE_FRAGMENT = `#graphql
-  fragment Page on Page {
+  fragment PageBasic on Page {
     id
     title
     handle
@@ -238,7 +238,7 @@ export const PAGE_QUERY = `#graphql
     $handle: String!
   ) @inContext(language: $language, country: $country) {
     page(handle: $handle) {
-      ...Page
+      ...PageBasic
     }
   }
   ${PAGE_FRAGMENT}
@@ -253,7 +253,7 @@ export const PAGES_QUERY = `#graphql
   ) @inContext(language: $language, country: $country) {
     pages(first: 50, query: $query) {
       nodes {
-        ...Page
+        ...PageBasic
       }
     }
   }
@@ -271,4 +271,47 @@ export const FOOTER_QUERY = `#graphql
     }
   }
   ${MENU_FRAGMENT}
+`;
+
+// Product query fragment and query
+export const PRODUCT_FRAGMENT = `#graphql
+  fragment ProductBasic on Product {
+    id
+    title
+    handle
+    description
+    featuredImage {
+      id
+      url
+      altText
+      width
+      height
+    }
+    priceRange {
+      minVariantPrice {
+        amount
+        currencyCode
+      }
+    }
+    variants(first: 1) {
+      nodes {
+        id
+        title
+        availableForSale
+        price {
+          amount
+          currencyCode
+        }
+      }
+    }
+  }
+`;
+
+export const PRODUCT_QUERY = `#graphql
+  query Product($handle: String!) {
+    product(handle: $handle) {
+      ...ProductBasic
+    }
+  }
+  ${PRODUCT_FRAGMENT}
 `;

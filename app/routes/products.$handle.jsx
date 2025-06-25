@@ -72,7 +72,7 @@ async function loadCriticalData({context, params, request}) {
  * Make sure to not throw any errors here, as it will cause the page to 500.
  * @param {LoaderFunctionArgs}
  */
-function loadDeferredData({context, params}) {
+function loadDeferredData() {
   // Put any API calls that is not critical to be available on first page render
   // For example: product reviews, product recommendations, social feeds.
 
@@ -181,7 +181,7 @@ const PRODUCT_VARIANT_FRAGMENT = `#graphql
 `;
 
 const PRODUCT_FRAGMENT = `#graphql
-  fragment Product on Product {
+  fragment ProductPage on Product {
     id
     title
     vendor
@@ -222,14 +222,14 @@ const PRODUCT_FRAGMENT = `#graphql
 `;
 
 const PRODUCT_QUERY = `#graphql
-  query Product(
+  query ProductPage(
     $country: CountryCode
     $handle: String!
     $language: LanguageCode
     $selectedOptions: [SelectedOptionInput!]!
   ) @inContext(country: $country, language: $language) {
     product(handle: $handle) {
-      ...Product
+      ...ProductPage
     }
   }
   ${PRODUCT_FRAGMENT}

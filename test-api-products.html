@@ -1,0 +1,47 @@
+/**
+ * Quick API test for Shopify products
+ * Open this in browser at localhost:3001 and check console
+ */
+
+console.log('🍉 Testing Shopify Product API...');
+
+// Test the actual product handles from your store
+const testHandles = [
+  'audio-hud-fx-packs',
+  '3d-product-viewer-kit', 
+  'e-commerce-templates-collection',
+  'watermelonos-theme-download',
+  'build-like-nuwud-systems-book',
+  'shopify-hydrogen-3d-guide'
+];
+
+async function testProductAPI() {
+  console.log('🧪 Testing product API endpoints...');
+  
+  for (const handle of testHandles) {
+    try {
+      console.log(`\n📦 Testing: ${handle}`);
+      
+      const response = await fetch(`/api/product?handle=${handle}`);
+      const data = await response.json();
+      
+      if (data.success && data.product) {
+        console.log(`✅ ${handle}: SUCCESS`);
+        console.log(`   Title: ${data.product.title}`);
+        console.log(`   Price: ${data.product.selectedOrFirstAvailableVariant?.price?.amount || 'N/A'}`);
+        console.log(`   Images: ${data.product.images?.nodes?.length || 0} found`);
+      } else {
+        console.log(`❌ ${handle}: NOT FOUND`);
+        console.log(`   Error: ${data.error || 'Unknown error'}`);
+      }
+    } catch (error) {
+      console.log(`❌ ${handle}: API ERROR`);
+      console.log(`   Error: ${error.message}`);
+    }
+  }
+  
+  console.log('\n🍉 Product API test complete!');
+}
+
+// Run the test automatically
+testProductAPI();

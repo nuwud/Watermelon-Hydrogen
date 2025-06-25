@@ -1,5 +1,8 @@
 // app/components/Carousel3DMenu.jsx
 import {useEffect, useRef} from 'react';
+import * as THREE from 'three';
+import {gsap} from 'gsap';
+import {OrbitControls} from 'three/examples/jsm/controls/OrbitControls.js';
 import ClientOnly from './ClientOnly';
 import Carousel3DProWrapper from './Carousel3DPro/Carousel3DProWrapper';
 import * as menuTransformUtils from '../utils/menuTransform';
@@ -12,32 +15,16 @@ export function Carousel3DMenu({ menuData }) {
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
-    // Rest of effect...
-
-    const loadGSAP = async () => {
-      if (window.gsap) return window.gsap;
-      try {
-        const gsap = await import('gsap');
-        window.gsap = gsap.default;
-        return gsap.default;
-      } catch (err) {
-        console.error('Failed to load GSAP:', err);
-        throw err;
-      }
-    };    
 
     const loadCarousel = async () => {
       try {
-        await loadGSAP();
-        const THREE = await import('three');
+        // Set up global references for backward compatibility
         window.THREE = THREE;
+        window.gsap = gsap;
+        window.OrbitControls = OrbitControls;
 
-        const [OrbitControlsModule, {setupCarousel}] = await Promise.all([
-          import('three/examples/jsm/controls/OrbitControls.js'),
-          import('./Carousel3DPro/main.js'),
-        ]);
-
-        window.OrbitControls = OrbitControlsModule.OrbitControls;
+        // Dynamic import only the main carousel setup function
+        const {setupCarousel} = await import('./Carousel3DPro/main.js');
 
         if (containerRef.current && !carouselInstanceRef.current) {
           // Pass menuData to setupCarousel

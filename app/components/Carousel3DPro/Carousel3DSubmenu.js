@@ -645,10 +645,12 @@ export class Carousel3DSubmenu extends THREE.Group { // Class definition for Car
         group.add(rightLens); // Add the right lens to the group
         return group; // Return the group containing the virtual tour headset and lenses
       }
-    };
-    this.items.forEach((item, index) => { // Iterate through each item in the submenu
-      // Create text geometry 
-      const geometry = new TextGeometry(item.toString(), { // Create text geometry using the loaded font
+    };    this.items.forEach((item, index) => { // Iterate through each item in the submenu
+      // Handle both string items and enriched object items
+      const itemTitle = typeof item === 'object' ? item.title : item;
+      
+      // Create text geometry using the display name
+      const geometry = new TextGeometry(itemTitle, { // Create text geometry using the loaded font
         font: this.font, // Use the loaded font
         size: 0.25, // Set font size
         height: 0.05, // Set height for extrusion
@@ -692,12 +694,79 @@ export class Carousel3DSubmenu extends THREE.Group { // Class definition for Car
       });
       const hitArea = new THREE.Mesh(hitAreaGeometry, hitAreaMaterial); // Create a mesh from the geometry and material
       hitArea.position.z = -0.1; // Positioned to extend both in front and behind text
-      container.add(hitArea); // Add the hit area to the container
-      // Determine which shape/icon to use
+      container.add(hitArea); // Add the hit area to the container      // Determine which shape/icon to use
       let iconMesh = null; // Initialize iconMesh to null
       const iconOffset = Math.max(0.7, textWidth * 0.25); // Calculate offset
       let baseScale = new THREE.Vector3(1, 1, 1); // Default base scale
-      if (item === 'Cart') {
+      
+      // Check if item has enriched shape data from content manager
+      const itemName = typeof item === 'object' ? item.name : item;
+      const itemShape = typeof item === 'object' ? item.shape : null;
+      
+      console.warn(`[Carousel3DSubmenu] Creating icon for item: ${itemName}, shape: ${itemShape}`);
+      
+      if (itemShape && itemShape !== 'null' && itemShape !== 'undefined') {
+        // Use the shape from content manager - load GLB model
+        const loader = new GLTFLoader();
+        const modelPath = `/assets/models/${itemShape}.glb`;
+        
+        console.warn(`[Carousel3DSubmenu] Loading GLB model: ${modelPath}`);
+        
+        loader.load(modelPath, (gltf) => {
+          const model = gltf.scene;
+          baseScale.set(0.3, 0.3, 0.3); // Set consistent scale for all GLB models
+          model.scale.copy(baseScale);
+          model.userData.originalScale = baseScale.clone();
+          model.position.x = -textWidth / 2 - iconOffset;
+          model.userData.isContentManagerIcon = true;
+          model.userData.shapeName = itemShape;
+          container.add(model);
+          container.userData.iconMesh = model;
+          
+          // Apply material and color styling
+          model.traverse((child) => {
+            if (child.isMesh) {
+              child.material = child.material.clone();
+              child.material.emissive = new THREE.Color(this.getIconColor(index));
+              child.material.emissiveIntensity = 0.3;
+              child.material.needsUpdate = true;
+            }
+          });
+          
+          // Animate icon scale after loading
+          if (!this.isBeingDisposed && this.visible) {
+            const isHighlighted = container.userData.index === this.currentIndex;
+            const multiplier = isHighlighted ? 1.3 : 1.0;
+            gsap.set(model.scale, { x: 0, y: 0, z: 0 }); // Start invisible
+            gsap.to(model.scale, {
+              x: model.userData.originalScale.x * multiplier,
+              y: model.userData.originalScale.y * multiplier,
+              z: model.userData.originalScale.z * multiplier,
+              duration: 0.3,
+              ease: 'elastic.out',
+            });
+            
+            // Apply highlight animation if needed
+            if (isHighlighted && model) {
+              gsap.killTweensOf(model.rotation);
+              gsap.timeline()
+                .to(model.rotation, {
+                  y: Math.PI * 2, x: Math.PI * 0.8, z: Math.PI * 0.3,
+                  duration: 1.0, ease: "power1.inOut"
+                })
+                .to(model.rotation, {
+                  x: 0, z: 0, duration: 0.3, ease: "back.out(2)"
+                }, "-=0.1");
+            }
+          }
+          
+          console.warn(`[Carousel3DSubmenu] ✅ GLB model loaded: ${modelPath}`);
+        }, undefined, (error) => {
+          console.warn(`[Carousel3DSubmenu] ⚠️ Failed to load GLB model ${modelPath}:`, error);
+          // Fallback to regular shape
+          this.createFallbackIcon(container, index, textWidth, iconOffset, baseScale);
+        });
+      } else if (itemName === 'Cart') {
         // Load the GLTF cart model asynchronously
         const loader = new GLTFLoader(); // Create a new GLTFLoader instance
         loader.load('/assets/Cart.glb', (gltf) => { // Load the GLTF model
@@ -1631,10 +1700,48 @@ update() {
    * 5. Disposes the close button (if it exists), including its geometry, materials, and removes it from its parent. Clears the `closeButton` reference.
    * 6. Removes the submenu instance itself from its parent object.
    * 7. Resets the instance's local and world matrices.
-   * 8. Disposes the floating preview (if it exists), including its geometry, materials, and removes it from its parent. Clears the `floatingPreview` reference.
-   * 9. Clears internal state references like `currentIndex`, `parentItem`, `itemGroup`, and `fixedElements`.
+   * 8. Disposes the floating preview (if it exists), including its geometry, materials, and removes it from its parent. Clears the `floatingPreview` reference.   * 9. Clears internal state references like `currentIndex`, `parentItem`, `itemGroup`, and `fixedElements`.
    * 10. Sets the `isDisposed` flag to true.
    */
+
+  /**
+   * Create a fallback icon when GLB loading fails
+   */
+  createFallbackIcon(container, index, textWidth, iconOffset, baseScale) {
+    console.warn(`[Carousel3DSubmenu] Creating fallback icon for index ${index}`);
+    
+    // Define fallback shapes
+    const regularShapes = [
+      () => new THREE.SphereGeometry(0.1, 16, 16),
+      () => new THREE.BoxGeometry(0.15, 0.15, 0.15),
+      () => new THREE.ConeGeometry(0.1, 0.2, 16),
+      () => new THREE.TorusGeometry(0.1, 0.04, 16, 32),
+      () => new THREE.TetrahedronGeometry(0.12),
+      () => new THREE.OctahedronGeometry(0.12),
+      () => new THREE.DodecahedronGeometry(0.12),
+      () => new THREE.IcosahedronGeometry(0.12)
+    ];
+    
+    const shapeIndex = index % regularShapes.length;
+    const shapeGeometry = regularShapes[shapeIndex]();
+    const shapeMaterial = new THREE.MeshStandardMaterial({
+      color: this.getIconColor(index),
+      metalness: 0.3,
+      roughness: 0.4,
+      emissive: this.getIconColor(index),
+      emissiveIntensity: 0.2
+    });
+    
+    const iconMesh = new THREE.Mesh(shapeGeometry, shapeMaterial);
+    iconMesh.position.x = -textWidth / 2 - iconOffset;
+    iconMesh.userData.originalScale = baseScale.clone();
+    container.add(iconMesh);
+    container.userData.iconMesh = iconMesh;
+    iconMesh.scale.set(0, 0, 0); // Start invisible for animation
+    
+    return iconMesh;
+  }
+
   dispose() {
     if (this.isDisposed || this.isBeingDisposed) return; // Prevent double disposal
     // Mark as being disposed to prevent further updates

@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🍉 Watermelon 3D - Browser Console Test</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background: #0a0a0a;
+            color: #00ff00;
+            font-family: 'Courier New', monospace;
+            overflow-x: hidden;
+        }
+        .test-container {
+            padding: 20px;
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        h1 {
+            color: #00ffff;
+            text-align: center;
+            text-shadow: 0 0 10px #00ffff;
+        }
+        .section {
+            background: rgba(0, 50, 0, 0.3);
+            border: 1px solid #00ff00;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 20px 0;
+        }
+        .command {
+            background: #001100;
+            border: 1px solid #00ff00;
+            padding: 10px;
+            margin: 10px 0;
+            font-family: 'Courier New', monospace;
+            color: #00ff00;
+            border-radius: 4px;
+        }
+        .step {
+            margin: 15px 0;
+        }
+        .highlight {
+            color: #ffff00;
+            font-weight: bold;
+        }
+        .link {
+            color: #00ffff;
+            text-decoration: underline;
+            cursor: pointer;
+        }
+        button {
+            background: #003300;
+            color: #00ff00;
+            border: 1px solid #00ff00;
+            padding: 10px 20px;
+            margin: 10px 5px;
+            cursor: pointer;
+            border-radius: 5px;
+            font-family: 'Courier New', monospace;
+        }
+        button:hover {
+            background: #005500;
+        }
+        .status {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 4px;
+        }
+        .status.success {
+            background: rgba(0, 255, 0, 0.1);
+            border: 1px solid #00ff00;
+        }
+        .status.warning {
+            background: rgba(255, 255, 0, 0.1);
+            border: 1px solid #ffff00;
+            color: #ffff00;
+        }
+        .status.error {
+            background: rgba(255, 0, 0, 0.1);
+            border: 1px solid #ff0000;
+            color: #ff0000;
+        }
+    </style>
+</head>
+<body>
+    <div class="test-container">
+        <h1>🍉 Watermelon 3D System - Console Test Interface</h1>
+        
+        <div class="section">
+            <h2>🔧 System Status</h2>
+            <p>This page provides a testing interface for the Watermelon 3D menu system. Use the browser console to test functionality.</p>
+            
+            <div class="step">
+                <strong>1. Go to the main page:</strong>
+                <br><button onclick="goToMainPage()">🍉 Open Main Page</button>
+            </div>
+            
+            <div class="step">
+                <strong>2. Open Developer Console:</strong>
+                <br>Press <span class="highlight">F12</span> or <span class="highlight">Ctrl+Shift+I</span>
+            </div>
+        </div>
+        
+        <div class="section">
+            <h2>🧪 Test Commands</h2>
+            <p>Copy and paste these commands into the browser console on the main page:</p>
+            
+            <div class="step">
+                <strong>Check System Status:</strong>
+                <div class="command">
+// Check if core systems are loaded
+console.log('🍉 System Status Check');
+console.log('Central Panel:', !!window.centralPanel);
+console.log('Content Manager:', !!window.contentManager);
+console.log('Load Content Function:', !!window.loadContentForItem);
+console.log('Carousel Controls:', !!window.carouselControls);
+console.log('Active Submenu:', !!window.activeSubmenu);
+console.log('Watermelon Admin:', !!window.watermelonAdmin);
+                </div>
+            </div>
+            
+            <div class="step">
+                <strong>Test Content Loading:</strong>
+                <div class="command">
+// Test loading content for a menu item
+if (window.loadContentForItem) {
+    console.log('🍉 Testing content loading...');
+    window.loadContentForItem('Shop', 'Hydrogen Cart')
+        .then(result => console.log('✅ Content loaded:', result))
+        .catch(error => console.error('❌ Content error:', error));
+} else {
+    console.warn('❌ loadContentForItem not available');
+}
+                </div>
+            </div>
+            
+            <div class="step">
+                <strong>Test Central Panel:</strong>
+                <div class="command">
+// Test central panel functionality
+if (window.centralPanel) {
+    console.log('🍉 Central Panel Info:');
+    console.log('Position:', window.centralPanel.position);
+    console.log('Visible:', window.centralPanel.visible);
+    console.log('Children:', window.centralPanel.children?.length);
+    
+    // Test loading templated content
+    if (window.centralPanel.loadTemplatedContent) {
+        const testContent = {
+            type: 'product',
+            title: 'Test Product',
+            content: 'This is a test product',
+            glbModel: '/assets/models/cart.glb'
+        };
+        window.centralPanel.loadTemplatedContent(testContent)
+            .then(() => console.log('✅ Template content loaded'))
+            .catch(error => console.error('❌ Template error:', error));
+    }
+} else {
+    console.warn('❌ Central panel not available');
+}
+                </div>
+            </div>
+            
+            <div class="step">
+                <strong>Debug Content Manager:</strong>
+                <div class="command">
+// Check content manager state
+const cm = window.contentManager || window.watermelonAdmin?.getContentManager();
+if (cm) {
+    console.log('🍉 Content Manager Debug:');
+    console.log('Products:', Object.keys(cm.products || {}));
+    console.log('Pages:', Object.keys(cm.pages || {}));
+    console.log('Content types:', Object.keys(cm.contentTypes || {}));
+    
+    // Test getting specific content
+    cm.getContentData('About')
+        .then(result => console.log('📄 About content:', result))
+        .catch(error => console.error('❌ About error:', error));
+} else {
+    console.warn('❌ Content manager not available');
+}
+                </div>
+            </div>
+            
+            <div class="step">
+                <strong>Test Menu Interaction:</strong>
+                <div class="command">
+// Simulate menu interactions
+if (window.carouselControls?.carousel) {
+    console.log('🍉 Testing carousel interaction...');
+    const carousel = window.carouselControls.carousel;
+    
+    // Test selecting an item
+    if (carousel.selectItem) {
+        console.log('Selecting first item...');
+        carousel.selectItem(0, true);
+        
+        setTimeout(() => {
+            if (window.activeSubmenu) {
+                console.log('✅ Submenu opened:', window.activeSubmenu);
+                // Test submenu item selection
+                if (window.activeSubmenu.selectItem) {
+                    console.log('Selecting submenu item...');
+                    window.activeSubmenu.selectItem(0, true, true);
+                }
+            } else {
+                console.warn('⚠️ No submenu opened');
+            }
+        }, 1000);
+    }
+} else {
+    console.warn('❌ Carousel not available');
+}
+                </div>
+            </div>
+        </div>
+        
+        <div class="section">
+            <h2>📋 Expected Results</h2>
+            <div class="status success">
+                <strong>✅ Success indicators:</strong>
+                <ul>
+                    <li>Central panel loads and is visible</li>
+                    <li>Content manager has products and pages</li>
+                    <li>Menu items trigger content loading</li>
+                    <li>3D GLB models load for products</li>
+                    <li>Submenu icons use correct GLB models</li>
+                </ul>
+            </div>
+            
+            <div class="status warning">
+                <strong>⚠️ Warning signs:</strong>
+                <ul>
+                    <li>Functions return null or undefined</li>
+                    <li>Console errors about missing modules</li>
+                    <li>Central panel not found</li>
+                    <li>Content manager empty</li>
+                </ul>
+            </div>
+            
+            <div class="status error">
+                <strong>❌ Critical issues:</strong>
+                <ul>
+                    <li>JavaScript errors preventing execution</li>
+                    <li>Three.js or GSAP not loaded</li>
+                    <li>Carousel system not initialized</li>
+                    <li>Network errors loading assets</li>
+                </ul>
+            </div>
+        </div>
+        
+        <div class="section">
+            <h2>🚀 Next Steps</h2>
+            <p>Based on the test results:</p>
+            <ol>
+                <li><strong>If all tests pass:</strong> The 3D product display system is working correctly</li>
+                <li><strong>If content loading fails:</strong> Check product handle mappings in contentManager.js</li>
+                <li><strong>If central panel missing:</strong> Verify main.js initialization</li>
+                <li><strong>If GLB models don't load:</strong> Check asset paths and file existence</li>
+            </ol>
+            
+            <div class="step">
+                <button onclick="showDocumentation()">📚 View Documentation</button>
+                <button onclick="openMainSite()">🍉 Open Main Site</button>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        function goToMainPage() {
+            window.open('/', '_blank');
+        }
+        
+        function openMainSite() {
+            window.open('/', '_blank');
+        }
+        
+        function showDocumentation() {
+            alert('📚 Documentation:\n\n1. Check docs/PRODUCT_CONNECTION_IMPLEMENTATION_COMPLETE.md\n2. See docs/3D_PRODUCT_DISPLAY_COMPLETE.md\n3. Review docs/CENTRAL_PANEL_IMPLEMENTATION_COMPLETE.md\n\nThese files contain complete implementation details and troubleshooting guides.');
+        }
+        
+        // Auto-copy command when clicked
+        document.querySelectorAll('.command').forEach(cmd => {
+            cmd.addEventListener('click', () => {
+                navigator.clipboard.writeText(cmd.textContent.trim())
+                    .then(() => {
+                        cmd.style.background = '#003300';
+                        setTimeout(() => {
+                            cmd.style.background = '#001100';
+                        }, 200);
+                    })
+                    .catch(err => console.log('Copy failed:', err));
+            });
+        });
+        
+        console.log('🍉 Test interface loaded. Click commands to copy them to clipboard.');
+    </script>
+</body>
+</html>

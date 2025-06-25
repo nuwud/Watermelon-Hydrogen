@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>3D Product Display Test</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            font-family: Arial, sans-serif;
+            background: #1a1a1a;
+            color: white;
+        }
+        .controls {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            z-index: 1000;
+            background: rgba(0,0,0,0.8);
+            padding: 20px;
+            border-radius: 10px;
+            max-width: 300px;
+        }
+        button {
+            display: block;
+            width: 100%;
+            margin: 10px 0;
+            padding: 10px;
+            background: #4ecdc4;
+            border: none;
+            border-radius: 5px;
+            color: white;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        button:hover {
+            background: #45b7b8;
+        }
+        .status {
+            margin-top: 20px;
+            padding: 10px;
+            background: rgba(0,100,0,0.3);
+            border-radius: 5px;
+            font-size: 12px;
+        }
+        .error {
+            background: rgba(100,0,0,0.3);
+        }
+        .info {
+            margin-bottom: 15px;
+            font-size: 14px;
+            line-height: 1.4;
+        }
+        h3 {
+            margin: 0 0 10px 0;
+            color: #4ecdc4;
+        }
+    </style>
+</head>
+<body>
+    <div class="controls">
+        <h3>🍉 Product Display Test</h3>
+        <div class="info">
+            Click a product button to test the 3D display system. 
+            The product should appear in the center with:
+            <ul>
+                <li>3D model or fallback shape</li>
+                <li>Product title and price</li>
+                <li>Interactive buttons</li>
+            </ul>
+        </div>
+        
+        <button onclick="testProduct('Shopify Hydrogen 3D Guide')">📖 Hydrogen Guide</button>
+        <button onclick="testProduct('Build Like Nuwud: Systems Book')">📚 Systems Book</button>
+        <button onclick="testProduct('Watermelon OS Theme (Download)')">💾 Theme Download</button>
+        <button onclick="testProduct('eCommerce Templates')">🎨 Templates</button>
+        <button onclick="testProduct('3D Product Viewer Kit')">🔮 Viewer Kit</button>
+        <button onclick="testProduct('Audio + HUD FX Packs')">🔊 Audio Pack</button>
+        
+        <button onclick="clearDisplay()">🧹 Clear Display</button>
+        <button onclick="testSystemStatus()">🔍 System Status</button>
+        
+        <div id="status" class="status">Ready to test...</div>
+    </div>
+
+    <script>
+        function updateStatus(message, isError = false) {
+            const status = document.getElementById('status');
+            status.textContent = message;
+            status.className = isError ? 'status error' : 'status';
+            console.log('[Test]', message);
+        }
+
+        async function testProduct(productTitle) {
+            updateStatus(`Testing product: ${productTitle}`);
+            
+            try {
+                // Wait for system to be ready
+                await waitForSystem();
+                
+                // Try to load the product via the content manager
+                if (window.loadContentForItem) {
+                    const result = await window.loadContentForItem(productTitle);
+                    updateStatus(`✅ Product loaded: ${productTitle}`);
+                    return result;
+                } else if (window.productDisplay) {
+                    // Direct test of product display
+                    const mockProduct = {
+                        title: productTitle,
+                        price: '$97.00',
+                        description: 'Test product description for ' + productTitle,
+                        type: 'product'
+                    };
+                    
+                    await window.productDisplay.displayProduct(mockProduct);
+                    updateStatus(`✅ Product displayed directly: ${productTitle}`);
+                    return mockProduct;
+                } else {
+                    throw new Error('Neither loadContentForItem nor productDisplay available');
+                }
+                
+            } catch (error) {
+                updateStatus(`❌ Error: ${error.message}`, true);
+                console.error('[Test Error]', error);
+            }
+        }
+
+        function clearDisplay() {
+            try {
+                if (window.productDisplay && window.productDisplay.clearDisplay) {
+                    window.productDisplay.clearDisplay();
+                    updateStatus('✅ Display cleared');
+                } else {
+                    updateStatus('❌ Clear function not available', true);
+                }
+            } catch (error) {
+                updateStatus(`❌ Clear error: ${error.message}`, true);
+            }
+        }
+
+        function testSystemStatus() {
+            const systems = {
+                'loadContentForItem': !!window.loadContentForItem,
+                'productDisplay': !!window.productDisplay,
+                'centralPanel': !!window.centralPanel,
+                'contentManager': !!window.contentManager,
+                'scene (Three.js)': !!(window.scene || document.querySelector('canvas'))
+            };
+            
+            console.log('[System Status]', systems);
+            
+            const working = Object.values(systems).filter(Boolean).length;
+            const total = Object.keys(systems).length;
+            
+            updateStatus(`System Status: ${working}/${total} components ready`);
+            
+            // Show detailed status in console
+            Object.entries(systems).forEach(([name, status]) => {
+                console.log(`[${status ? '✅' : '❌'}] ${name}: ${status ? 'Available' : 'Missing'}`);
+            });
+        }
+
+        async function waitForSystem(maxWait = 10000) {
+            const startTime = Date.now();
+            
+            while (Date.now() - startTime < maxWait) {
+                if (window.loadContentForItem || window.productDisplay) {
+                    return true;
+                }
+                await new Promise(resolve => setTimeout(resolve, 100));
+            }
+            
+            throw new Error('System not ready after timeout');
+        }
+
+        // Auto-test system status on load
+        window.addEventListener('load', () => {
+            setTimeout(() => {
+                testSystemStatus();
+            }, 2000);
+        });
+
+        // Show helpful console commands
+        console.log(`
+🍉 Watermelon Product Display Test Console
+
+Available test functions:
+• testProduct('Product Name') - Test a specific product
+• clearDisplay() - Clear the center display
+• testSystemStatus() - Check system availability
+• window.loadContentForItem('Product Name') - Direct content loading
+
+Quick tests:
+• testProduct('Shopify Hydrogen 3D Guide')
+• testProduct('Watermelon OS Theme (Download)')
+
+System checks:
+• window.productDisplay - 3D display system
+• window.loadContentForItem - Content loading
+• window.contentManager - Content management
+        `);
+    </script>
+</body>
+</html>

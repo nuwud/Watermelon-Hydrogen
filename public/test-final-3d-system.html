@@ -1,0 +1,366 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🍉 Watermelon 3D - Final System Test</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background: #0a0a0a;
+            color: #00ff00;
+            font-family: 'Courier New', monospace;
+            overflow: hidden;
+        }
+        #carousel-container {
+            width: 100vw;
+            height: 100vh;
+            position: relative;
+        }
+        #debug-panel {
+            position: fixed;
+            top: 10px;
+            left: 10px;
+            background: rgba(0, 0, 0, 0.8);
+            color: #00ff00;
+            padding: 15px;
+            border: 1px solid #00ff00;
+            border-radius: 5px;
+            z-index: 1000;
+            max-width: 300px;
+            font-size: 12px;
+        }
+        #debug-panel h3 {
+            margin: 0 0 10px 0;
+            color: #00ffff;
+        }
+        .debug-section {
+            margin: 10px 0;
+            padding: 8px;
+            border: 1px solid #333;
+            background: rgba(0, 50, 0, 0.3);
+        }
+        .status-ok { color: #00ff00; }
+        .status-warning { color: #ffff00; }
+        .status-error { color: #ff0000; }
+        button {
+            background: #003300;
+            color: #00ff00;
+            border: 1px solid #00ff00;
+            padding: 5px 10px;
+            margin: 2px;
+            cursor: pointer;
+            border-radius: 3px;
+        }
+        button:hover {
+            background: #005500;
+        }
+        #loading {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: #00ff00;
+            font-size: 18px;
+            z-index: 999;
+        }
+    </style>
+</head>
+<body>
+    <div id="loading">🍉 Loading Watermelon 3D System...</div>
+    
+    <div id="debug-panel">
+        <h3>🍉 System Status</h3>
+        
+        <div class="debug-section">
+            <strong>Core Systems:</strong><br>
+            Three.js: <span id="threejs-status">Loading...</span><br>
+            GSAP: <span id="gsap-status">Loading...</span><br>
+            Carousel: <span id="carousel-status">Loading...</span><br>
+            Central Panel: <span id="panel-status">Loading...</span>
+        </div>
+        
+        <div class="debug-section">
+            <strong>Content Manager:</strong><br>
+            Status: <span id="content-status">Loading...</span><br>
+            Products: <span id="products-count">0</span><br>
+            Pages: <span id="pages-count">0</span>
+        </div>
+        
+        <div class="debug-section">
+            <strong>Test Actions:</strong><br>
+            <button onclick="testMainMenuClick()">Test Main Menu</button>
+            <button onclick="testSubmenuClick()">Test Submenu</button><br>
+            <button onclick="testProductLoad()">Test Product</button>
+            <button onclick="testContentLoad()">Test Content</button><br>
+            <button onclick="showDebugInfo()">Show Debug Info</button>
+        </div>
+        
+        <div class="debug-section">
+            <strong>Last Action:</strong><br>
+            <span id="last-action">None</span>
+        </div>
+    </div>
+
+    <div id="carousel-container"></div>
+
+    <!-- Include required dependencies -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/0.177.0/three.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+    
+    <script type="module">
+        console.log('🍉 Starting Final System Test');
+        
+        // Status tracking
+        const status = {
+            threejs: false,
+            gsap: false,
+            carousel: false,
+            centralPanel: false,
+            contentManager: false,
+            ready: false
+        };
+        
+        function updateStatus(component, isOk, message = '') {
+            status[component] = isOk;
+            const element = document.getElementById(`${component === 'threejs' ? 'threejs' : component}-status`);
+            if (element) {
+                element.className = isOk ? 'status-ok' : 'status-error';
+                element.textContent = isOk ? 'OK' : `Error: ${message}`;
+            }
+            checkOverallStatus();
+        }
+        
+        function checkOverallStatus() {
+            const allOk = Object.values(status).every(s => s);
+            if (allOk && !status.ready) {
+                status.ready = true;
+                document.getElementById('loading').style.display = 'none';
+                updateLastAction('✅ System fully loaded and ready');
+                console.log('🍉 All systems ready!');
+            }
+        }
+        
+        function updateLastAction(action) {
+            document.getElementById('last-action').textContent = action;
+            console.log('🍉 Action:', action);
+        }
+        
+        // Check basic dependencies
+        if (typeof THREE !== 'undefined') {
+            updateStatus('threejs', true);
+            console.log('✅ Three.js loaded:', THREE.REVISION);
+        } else {
+            updateStatus('threejs', false, 'Not loaded');
+        }
+        
+        if (typeof gsap !== 'undefined') {
+            updateStatus('gsap', true);
+            console.log('✅ GSAP loaded:', gsap.version);
+        } else {
+            updateStatus('gsap', false, 'Not loaded');
+        }
+        
+        // Import and setup the carousel system
+        try {
+            // Import from the local app (corrected path)
+            const { setupCarousel } = await import('/app/components/Carousel3DPro/main.js');
+            
+            if (setupCarousel) {
+                console.log('✅ Carousel module loaded');
+                
+                // Setup the container
+                const container = document.getElementById('carousel-container');
+                if (container) {
+                    console.log('🍉 Setting up carousel...');
+                    
+                    // Initialize the carousel
+                    const carouselControls = setupCarousel(container);
+                    
+                    if (carouselControls) {
+                        updateStatus('carousel', true);
+                        window.carouselControls = carouselControls;
+                        console.log('✅ Carousel setup complete');
+                        
+                        // Wait for central panel
+                        let checkCount = 0;
+                        const checkInterval = setInterval(() => {
+                            checkCount++;
+                            if (window.centralPanel) {
+                                updateStatus('centralPanel', true);
+                                clearInterval(checkInterval);
+                                console.log('✅ Central panel detected');
+                            } else if (checkCount > 50) { // 5 seconds
+                                updateStatus('centralPanel', false, 'Timeout');
+                                clearInterval(checkInterval);
+                            }
+                        }, 100);
+                        
+                        // Check for content manager
+                        setTimeout(() => {
+                            if (window.contentManager || window.watermelonAdmin?.getContentManager()) {
+                                updateStatus('contentManager', true);
+                                const cm = window.contentManager || window.watermelonAdmin.getContentManager();
+                                
+                                // Update counts
+                                try {
+                                    const productCount = Object.keys(cm.products || {}).length;
+                                    const pageCount = Object.keys(cm.pages || {}).length;
+                                    document.getElementById('products-count').textContent = productCount;
+                                    document.getElementById('pages-count').textContent = pageCount;
+                                    console.log(`📊 Content: ${productCount} products, ${pageCount} pages`);
+                                } catch (e) {
+                                    console.warn('Error getting content counts:', e);
+                                }
+                            } else {
+                                updateStatus('contentManager', false, 'Not available');
+                            }
+                        }, 2000);
+                        
+                    } else {
+                        updateStatus('carousel', false, 'Setup failed');
+                    }
+                } else {
+                    updateStatus('carousel', false, 'No container');
+                }
+            } else {
+                updateStatus('carousel', false, 'Module import failed');
+            }
+        } catch (error) {
+            updateStatus('carousel', false, error.message);
+            console.error('❌ Carousel setup error:', error);
+        }
+        
+        // Test functions
+        window.testMainMenuClick = function() {
+            updateLastAction('Testing main menu click...');
+            if (window.carouselControls?.carousel) {
+                try {
+                    // Simulate a click on the first item
+                    const carousel = window.carouselControls.carousel;
+                    if (carousel.onItemClick) {
+                        carousel.onItemClick(0, 'Shop');
+                        updateLastAction('✅ Main menu click test completed');
+                    } else {
+                        updateLastAction('❌ No onItemClick method');
+                    }
+                } catch (error) {
+                    updateLastAction(`❌ Main menu test error: ${error.message}`);
+                }
+            } else {
+                updateLastAction('❌ No carousel available');
+            }
+        };
+        
+        window.testSubmenuClick = function() {
+            updateLastAction('Testing submenu functionality...');
+            if (window.carouselControls?.carousel) {
+                try {
+                    // First click main item to open submenu
+                    const carousel = window.carouselControls.carousel;
+                    carousel.selectItem?.(0);
+                    
+                    setTimeout(() => {
+                        if (window.activeSubmenu) {
+                            updateLastAction('✅ Submenu opened, testing item click');
+                            // Test submenu item click
+                            if (window.activeSubmenu.selectItem) {
+                                window.activeSubmenu.selectItem(0);
+                                updateLastAction('✅ Submenu click test completed');
+                            }
+                        } else {
+                            updateLastAction('❌ No active submenu found');
+                        }
+                    }, 1000);
+                } catch (error) {
+                    updateLastAction(`❌ Submenu test error: ${error.message}`);
+                }
+            } else {
+                updateLastAction('❌ No carousel available');
+            }
+        };
+        
+        window.testProductLoad = function() {
+            updateLastAction('Testing product content loading...');
+            if (window.loadContentForItem) {
+                try {
+                    window.loadContentForItem('Shop', 'Hydrogen Cart')
+                        .then(result => {
+                            if (result) {
+                                updateLastAction(`✅ Product loaded: ${result.title || 'Unknown'}`);
+                            } else {
+                                updateLastAction('❌ Product load returned null');
+                            }
+                        })
+                        .catch(error => {
+                            updateLastAction(`❌ Product load error: ${error.message}`);
+                        });
+                } catch (error) {
+                    updateLastAction(`❌ Product test error: ${error.message}`);
+                }
+            } else {
+                updateLastAction('❌ No loadContentForItem function');
+            }
+        };
+        
+        window.testContentLoad = function() {
+            updateLastAction('Testing content manager...');
+            const cm = window.contentManager || window.watermelonAdmin?.getContentManager();
+            if (cm) {
+                try {
+                    cm.getContentData('About')
+                        .then(result => {
+                            if (result) {
+                                updateLastAction(`✅ Content loaded: ${result.title || 'Unknown'}`);
+                            } else {
+                                updateLastAction('❌ Content load returned null');
+                            }
+                        })
+                        .catch(error => {
+                            updateLastAction(`❌ Content load error: ${error.message}`);
+                        });
+                } catch (error) {
+                    updateLastAction(`❌ Content test error: ${error.message}`);
+                }
+            } else {
+                updateLastAction('❌ No content manager available');
+            }
+        };
+        
+        window.showDebugInfo = function() {
+            updateLastAction('Displaying debug information...');
+            console.group('🍉 Debug Information');
+            console.log('Window objects:', {
+                centralPanel: !!window.centralPanel,
+                carouselControls: !!window.carouselControls,
+                contentManager: !!window.contentManager,
+                watermelonAdmin: !!window.watermelonAdmin,
+                loadContentForItem: !!window.loadContentForItem,
+                activeSubmenu: !!window.activeSubmenu
+            });
+            
+            if (window.carouselControls) {
+                console.log('Carousel state:', {
+                    scene: !!window.carouselControls.scene,
+                    camera: !!window.carouselControls.camera,
+                    renderer: !!window.carouselControls.renderer,
+                    carousel: !!window.carouselControls.carousel
+                });
+            }
+            
+            if (window.centralPanel) {
+                console.log('Central panel state:', {
+                    visible: window.centralPanel.visible,
+                    position: window.centralPanel.position,
+                    children: window.centralPanel.children?.length || 0
+                });
+            }
+            
+            console.groupEnd();
+            updateLastAction('✅ Debug info displayed in console');
+        };
+        
+    </script>
+</body>
+</html>
