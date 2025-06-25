@@ -1,0 +1,529 @@
+{
+  "menuName": "Nuwud Multimedia WatermelonOS",
+  "shopifyDomain": "nx40dr-bu.myshopify.com",
+  "version": "1.0.0",
+  "lastUpdated": "2025-06-24",
+  "description": "Three.js-optimized Shopify menu structure for Nuwud Multimedia's immersive WatermelonOS 3D storefront",
+  
+  "menu": [
+    {
+      "id": "home",
+      "label": "Home",
+      "url": "/pages/home",
+      "description": "The hub for navigating Nuwud's ecosystem",
+      "model3D": {
+        "type": "rotating_compass",
+        "description": "3D HUD panel: rotating compass",
+        "glbPath": "/assets/models/home-compass.glb",
+        "metafield": "custom.model_3d"
+      },
+      "submenu": [
+        {
+          "id": "dashboard",
+          "label": "Dashboard",
+          "url": "/pages/dashboard",
+          "model3D": {
+            "type": "hud_panel",
+            "description": "3D HUD panel: rotating compass",
+            "glbPath": "/assets/models/dashboard-hud.glb"
+          }
+        },
+        {
+          "id": "announcements",
+          "label": "Announcements",
+          "url": "/pages/announcements",
+          "model3D": {
+            "type": "megaphone",
+            "description": "3D shape: megaphone or holographic scroll",
+            "glbPath": "/assets/models/announcements-megaphone.glb"
+          }
+        },
+        {
+          "id": "my-library",
+          "label": "My Library",
+          "url": "/pages/my-library",
+          "model3D": {
+            "type": "bookshelf",
+            "description": "3D shape: glowing bookshelf or cube stack",
+            "glbPath": "/assets/models/library-bookshelf.glb"
+          }
+        },
+        {
+          "id": "settings",
+          "label": "Settings",
+          "url": "/pages/settings",
+          "model3D": {
+            "type": "control_panel",
+            "description": "3D model: wrench/floating control panel",
+            "glbPath": "/assets/models/settings-panel.glb"
+          }
+        }
+      ]
+    },
+    {
+      "id": "services",
+      "label": "Services",
+      "url": "/pages/services",
+      "description": "Your high-ticket offerings & agency services (Store #1: Client Projects)",
+      "model3D": {
+        "type": "service_tower",
+        "description": "Stack of service icons forming a tower",
+        "glbPath": "/assets/models/services-tower.glb",
+        "metafield": "custom.model_3d"
+      },
+      "submenu": [
+        {
+          "id": "web-design",
+          "label": "Web Design (WordPress/Shopify)",
+          "url": "/pages/web-design",
+          "model3D": {
+            "type": "browser_wireframe",
+            "description": "3D shape: rotating wireframe browser window",
+            "glbPath": "/assets/models/web-design-browser.glb"
+          }
+        },
+        {
+          "id": "seo-analytics",
+          "label": "SEO & Analytics",
+          "url": "/pages/seo-analytics",
+          "model3D": {
+            "type": "data_tower",
+            "description": "3D model: bar graph tower with pulsing data",
+            "glbPath": "/assets/models/seo-graph-tower.glb"
+          }
+        },
+        {
+          "id": "branding-identity",
+          "label": "Branding & Identity",
+          "url": "/pages/branding-identity",
+          "model3D": {
+            "type": "paint_palette",
+            "description": "3D shape: mask or paint palette icon",
+            "glbPath": "/assets/models/branding-palette.glb"
+          }
+        },
+        {
+          "id": "video-animation",
+          "label": "Video & Animation",
+          "url": "/pages/video-animation",
+          "model3D": {
+            "type": "film_camera",
+            "description": "3D model: vintage camera or floating film reel",
+            "glbPath": "/assets/models/video-camera.glb"
+          }
+        },
+        {
+          "id": "ai-automation-setup",
+          "label": "AI Automation Setup",
+          "url": "/pages/ai-automation-setup",
+          "model3D": {
+            "type": "ai_orb",
+            "description": "3D object: AI crystal orb or neural net",
+            "glbPath": "/assets/models/ai-crystal-orb.glb"
+          }
+        },
+        {
+          "id": "client-portal",
+          "label": "Client Portal",
+          "url": "/pages/client-portal",
+          "model3D": {
+            "type": "vault_door",
+            "description": "3D shape: floating vault door with login terminal",
+            "glbPath": "/assets/models/client-vault-door.glb"
+          }
+        }
+      ]
+    },
+    {
+      "id": "digital-products",
+      "label": "Digital Products",
+      "url": "/pages/digital-products",
+      "description": "Your books, toolkits, guides, and templates (Store #2: eCommerce for IP)",
+      "model3D": {
+        "type": "product_showcase",
+        "description": "Floating digital products in holographic display",
+        "glbPath": "/assets/models/digital-products-showcase.glb",
+        "metafield": "custom.model_3d"
+      },
+      "submenu": [
+        {
+          "id": "shopify-hydrogen-3d-guide",
+          "label": "Shopify Hydrogen 3D Guide",
+          "url": "/pages/shopify-hydrogen-3d-guide",
+          "model3D": {
+            "type": "glowing_book",
+            "description": "3D book with glowing Hydrogen logo",
+            "glbPath": "/assets/models/hydrogen-guide-book.glb"
+          },
+          "productType": "digital_download"
+        },
+        {
+          "id": "build-like-nuwud-systems-book",
+          "label": "Build Like Nuwud: Systems Book",
+          "url": "/pages/build-like-nuwud-systems-book",
+          "model3D": {
+            "type": "blueprint_binder",
+            "description": "Floating blueprint or open binder model",
+            "glbPath": "/assets/models/systems-book-blueprint.glb"
+          },
+          "productType": "digital_download"
+        },
+        {
+          "id": "watermelon-os-theme-download",
+          "label": "Watermelon OS Theme (Download)",
+          "url": "/pages/watermelon-os-theme-download",
+          "model3D": {
+            "type": "watermelon_usb",
+            "description": "3D watermelon slice USB stick or retro disk icon",
+            "glbPath": "/assets/models/watermelon-usb-disk.glb"
+          },
+          "productType": "digital_download"
+        },
+        {
+          "id": "ecommerce-templates",
+          "label": "eCommerce Templates",
+          "url": "/pages/ecommerce-templates",
+          "model3D": {
+            "type": "website_cards",
+            "description": "Stacked website cards",
+            "glbPath": "/assets/models/template-cards-stack.glb"
+          },
+          "productType": "digital_download"
+        },
+        {
+          "id": "3d-product-viewer-kit",
+          "label": "3D Product Viewer Kit",
+          "url": "/pages/3d-product-viewer-kit",
+          "model3D": {
+            "type": "hologram_box",
+            "description": "Box with hologram popping out",
+            "glbPath": "/assets/models/3d-viewer-hologram-box.glb"
+          },
+          "productType": "digital_download"
+        },
+        {
+          "id": "audio-hud-fx-packs",
+          "label": "Audio + HUD FX Packs",
+          "url": "/pages/audio-hud-fx-packs",
+          "model3D": {
+            "type": "headphones_waveform",
+            "description": "3D headphones or waveform emitter model",
+            "glbPath": "/assets/models/audio-fx-headphones.glb"
+          },
+          "productType": "digital_download"
+        }
+      ]
+    },
+    {
+      "id": "gallery",
+      "label": "Gallery",
+      "url": "/pages/gallery",
+      "description": "For showcasing your portfolio, creativity, and studio work",
+      "model3D": {
+        "type": "portfolio_display",
+        "description": "Rotating gallery frames in 3D space",
+        "glbPath": "/assets/models/gallery-display.glb",
+        "metafield": "custom.model_3d"
+      },
+      "submenu": [
+        {
+          "id": "site-launches",
+          "label": "Site Launches",
+          "url": "/pages/site-launches",
+          "model3D": {
+            "type": "rocket",
+            "description": "3D rocket icon",
+            "glbPath": "/assets/models/site-launch-rocket.glb"
+          }
+        },
+        {
+          "id": "client-before-after",
+          "label": "Client Before & After",
+          "url": "/pages/client-before-after",
+          "model3D": {
+            "type": "flip_cube",
+            "description": "Split screen or flippable cube",
+            "glbPath": "/assets/models/before-after-cube.glb"
+          }
+        },
+        {
+          "id": "brand-designs",
+          "label": "Brand Designs",
+          "url": "/pages/brand-designs",
+          "model3D": {
+            "type": "logo_carousel",
+            "description": "Logo carousel wheel",
+            "glbPath": "/assets/models/brand-logo-carousel.glb"
+          }
+        },
+        {
+          "id": "video-reel",
+          "label": "Video Reel",
+          "url": "/pages/video-reel",
+          "model3D": {
+            "type": "vintage_projector",
+            "description": "Vintage projector with loop",
+            "glbPath": "/assets/models/video-reel-projector.glb"
+          }
+        },
+        {
+          "id": "3d-demos",
+          "label": "3D Demos",
+          "url": "/pages/3d-demos",
+          "model3D": {
+            "type": "interactive_orb",
+            "description": "Floating ball/interactive orb from your other Three.js work",
+            "glbPath": "/assets/models/3d-demo-orb.glb"
+          }
+        }
+      ]
+    },
+    {
+      "id": "about",
+      "label": "About",
+      "url": "/pages/about",
+      "description": "Your story, values, and team",
+      "model3D": {
+        "type": "story_book",
+        "description": "Open book with floating story elements",
+        "glbPath": "/assets/models/about-story-book.glb",
+        "metafield": "custom.model_3d"
+      },
+      "submenu": [
+        {
+          "id": "our-mission",
+          "label": "Our Mission",
+          "url": "/pages/our-mission",
+          "model3D": {
+            "type": "compass_heart",
+            "description": "3D heart or compass",
+            "glbPath": "/assets/models/mission-compass-heart.glb"
+          }
+        },
+        {
+          "id": "meet-patrick",
+          "label": "Meet Patrick",
+          "url": "/pages/meet-patrick",
+          "model3D": {
+            "type": "avatar_bust",
+            "description": "Stylized avatar bust model",
+            "glbPath": "/assets/models/patrick-avatar-bust.glb"
+          }
+        },
+        {
+          "id": "faith-philosophy",
+          "label": "Faith & Philosophy",
+          "url": "/pages/faith-philosophy",
+          "model3D": {
+            "type": "glowing_bible",
+            "description": "3D Bible with light rays or open scroll",
+            "glbPath": "/assets/models/faith-bible-scroll.glb"
+          }
+        },
+        {
+          "id": "history",
+          "label": "History",
+          "url": "/pages/history",
+          "model3D": {
+            "type": "time_dial",
+            "description": "Time dial / retro tape reel",
+            "glbPath": "/assets/models/history-time-dial.glb"
+          }
+        },
+        {
+          "id": "nuwud-future",
+          "label": "Nuwud's Future",
+          "url": "/pages/nuwud-s-future",
+          "model3D": {
+            "type": "crystal_seed",
+            "description": "Crystal seed model or rising staircase",
+            "glbPath": "/assets/models/future-crystal-seed.glb"
+          }
+        }
+      ]
+    },
+    {
+      "id": "contact",
+      "label": "Contact",
+      "url": "/pages/contact",
+      "description": "A human, approachable support experience",
+      "model3D": {
+        "type": "communication_hub",
+        "description": "Floating communication devices in orbit",
+        "glbPath": "/assets/models/contact-hub.glb",
+        "metafield": "custom.model_3d"
+      },
+      "submenu": [
+        {
+          "id": "start-a-project",
+          "label": "Start a Project",
+          "url": "/pages/start-a-project",
+          "model3D": {
+            "type": "floating_pencil",
+            "description": "3D pencil hovering above a tablet",
+            "glbPath": "/assets/models/start-project-pencil.glb"
+          }
+        },
+        {
+          "id": "email",
+          "label": "Email",
+          "url": "/pages/email",
+          "model3D": {
+            "type": "floating_envelope",
+            "description": "3D envelope icon floating open",
+            "glbPath": "/assets/models/email-envelope.glb"
+          }
+        },
+        {
+          "id": "chatbot-ai-contact",
+          "label": "Chatbot / AI Contact",
+          "url": "/pages/chatbot-ai-contact",
+          "model3D": {
+            "type": "ai_bot_head",
+            "description": "Smiling 3D AI bot head",
+            "glbPath": "/assets/models/chatbot-ai-head.glb"
+          }
+        },
+        {
+          "id": "socials",
+          "label": "Socials",
+          "url": "/pages/socials",
+          "model3D": {
+            "type": "social_globe",
+            "description": "Globe with orbiting icons: IG, TikTok, LinkedIn",
+            "glbPath": "/assets/models/socials-globe-orbit.glb"
+          }
+        },
+        {
+          "id": "office-hours-map",
+          "label": "Office Hours / Map",
+          "url": "/pages/office-hours-map",
+          "model3D": {
+            "type": "clock_map",
+            "description": "Spinning clock over 3D map pin",
+            "glbPath": "/assets/models/office-clock-map.glb"
+          }
+        }
+      ]
+    },
+    {
+      "id": "cart-account",
+      "label": "Cart / Account",
+      "url": "/pages/cart-account",
+      "description": "Dynamic cart and user settings area",
+      "model3D": {
+        "type": "user_terminal",
+        "description": "Holographic user interface terminal",
+        "glbPath": "/assets/models/cart-account-terminal.glb",
+        "metafield": "custom.model_3d"
+      },
+      "submenu": [
+        {
+          "id": "view-cart",
+          "label": "View Cart",
+          "url": "/pages/view-cart",
+          "model3D": {
+            "type": "cart_bubbles",
+            "description": "3D cart with product bubbles inside",
+            "glbPath": "/assets/models/cart-product-bubbles.glb"
+          }
+        },
+        {
+          "id": "order-history",
+          "label": "Order History",
+          "url": "/pages/order-history",
+          "model3D": {
+            "type": "receipt_rolodex",
+            "description": "Rolodex or flipping receipt",
+            "glbPath": "/assets/models/order-history-rolodex.glb"
+          }
+        },
+        {
+          "id": "saved-items-wishlist",
+          "label": "Saved Items / Wishlist",
+          "url": "/pages/saved-items-wishlist",
+          "model3D": {
+            "type": "heart_cube",
+            "description": "Heart-shaped cube or glowing favorites drawer",
+            "glbPath": "/assets/models/wishlist-heart-cube.glb"
+          }
+        },
+        {
+          "id": "account-settings",
+          "label": "Account Settings",
+          "url": "/pages/account-settings",
+          "model3D": {
+            "type": "settings_terminal",
+            "description": "3D terminal or console",
+            "glbPath": "/assets/models/account-settings-terminal.glb"
+          }
+        }
+      ]
+    }
+  ],
+
+  "metaobjects": {
+    "namespace": "custom",
+    "fields": [
+      {
+        "key": "model_3d",
+        "name": "3D Model",
+        "type": "file_reference",
+        "description": "GLB/GLTF file reference for 3D menu icon"
+      },
+      {
+        "key": "video_preview",
+        "name": "Video Preview",
+        "type": "file_reference",
+        "description": "Video file for hover preview"
+      },
+      {
+        "key": "floating_text",
+        "name": "Floating Text",
+        "type": "multi_line_text_field",
+        "description": "Text content for floating HUD elements"
+      },
+      {
+        "key": "sound_effects",
+        "name": "Sound Effects",
+        "type": "file_reference",
+        "description": "Audio file for hover/interaction sounds"
+      },
+      {
+        "key": "floating_preview",
+        "name": "Floating Preview",
+        "type": "json",
+        "description": "JSON configuration for FloatingPreview HUD"
+      },
+      {
+        "key": "audio_hover",
+        "name": "Audio Hover",
+        "type": "file_reference",
+        "description": "Audio whispers or hover effects"
+      },
+      {
+        "key": "carousel_tooltip",
+        "name": "Carousel Tooltip",
+        "type": "single_line_text_field",
+        "description": "Tooltip text for carousel items"
+      }
+    ]
+  },
+
+  "integration": {
+    "contentManager": {
+      "mapToShopifyProducts": true,
+      "extractGLBFromMetafields": true,
+      "fallbackModels": "/assets/models/defaults/"
+    },
+    "graphqlFragments": {
+      "includeMetafields": true,
+      "include3DModelFields": true
+    },
+    "carousel3D": {
+      "enableProductMapping": true,
+      "preserveTextGeometry": true,
+      "greenRingToggle": true
+    }
+  }
+}

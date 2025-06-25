@@ -273,19 +273,88 @@ export const FOOTER_QUERY = `#graphql
   ${MENU_FRAGMENT}
 `;
 
-// Product query fragment and query
+// Product query fragment and query - Enhanced for 3D models
 export const PRODUCT_FRAGMENT = `#graphql
   fragment ProductBasic on Product {
     id
     title
     handle
     description
+    productType
+    tags
     featuredImage {
       id
       url
       altText
       width
       height
+    }
+    media(first: 10) {
+      nodes {
+        ... on MediaImage {
+          id
+          image {
+            url
+            altText
+            width
+            height
+          }
+        }
+        ... on Video {
+          id
+          sources {
+            url
+            mimeType
+          }
+        }
+        ... on Model3d {
+          id
+          sources {
+            url
+            mimeType
+            format
+          }
+        }
+        ... on ExternalVideo {
+          id
+          embedUrl
+        }
+      }
+    }
+    metafields(identifiers: [
+      {namespace: "custom", key: "model_3d"},
+      {namespace: "custom", key: "video_preview"},
+      {namespace: "custom", key: "floating_text"},
+      {namespace: "custom", key: "sound_effects"},
+      {namespace: "custom", key: "floating_preview"},
+      {namespace: "custom", key: "audio_hover"},
+      {namespace: "custom", key: "carousel_tooltip"}
+    ]) {
+      namespace
+      key
+      value
+      type
+      reference {
+        ... on MediaImage {
+          image {
+            url
+            altText
+          }
+        }
+        ... on Video {
+          sources {
+            url
+            mimeType
+          }
+        }
+        ... on Model3d {
+          sources {
+            url
+            mimeType
+            format
+          }
+        }
+      }
     }
     priceRange {
       minVariantPrice {
@@ -314,4 +383,29 @@ export const PRODUCT_QUERY = `#graphql
     }
   }
   ${PRODUCT_FRAGMENT}
+`;
+
+// Enhanced collection query for 3D menu integration
+export const COLLECTION_PRODUCTS_FRAGMENT = `#graphql
+  fragment CollectionProducts on Collection {
+    id
+    title
+    handle
+    description
+    products(first: 50) {
+      nodes {
+        ...ProductBasic
+      }
+    }
+  }
+  ${PRODUCT_FRAGMENT}
+`;
+
+export const COLLECTION_QUERY = `#graphql
+  query Collection($handle: String!) {
+    collection(handle: $handle) {
+      ...CollectionProducts
+    }
+  }
+  ${COLLECTION_PRODUCTS_FRAGMENT}
 `;

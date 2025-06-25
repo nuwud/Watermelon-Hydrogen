@@ -1,163 +1,9 @@
 /**
  * Content Management System for 3D Central Panel
  * Handles loading and transforming Shopify content for 3D display
- * Enhanced for Nuwud Multimedia Shopify integration
  */
 
 import { contentTemplates } from './contentTemplates.js';
-
-// Import the Nuwud menu structure
-let nuwudMenuStructure = null;
-
-// Load the menu structure
-export async function loadMenuStructure() {
-  if (!nuwudMenuStructure) {
-    try {
-      const response = await fetch('/nuwud-menu-structure-final.json');
-      nuwudMenuStructure = await response.json();
-    } catch (error) {
-      console.warn('Could not load menu structure, using defaults:', error);
-      nuwudMenuStructure = getDefaultMenuStructure();
-    }
-  }
-  return nuwudMenuStructure;
-}
-
-// Enhanced function to map Shopify products to menu items
-export async function mapShopifyProductsToMenu(shopifyProducts = []) {
-  const menuStructure = await loadMenuStructure();
-  const mappedItems = [];
-
-  for (const menuItem of menuStructure.menu) {
-    // Process main menu items
-    const mainItem = await processMenuItem(menuItem, shopifyProducts);
-    mappedItems.push(mainItem);
-
-    // Process submenu items
-    if (menuItem.submenu && menuItem.submenu.length > 0) {
-      mainItem.submenuItems = [];
-      for (const submenuItem of menuItem.submenu) {
-        const processedSubmenu = await processMenuItem(submenuItem, shopifyProducts);
-        mainItem.submenuItems.push(processedSubmenu);
-      }
-    }
-  }
-
-  return mappedItems;
-}
-
-// Process individual menu item and map to Shopify product if available
-async function processMenuItem(menuItem, shopifyProducts) {
-  // Find matching Shopify product by handle or title
-  const matchingProduct = shopifyProducts.find(product => 
-    product.handle === menuItem.id || 
-    product.title.toLowerCase().includes(menuItem.label.toLowerCase()) ||
-    product.tags?.some(tag => tag.toLowerCase() === menuItem.id)
-  );
-
-  const processedItem = {
-    id: menuItem.id,
-    label: menuItem.label,
-    url: menuItem.url,
-    description: menuItem.description,
-    model3D: {
-      type: menuItem.model3D?.type || 'default',
-      description: menuItem.model3D?.description || menuItem.description,
-      glbPath: menuItem.model3D?.glbPath || `/assets/models/default/${menuItem.id}.glb`
-    }
-  };
-
-  // If we found a matching Shopify product, enhance with product data
-  if (matchingProduct) {
-    processedItem.shopifyProduct = matchingProduct;
-    processedItem.productType = matchingProduct.productType;
-    processedItem.price = matchingProduct.priceRange?.minVariantPrice;
-    
-    // Override GLB path with actual Shopify GLB if available
-    const shopifyGLB = extractShopifyGLBUrl(matchingProduct);
-    if (shopifyGLB) {
-      processedItem.model3D.glbPath = shopifyGLB;
-    }
-
-    // Add metafield data for 3D enhancements
-    if (matchingProduct.metafields) {
-      processedItem.metafields = {};
-      matchingProduct.metafields.forEach(field => {
-        if (field.namespace === 'custom') {
-          processedItem.metafields[field.key] = field.value;
-        }
-      });
-    }
-  }
-
-  return processedItem;
-}
-
-// Default menu structure fallback
-function getDefaultMenuStructure() {
-  return {
-    menu: [
-      { id: 'home', label: 'Home', submenu: [] },
-      { id: 'services', label: 'Services', submenu: [] },
-      { id: 'digital-products', label: 'Digital Products', submenu: [] },
-      { id: 'gallery', label: 'Gallery', submenu: [] },
-      { id: 'about', label: 'About', submenu: [] },
-      { id: 'contact', label: 'Contact', submenu: [] },
-      { id: 'cart-account', label: 'Cart / Account', submenu: [] }
-    ]
-  };
-}
-
-// Enhanced Shopify product data extraction
-export function extractShopifyGLBUrl(product) {
-  // Priority order for GLB extraction:
-  // 1. Custom metafield: custom.model_3d
-  // 2. Media files with GLB/GLTF extension
-  // 3. Featured image as fallback
-  // 4. Default model based on product type
-  
-  if (!product) return null;
-
-  // 1. Check for custom 3D model metafield
-  if (product.metafields) {
-    const model3DField = product.metafields.find(field => 
-      field.namespace === 'custom' && field.key === 'model_3d'
-    );
-    if (model3DField?.value) {
-      return model3DField.value;
-    }
-  }
-
-  // 2. Search media for GLB/GLTF files
-  if (product.media?.nodes) {
-    const glbMedia = product.media.nodes.find(media => {
-      const url = media.url || media.originalSrc || media.src;
-      return url && (url.includes('.glb') || url.includes('.gltf'));
-    });
-    if (glbMedia) {
-      return glbMedia.url || glbMedia.originalSrc || glbMedia.src;
-    }
-  }
-
-  // 3. Check featured image for GLB reference
-  if (product.featuredImage?.url) {
-    const imageUrl = product.featuredImage.url;
-    if (imageUrl.includes('.glb') || imageUrl.includes('.gltf')) {
-      return imageUrl;
-    }
-  }
-
-  // 4. Generate default model path based on product type or handle
-  const productHandle = product.handle || 'default';
-  const defaultPath = `/assets/models/products/${productHandle}.glb`;
-  
-  // Check if this is a digital product for specific defaults
-  if (product.productType === 'Digital Download' || product.tags?.includes('digital')) {
-    return `/assets/models/digital-products/${productHandle}.glb`;
-  }
-
-  return defaultPath;
-}
 
 // Content mapping for your Nuwud Multimedia menu structure
 export const NUWUD_CONTENT_MAP = {
@@ -276,7 +122,6 @@ export const NUWUD_CONTENT_MAP = {
     description: 'Complete guide to 3D Shopify development',
     icon: '📖',
     shape: '3d-book-hydrogen',
-    glbModel: '/assets/models/book.glb',
     price: '$97'
   },
   'Build Like Nuwud: Systems Book': {
@@ -287,7 +132,6 @@ export const NUWUD_CONTENT_MAP = {
     description: 'Complete business systems methodology',
     icon: '📋',
     shape: 'floating-blueprint',
-    glbModel: '/assets/models/blueprint.glb',
     price: '$197'
   },
   'Watermelon OS Theme (Download)': {
@@ -298,7 +142,6 @@ export const NUWUD_CONTENT_MAP = {
     description: 'Complete 3D theme package download',
     icon: '🍉',
     shape: 'watermelon-usb',
-    glbModel: '/assets/models/watermelon.glb',
     price: '$47'
   },
   'eCommerce Templates': {
@@ -309,7 +152,6 @@ export const NUWUD_CONTENT_MAP = {
     description: 'Ready-to-use store designs',
     icon: '🛒',
     shape: 'stacked-website-cards',
-    glbModel: '/assets/models/templates.glb',
     price: '$127'
   },
   '3D Product Viewer Kit': {

@@ -1,0 +1,502 @@
+{
+  "menuStructure": {
+    "metadata": {
+      "name": "Nuwud Multimedia WatermelonOS Menu",
+      "version": "1.0",
+      "description": "Three.js-optimized Shopify menu structure for immersive 3D navigation",
+      "namespace": "nuwud_3d_menu"
+    },
+    "items": [
+      {
+        "id": "home",
+        "label": "Home",
+        "url": "https://nx40dr-bu.myshopify.com/pages/home",
+        "description": "The hub for navigating Nuwud's ecosystem",
+        "shape3D": "dashboard_hud",
+        "iconType": "rotating_compass",
+        "submenu": [
+          {
+            "id": "dashboard",
+            "label": "Dashboard",
+            "url": "https://nx40dr-bu.myshopify.com/pages/dashboard",
+            "shape3D": "hud_panel",
+            "iconType": "rotating_compass",
+            "metafields": {
+              "floatingPreview": "dashboard_preview.glb",
+              "audioHover": "interface_beep.mp3",
+              "tooltipText": "Your personalized command center"
+            }
+          },
+          {
+            "id": "announcements",
+            "label": "Announcements",
+            "url": "https://nx40dr-bu.myshopify.com/pages/announcements",
+            "shape3D": "megaphone",
+            "iconType": "holographic_scroll",
+            "metafields": {
+              "floatingPreview": "megaphone.glb",
+              "audioHover": "notification_chime.mp3",
+              "tooltipText": "Latest updates and news"
+            }
+          },
+          {
+            "id": "my_library",
+            "label": "My Library",
+            "url": "https://nx40dr-bu.myshopify.com/pages/my-library",
+            "shape3D": "bookshelf",
+            "iconType": "glowing_bookshelf",
+            "metafields": {
+              "floatingPreview": "bookshelf_glowing.glb",
+              "audioHover": "page_flip.mp3",
+              "tooltipText": "Your digital collection"
+            }
+          },
+          {
+            "id": "settings",
+            "label": "Settings",
+            "url": "https://nx40dr-bu.myshopify.com/pages/settings",
+            "shape3D": "control_panel",
+            "iconType": "floating_wrench",
+            "metafields": {
+              "floatingPreview": "control_panel.glb",
+              "audioHover": "mechanical_click.mp3",
+              "tooltipText": "Customize your experience"
+            }
+          }
+        ]
+      },
+      {
+        "id": "services",
+        "label": "Services",
+        "url": "https://nx40dr-bu.myshopify.com/pages/services",
+        "description": "High-ticket offerings & agency services",
+        "shape3D": "service_tower",
+        "iconType": "professional_briefcase",
+        "submenu": [
+          {
+            "id": "web_design",
+            "label": "Web Design",
+            "url": "https://nx40dr-bu.myshopify.com/pages/web-design",
+            "shape3D": "browser_window",
+            "iconType": "rotating_wireframe_browser",
+            "metafields": {
+              "floatingPreview": "browser_wireframe.glb",
+              "audioHover": "keyboard_type.mp3",
+              "tooltipText": "WordPress & Shopify expertise"
+            }
+          },
+          {
+            "id": "seo_analytics",
+            "label": "SEO & Analytics",
+            "url": "https://nx40dr-bu.myshopify.com/pages/seo-analytics",
+            "shape3D": "bar_graph_tower",
+            "iconType": "pulsing_data_tower",
+            "metafields": {
+              "floatingPreview": "analytics_tower.glb",
+              "audioHover": "data_pulse.mp3",
+              "tooltipText": "Data-driven growth strategies"
+            }
+          },
+          {
+            "id": "branding_identity",
+            "label": "Branding & Identity",
+            "url": "https://nx40dr-bu.myshopify.com/pages/branding-identity",
+            "shape3D": "paint_palette",
+            "iconType": "artistic_mask",
+            "metafields": {
+              "floatingPreview": "brand_palette.glb",
+              "audioHover": "brush_stroke.mp3",
+              "tooltipText": "Visual identity that resonates"
+            }
+          },
+          {
+            "id": "video_animation",
+            "label": "Video & Animation",
+            "url": "https://nx40dr-bu.myshopify.com/pages/video-animation",
+            "shape3D": "vintage_camera",
+            "iconType": "floating_film_reel",
+            "metafields": {
+              "floatingPreview": "camera_vintage.glb",
+              "audioHover": "film_roll.mp3",
+              "tooltipText": "Motion graphics and storytelling"
+            }
+          },
+          {
+            "id": "ai_automation",
+            "label": "AI Automation Setup",
+            "url": "https://nx40dr-bu.myshopify.com/pages/ai-automation-setup",
+            "shape3D": "ai_crystal_orb",
+            "iconType": "neural_network",
+            "metafields": {
+              "floatingPreview": "ai_orb.glb",
+              "audioHover": "digital_hum.mp3",
+              "tooltipText": "Intelligent workflow automation"
+            }
+          },
+          {
+            "id": "client_portal",
+            "label": "Client Portal",
+            "url": "https://nx40dr-bu.myshopify.com/pages/client-portal",
+            "shape3D": "vault_door",
+            "iconType": "secure_terminal",
+            "metafields": {
+              "floatingPreview": "vault_secure.glb",
+              "audioHover": "vault_unlock.mp3",
+              "tooltipText": "Secure project collaboration"
+            }
+          }
+        ]
+      },
+      {
+        "id": "digital_products",
+        "label": "Digital Products",
+        "url": "https://nx40dr-bu.myshopify.com/pages/digital-products",
+        "description": "Books, toolkits, guides, and templates",
+        "shape3D": "product_showcase",
+        "iconType": "digital_storefront",
+        "submenu": [
+          {
+            "id": "hydrogen_3d_guide",
+            "label": "Shopify Hydrogen 3D Guide",
+            "url": "https://nx40dr-bu.myshopify.com/pages/shopify-hydrogen-3d-guide",
+            "shape3D": "glowing_book",
+            "iconType": "hydrogen_logo_book",
+            "metafields": {
+              "floatingPreview": "hydrogen_book.glb",
+              "audioHover": "page_magic.mp3",
+              "tooltipText": "Master 3D eCommerce development"
+            }
+          },
+          {
+            "id": "systems_book",
+            "label": "Build Like Nuwud: Systems Book",
+            "url": "https://nx40dr-bu.myshopify.com/pages/build-like-nuwud-systems-book",
+            "shape3D": "blueprint_binder",
+            "iconType": "floating_blueprint",
+            "metafields": {
+              "floatingPreview": "blueprint_open.glb",
+              "audioHover": "blueprint_unfold.mp3",
+              "tooltipText": "Business systems mastery"
+            }
+          },
+          {
+            "id": "watermelon_theme",
+            "label": "Watermelon OS Theme",
+            "url": "https://nx40dr-bu.myshopify.com/pages/watermelon-os-theme-download",
+            "shape3D": "watermelon_usb",
+            "iconType": "retro_disk",
+            "metafields": {
+              "floatingPreview": "watermelon_usb.glb",
+              "audioHover": "retro_beep.mp3",
+              "tooltipText": "Immersive 3D theme experience"
+            }
+          },
+          {
+            "id": "ecommerce_templates",
+            "label": "eCommerce Templates",
+            "url": "https://nx40dr-bu.myshopify.com/pages/ecommerce-templates",
+            "shape3D": "website_cards",
+            "iconType": "stacked_cards",
+            "metafields": {
+              "floatingPreview": "template_cards.glb",
+              "audioHover": "card_shuffle.mp3",
+              "tooltipText": "Ready-to-launch store designs"
+            }
+          },
+          {
+            "id": "3d_viewer_kit",
+            "label": "3D Product Viewer Kit",
+            "url": "https://nx40dr-bu.myshopify.com/pages/3d-product-viewer-kit",
+            "shape3D": "hologram_box",
+            "iconType": "holographic_popup",
+            "metafields": {
+              "floatingPreview": "hologram_box.glb",
+              "audioHover": "hologram_activate.mp3",
+              "tooltipText": "Interactive 3D product displays"
+            }
+          },
+          {
+            "id": "audio_fx_packs",
+            "label": "Audio + HUD FX Packs",
+            "url": "https://nx40dr-bu.myshopify.com/pages/audio-hud-fx-packs",
+            "shape3D": "headphones_3d",
+            "iconType": "waveform_emitter",
+            "metafields": {
+              "floatingPreview": "headphones_glowing.glb",
+              "audioHover": "audio_preview.mp3",
+              "tooltipText": "Professional UI sound design"
+            }
+          }
+        ]
+      },
+      {
+        "id": "gallery",
+        "label": "Gallery",
+        "url": "https://nx40dr-bu.myshopify.com/pages/gallery",
+        "description": "Portfolio, creativity, and studio work showcase",
+        "shape3D": "gallery_frame",
+        "iconType": "artistic_easel",
+        "submenu": [
+          {
+            "id": "site_launches",
+            "label": "Site Launches",
+            "url": "https://nx40dr-bu.myshopify.com/pages/site-launches",
+            "shape3D": "rocket_3d",
+            "iconType": "launch_rocket",
+            "metafields": {
+              "floatingPreview": "rocket_launch.glb",
+              "audioHover": "rocket_ignition.mp3",
+              "tooltipText": "Successful project launches"
+            }
+          },
+          {
+            "id": "before_after",
+            "label": "Client Before & After",
+            "url": "https://nx40dr-bu.myshopify.com/pages/client-before-after",
+            "shape3D": "split_cube",
+            "iconType": "flippable_screen",
+            "metafields": {
+              "floatingPreview": "split_screen.glb",
+              "audioHover": "transformation.mp3",
+              "tooltipText": "Transformation showcases"
+            }
+          },
+          {
+            "id": "brand_designs",
+            "label": "Brand Designs",
+            "url": "https://nx40dr-bu.myshopify.com/pages/brand-designs",
+            "shape3D": "logo_carousel",
+            "iconType": "rotating_wheel",
+            "metafields": {
+              "floatingPreview": "logo_wheel.glb",
+              "audioHover": "design_whoosh.mp3",
+              "tooltipText": "Brand identity portfolio"
+            }
+          },
+          {
+            "id": "video_reel",
+            "label": "Video Reel",
+            "url": "https://nx40dr-bu.myshopify.com/pages/video-reel",
+            "shape3D": "vintage_projector",
+            "iconType": "film_loop",
+            "metafields": {
+              "floatingPreview": "projector_vintage.glb",
+              "audioHover": "projector_run.mp3",
+              "tooltipText": "Motion graphics showcase"
+            }
+          },
+          {
+            "id": "3d_demos",
+            "label": "3D Demos",
+            "url": "https://nx40dr-bu.myshopify.com/pages/3d-demos",
+            "shape3D": "interactive_orb",
+            "iconType": "floating_sphere",
+            "metafields": {
+              "floatingPreview": "demo_orb.glb",
+              "audioHover": "orb_resonate.mp3",
+              "tooltipText": "Interactive 3D experiences"
+            }
+          }
+        ]
+      },
+      {
+        "id": "about",
+        "label": "About",
+        "url": "https://nx40dr-bu.myshopify.com/pages/about",
+        "description": "Story, values, and team",
+        "shape3D": "story_book",
+        "iconType": "open_narrative",
+        "submenu": [
+          {
+            "id": "mission",
+            "label": "Our Mission",
+            "url": "https://nx40dr-bu.myshopify.com/pages/our-mission",
+            "shape3D": "compass_heart",
+            "iconType": "glowing_compass",
+            "metafields": {
+              "floatingPreview": "mission_compass.glb",
+              "audioHover": "heartbeat_warm.mp3",
+              "tooltipText": "Our driving purpose"
+            }
+          },
+          {
+            "id": "meet_patrick",
+            "label": "Meet Patrick",
+            "url": "https://nx40dr-bu.myshopify.com/pages/meet-patrick",
+            "shape3D": "avatar_bust",
+            "iconType": "stylized_portrait",
+            "metafields": {
+              "floatingPreview": "patrick_avatar.glb",
+              "audioHover": "friendly_hello.mp3",
+              "tooltipText": "Founder and creative director"
+            }
+          },
+          {
+            "id": "faith_philosophy",
+            "label": "Faith & Philosophy",
+            "url": "https://nx40dr-bu.myshopify.com/pages/faith-philosophy",
+            "shape3D": "holy_book",
+            "iconType": "light_rays",
+            "metafields": {
+              "floatingPreview": "bible_light.glb",
+              "audioHover": "spiritual_chime.mp3",
+              "tooltipText": "Values that guide our work"
+            }
+          },
+          {
+            "id": "history",
+            "label": "History",
+            "url": "https://nx40dr-bu.myshopify.com/pages/history",
+            "shape3D": "time_dial",
+            "iconType": "retro_tape_reel",
+            "metafields": {
+              "floatingPreview": "time_machine.glb",
+              "audioHover": "vintage_tick.mp3",
+              "tooltipText": "Our journey through time"
+            }
+          },
+          {
+            "id": "future",
+            "label": "Nuwud's Future",
+            "url": "https://nx40dr-bu.myshopify.com/pages/nuwud-s-future",
+            "shape3D": "crystal_seed",
+            "iconType": "rising_staircase",
+            "metafields": {
+              "floatingPreview": "crystal_growth.glb",
+              "audioHover": "future_shimmer.mp3",
+              "tooltipText": "Vision for tomorrow"
+            }
+          }
+        ]
+      },
+      {
+        "id": "contact",
+        "label": "Contact",
+        "url": "https://nx40dr-bu.myshopify.com/pages/contact",
+        "description": "Human, approachable support experience",
+        "shape3D": "communication_hub",
+        "iconType": "connected_network",
+        "submenu": [
+          {
+            "id": "start_project",
+            "label": "Start a Project",
+            "url": "https://nx40dr-bu.myshopify.com/pages/start-a-project",
+            "shape3D": "pencil_tablet",
+            "iconType": "floating_pencil",
+            "metafields": {
+              "floatingPreview": "pencil_tablet.glb",
+              "audioHover": "pencil_sketch.mp3",
+              "tooltipText": "Begin your digital transformation"
+            }
+          },
+          {
+            "id": "email",
+            "label": "Email",
+            "url": "https://nx40dr-bu.myshopify.com/pages/email",
+            "shape3D": "envelope_3d",
+            "iconType": "floating_open_envelope",
+            "metafields": {
+              "floatingPreview": "envelope_open.glb",
+              "audioHover": "mail_send.mp3",
+              "tooltipText": "Direct communication"
+            }
+          },
+          {
+            "id": "chatbot",
+            "label": "Chatbot / AI Contact",
+            "url": "https://nx40dr-bu.myshopify.com/pages/chatbot-ai-contact",
+            "shape3D": "ai_bot_head",
+            "iconType": "smiling_bot",
+            "metafields": {
+              "floatingPreview": "ai_assistant.glb",
+              "audioHover": "bot_greeting.mp3",
+              "tooltipText": "Instant AI assistance"
+            }
+          },
+          {
+            "id": "socials",
+            "label": "Socials",
+            "url": "https://nx40dr-bu.myshopify.com/pages/socials",
+            "shape3D": "social_globe",
+            "iconType": "orbiting_icons",
+            "metafields": {
+              "floatingPreview": "social_orbit.glb",
+              "audioHover": "social_connect.mp3",
+              "tooltipText": "Connect across platforms"
+            }
+          },
+          {
+            "id": "office_hours",
+            "label": "Office Hours / Map",
+            "url": "https://nx40dr-bu.myshopify.com/pages/office-hours-map",
+            "shape3D": "clock_map",
+            "iconType": "spinning_clock_pin",
+            "metafields": {
+              "floatingPreview": "office_location.glb",
+              "audioHover": "clock_tick.mp3",
+              "tooltipText": "When and where to find us"
+            }
+          }
+        ]
+      },
+      {
+        "id": "cart_account",
+        "label": "Cart / Account",
+        "url": "https://nx40dr-bu.myshopify.com/pages/cart-account",
+        "description": "Dynamic cart and user settings area",
+        "shape3D": "user_dashboard",
+        "iconType": "personal_terminal",
+        "submenu": [
+          {
+            "id": "view_cart",
+            "label": "View Cart",
+            "url": "https://nx40dr-bu.myshopify.com/pages/view-cart",
+            "shape3D": "cart_3d",
+            "iconType": "product_bubbles",
+            "metafields": {
+              "floatingPreview": "cart_full.glb",
+              "audioHover": "cart_item_add.mp3",
+              "tooltipText": "Review your selections"
+            }
+          },
+          {
+            "id": "order_history",
+            "label": "Order History",
+            "url": "https://nx40dr-bu.myshopify.com/pages/order-history",
+            "shape3D": "receipt_rolodex",
+            "iconType": "flipping_receipts",
+            "metafields": {
+              "floatingPreview": "receipt_stack.glb",
+              "audioHover": "paper_flip.mp3",
+              "tooltipText": "Past purchases and downloads"
+            }
+          },
+          {
+            "id": "wishlist",
+            "label": "Saved Items / Wishlist",
+            "url": "https://nx40dr-bu.myshopify.com/pages/saved-items-wishlist",
+            "shape3D": "heart_cube",
+            "iconType": "glowing_favorites",
+            "metafields": {
+              "floatingPreview": "wishlist_heart.glb",
+              "audioHover": "heart_pulse.mp3",
+              "tooltipText": "Items for later"
+            }
+          },
+          {
+            "id": "account_settings",
+            "label": "Account Settings",
+            "url": "https://nx40dr-bu.myshopify.com/pages/account-settings",
+            "shape3D": "user_terminal",
+            "iconType": "control_console",
+            "metafields": {
+              "floatingPreview": "user_console.glb",
+              "audioHover": "console_beep.mp3",
+              "tooltipText": "Manage your profile"
+            }
+          }
+        ]
+      }
+    ]
+  }
+}

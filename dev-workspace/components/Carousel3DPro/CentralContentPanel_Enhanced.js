@@ -294,7 +294,7 @@ export class CentralContentPanel extends THREE.Group {
   createProductText(group, productData, font) {
     // Product title
     const titleGeometry = new THREE.TextGeometry(productData.title || 'Product', {
-      font: font,
+      font,
       size: 0.15,
       depth: 0.02, // Preserve depth setting per user request
       curveSegments: 12,
@@ -321,7 +321,7 @@ export class CentralContentPanel extends THREE.Group {
     // Product price
     if (productData.price) {
       const priceGeometry = new THREE.TextGeometry(`$${productData.price}`, {
-        font: font,
+        font,
         size: 0.1,
         depth: 0.015, // Slightly less depth for smaller text
         curveSegments: 8

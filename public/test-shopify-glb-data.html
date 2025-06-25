@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🔍 Shopify GLB Product Data Inspector</title>
+    <style>
+        body {
+            font-family: 'Courier New', monospace;
+            background: #0a0a0a;
+            color: #00ff00;
+            padding: 20px;
+            margin: 0;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        h1 {
+            color: #00ffff;
+            text-align: center;
+        }
+        .test-section {
+            background: rgba(0, 50, 0, 0.3);
+            border: 1px solid #00ff00;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 20px 0;
+        }
+        .product-buttons {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin: 20px 0;
+        }
+        button {
+            background: #003300;
+            color: #00ff00;
+            border: 1px solid #00ff00;
+            padding: 10px 15px;
+            cursor: pointer;
+            border-radius: 4px;
+            font-family: 'Courier New', monospace;
+        }
+        button:hover {
+            background: #005500;
+        }
+        .results {
+            background: #000;
+            border: 1px solid #333;
+            padding: 15px;
+            border-radius: 4px;
+            margin: 10px 0;
+            white-space: pre-wrap;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        .success { color: #00ff00; }
+        .error { color: #ff0000; }
+        .warning { color: #ffff00; }
+        .info { color: #00ffff; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔍 Shopify GLB Product Data Inspector</h1>
+        
+        <div class="test-section">
+            <h2>📋 Product Data Analysis</h2>
+            <p>Click any product button to fetch and analyze its Shopify data structure.</p>
+            
+            <div class="product-buttons">
+                <button onclick="fetchProduct('hydrogen-cart')">Hydrogen Cart</button>
+                <button onclick="fetchProduct('3d-guide')">3D Guide</button>
+                <button onclick="fetchProduct('systems-book')">Systems Book</button>
+                <button onclick="fetchProduct('watermelon-theme')">WatermelonOS Theme</button>
+                <button onclick="fetchProduct('ecommerce-templates')">eCommerce Templates</button>
+                <button onclick="fetchProduct('3d-viewer-kit')">3D Viewer Kit</button>
+                <button onclick="fetchProduct('audio-fx-packs')">Audio FX Packs</button>
+            </div>
+            
+            <div id="results" class="results">
+                Click a product button to see its Shopify data structure...
+            </div>
+        </div>
+        
+        <div class="test-section">
+            <h2>🎯 GLB Detection Analysis</h2>
+            <div id="glb-analysis" class="results">
+                GLB analysis will appear here after fetching product data...
+            </div>
+        </div>
+        
+        <div class="test-section">
+            <h2>📊 Current Content Manager Data</h2>
+            <button onclick="showContentManagerData()">Show Content Manager Products</button>
+            <div id="content-manager-data" class="results">
+                Content manager data will appear here...
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        function log(message, type = 'info') {
+            const results = document.getElementById('results');
+            const timestamp = new Date().toLocaleTimeString();
+            const colorClass = type;
+            results.innerHTML += `<span class="${colorClass}">[${timestamp}] ${message}</span>\n`;
+            results.scrollTop = results.scrollHeight;
+        }
+        
+        async function fetchProduct(handle) {
+            log(`🔍 Fetching product: ${handle}`, 'info');
+            
+            try {
+                const response = await fetch(`/api/product?handle=${handle}`);
+                const data = await response.json();
+                
+                log(`✅ Response status: ${response.status}`, 'success');
+                log(`📦 Raw product data:`, 'info');
+                log(JSON.stringify(data, null, 2), 'info');
+                
+                // Analyze for GLB data
+                analyzeGLBData(data, handle);
+                
+            } catch (error) {
+                log(`❌ Error fetching ${handle}: ${error.message}`, 'error');
+            }
+        }
+        
+        function analyzeGLBData(data, handle) {
+            const analysis = document.getElementById('glb-analysis');
+            const timestamp = new Date().toLocaleTimeString();
+            
+            analysis.innerHTML += `<span class="info">[${timestamp}] 🎯 GLB Analysis for ${handle}:</span>\n`;
+            
+            if (!data.success) {
+                analysis.innerHTML += `<span class="error">❌ API call failed: ${data.error}</span>\n`;
+                return;
+            }
+            
+            const product = data.product;
+            let glbFound = false;
+            
+            // Check featured image
+            if (product.featuredImage?.url) {
+                analysis.innerHTML += `<span class="info">🖼️ Featured Image: ${product.featuredImage.url}</span>\n`;
+                if (product.featuredImage.url.toLowerCase().includes('.glb')) {
+                    analysis.innerHTML += `<span class="success">✅ GLB found in featured image!</span>\n`;
+                    glbFound = true;
+                }
+            }
+            
+            // Check images array
+            if (product.images?.nodes) {
+                analysis.innerHTML += `<span class="info">🖼️ Images count: ${product.images.nodes.length}</span>\n`;
+                product.images.nodes.forEach((img, index) => {
+                    if (img.url?.toLowerCase().includes('.glb')) {
+                        analysis.innerHTML += `<span class="success">✅ GLB found in image ${index}: ${img.url}</span>\n`;
+                        glbFound = true;
+                    }
+                });
+            }
+            
+            // Check media (if available)
+            if (product.media?.nodes) {
+                analysis.innerHTML += `<span class="info">🎬 Media count: ${product.media.nodes.length}</span>\n`;
+                product.media.nodes.forEach((media, index) => {
+                    analysis.innerHTML += `<span class="info">   Media ${index}: ${media.mediaContentType || 'unknown type'}</span>\n`;
+                    if (media.mediaContentType === 'MODEL_3D') {
+                        analysis.innerHTML += `<span class="success">✅ 3D Model found in media!</span>\n`;
+                        glbFound = true;
+                    }
+                });
+            }
+            
+            // Check metafields (if available)
+            if (product.metafields) {
+                analysis.innerHTML += `<span class="info">🏷️ Metafields count: ${product.metafields.length}</span>\n`;
+                product.metafields.forEach(meta => {
+                    if (meta.key?.toLowerCase().includes('glb') || meta.key?.toLowerCase().includes('3d') || meta.key?.toLowerCase().includes('model')) {
+                        analysis.innerHTML += `<span class="success">✅ Potential GLB metafield: ${meta.key} = ${meta.value}</span>\n`;
+                        glbFound = true;
+                    }
+                });
+            }
+            
+            // Check tags for GLB references
+            if (product.tags) {
+                const glbTags = product.tags.filter(tag => 
+                    tag.toLowerCase().includes('glb') || 
+                    tag.toLowerCase().includes('3d') || 
+                    tag.toLowerCase().includes('model')
+                );
+                if (glbTags.length > 0) {
+                    analysis.innerHTML += `<span class="warning">⚠️ Potential GLB tags: ${glbTags.join(', ')}</span>\n`;
+                }
+            }
+            
+            if (!glbFound) {
+                analysis.innerHTML += `<span class="warning">⚠️ No GLB data found in current API response for ${handle}</span>\n`;
+                analysis.innerHTML += `<span class="info">💡 May need to enhance GraphQL query to include media/metafields</span>\n`;
+            }
+            
+            analysis.innerHTML += `\n`;
+        }
+        
+        function showContentManagerData() {
+            const container = document.getElementById('content-manager-data');
+            
+            if (window.contentManager) {
+                container.innerHTML = `<span class="success">✅ Content Manager found</span>\n`;
+                container.innerHTML += `<span class="info">📦 Products:</span>\n`;
+                container.innerHTML += JSON.stringify(window.contentManager.products, null, 2);
+            } else {
+                container.innerHTML = `<span class="error">❌ Content Manager not available</span>\n`;
+                container.innerHTML += `<span class="info">💡 Try navigating to the main site first</span>\n`;
+            }
+        }
+        
+        // Auto-log page load
+        log('🍉 GLB Product Data Inspector loaded', 'success');
+        log('💡 Click product buttons to analyze Shopify data structure', 'info');
+    </script>
+</body>
+</html>
