@@ -4,7 +4,7 @@
  */
 
 import { json } from '@shopify/remix-oxygen';
-import { COLLECTION_QUERY } from '../../lib/fragments.js';
+import { COLLECTION_QUERY } from '../lib/fragments.js';
 
 export async function loader({ request, context }) {
   const { storefront } = context;
