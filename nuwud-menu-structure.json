@@ -156,11 +156,31 @@
         "iconType": "digital_storefront",
         "submenu": [
           {
+            "id": "crystal_seed",
+            "label": "Crystal Seed – Interactive 3D Genesis Kit",
+            "url": "https://nx40dr-bu.myshopify.com/products/crystal-seed-interactive-3d-genesis-kit",
+            "shopifyHandle": "crystal-seed-interactive-3d-genesis-kit",
+            "shape3D": "glowing_crystal",
+            "iconType": "crystal_genesis",
+            "model3D": {
+              "glbPath": "https://nx40dr-bu.myshopify.com/cdn/shop/3d/models/o/cc50bed7036f7723/PremiumQuality.glb"
+            },
+            "metafields": {
+              "floatingPreview": "crystal_seed.glb",
+              "audioHover": "crystal_chime.mp3",
+              "tooltipText": "🌌 Interactive 3D Genesis Kit"
+            }
+          },
+          {
             "id": "hydrogen_3d_guide",
             "label": "Shopify Hydrogen 3D Guide",
-            "url": "https://nx40dr-bu.myshopify.com/pages/shopify-hydrogen-3d-guide",
+            "url": "https://nx40dr-bu.myshopify.com/products/shopify-hydrogen-3d-guide",
+            "shopifyHandle": "shopify-hydrogen-3d-guide",
             "shape3D": "glowing_book",
             "iconType": "hydrogen_logo_book",
+            "model3D": {
+              "glbPath": "https://nx40dr-bu.myshopify.com/cdn/shop/3d/models/o/944fa13eb82fdcfb/book1.glb"
+            },
             "metafields": {
               "floatingPreview": "hydrogen_book.glb",
               "audioHover": "page_magic.mp3",
@@ -170,9 +190,13 @@
           {
             "id": "systems_book",
             "label": "Build Like Nuwud: Systems Book",
-            "url": "https://nx40dr-bu.myshopify.com/pages/build-like-nuwud-systems-book",
+            "url": "https://nx40dr-bu.myshopify.com/products/build-like-nuwud-systems-book",
+            "shopifyHandle": "build-like-nuwud-systems-book",
             "shape3D": "blueprint_binder",
             "iconType": "floating_blueprint",
+            "model3D": {
+              "glbPath": "https://nx40dr-bu.myshopify.com/cdn/shop/3d/models/o/7f52dace182c93fd/book1.glb"
+            },
             "metafields": {
               "floatingPreview": "blueprint_open.glb",
               "audioHover": "blueprint_unfold.mp3",
@@ -181,10 +205,14 @@
           },
           {
             "id": "watermelon_theme",
-            "label": "Watermelon OS Theme",
-            "url": "https://nx40dr-bu.myshopify.com/pages/watermelon-os-theme-download",
+            "label": "WatermelonOS Theme Download",
+            "url": "https://nx40dr-bu.myshopify.com/products/watermelonos-theme-download",
+            "shopifyHandle": "watermelonos-theme-download",
             "shape3D": "watermelon_usb",
             "iconType": "retro_disk",
+            "model3D": {
+              "glbPath": "https://nx40dr-bu.myshopify.com/cdn/shop/3d/models/o/67fe49781a1f85f6/Watermelon.glb"
+            },
             "metafields": {
               "floatingPreview": "watermelon_usb.glb",
               "audioHover": "retro_beep.mp3",
@@ -193,38 +221,50 @@
           },
           {
             "id": "ecommerce_templates",
-            "label": "eCommerce Templates",
-            "url": "https://nx40dr-bu.myshopify.com/pages/ecommerce-templates",
+            "label": "E-commerce Templates Collection",
+            "url": "https://nx40dr-bu.myshopify.com/products/e-commerce-templates-collection",
+            "shopifyHandle": "e-commerce-templates-collection",
             "shape3D": "website_cards",
             "iconType": "stacked_cards",
+            "model3D": {
+              "glbPath": "https://nx40dr-bu.myshopify.com/cdn/shop/3d/models/o/3d7822d12fd4b82c/10_Laptop_Transaction.glb"
+            },
             "metafields": {
               "floatingPreview": "template_cards.glb",
-              "audioHover": "card_shuffle.mp3",
-              "tooltipText": "Ready-to-launch store designs"
+              "audioHover": "card_flip.mp3",
+              "tooltipText": "Professional template collection"
             }
           },
           {
-            "id": "3d_viewer_kit",
+            "id": "product_viewer_kit",
             "label": "3D Product Viewer Kit",
-            "url": "https://nx40dr-bu.myshopify.com/pages/3d-product-viewer-kit",
-            "shape3D": "hologram_box",
-            "iconType": "holographic_popup",
+            "url": "https://nx40dr-bu.myshopify.com/products/3d-product-viewer-kit",
+            "shopifyHandle": "3d-product-viewer-kit",
+            "shape3D": "viewer_cube",
+            "iconType": "3d_viewer",
+            "model3D": {
+              "glbPath": "https://nx40dr-bu.myshopify.com/cdn/shop/3d/models/o/aeeafaa9d26f0a42/Buying.glb"
+            },
             "metafields": {
-              "floatingPreview": "hologram_box.glb",
-              "audioHover": "hologram_activate.mp3",
-              "tooltipText": "Interactive 3D product displays"
+              "floatingPreview": "viewer_demo.glb",
+              "audioHover": "viewer_activate.mp3",
+              "tooltipText": "Complete 3D viewing toolkit"
             }
           },
           {
-            "id": "audio_fx_packs",
-            "label": "Audio + HUD FX Packs",
-            "url": "https://nx40dr-bu.myshopify.com/pages/audio-hud-fx-packs",
-            "shape3D": "headphones_3d",
-            "iconType": "waveform_emitter",
+            "id": "audio_hud_fx",
+            "label": "Audio HUD FX Packs",
+            "url": "https://nx40dr-bu.myshopify.com/products/audio-hud-fx-packs",
+            "shopifyHandle": "audio-hud-fx-packs",
+            "shape3D": "sound_waveform",
+            "iconType": "audio_mixer",
+            "model3D": {
+              "glbPath": "https://nx40dr-bu.myshopify.com/cdn/shop/3d/models/o/0c3828a0ee9e6940/14_AIMusicGenerator.glb"
+            },
             "metafields": {
-              "floatingPreview": "headphones_glowing.glb",
-              "audioHover": "audio_preview.mp3",
-              "tooltipText": "Professional UI sound design"
+              "floatingPreview": "audio_visualizer.glb",
+              "audioHover": "ui_synth.mp3",
+              "tooltipText": "Professional audio effects"
             }
           }
         ]

@@ -44,7 +44,9 @@ export class CentralContentPanel extends THREE.Group {
     
     // Setup CSS3D renderer for HTML content
     this.setupCSS3DRenderer();
-    
+
+    this.setupCSS3DObject();
+
     // Position at center of carousel
     this.position.set(0, 0, 0);
   }
@@ -172,6 +174,15 @@ export class CentralContentPanel extends THREE.Group {
     this.cssRenderer.domElement.style.left = '0px';
     this.cssRenderer.domElement.style.pointerEvents = 'none';
     this.cssRenderer.domElement.style.zIndex = '100';
+  }
+
+  setupCSS3DObject() {
+    if (typeof window === 'undefined') return;
+    // Create CSS3D object for HTML content
+    this.htmlContent = new CSS3DObject(document.createElement('div'));  
+    this.htmlContent.position.set(0, 0, 0); // Center in panel
+    this.htmlContent.scale.set(1, 1, 1); // Default scale
+    this.add(this.htmlContent);
   }
 
   /**
