@@ -19,7 +19,7 @@ export async function loader({ request, context }) {
       // Fetch products from multiple collections for the 3D menu
       const collections = [
         'digital-products',
-        'services', 
+        'services',
         'web-design',
         'branding',
         'video-animation',
@@ -55,7 +55,7 @@ export async function loader({ request, context }) {
     const processedProducts = products.map(product => {
       // Extract 3D model URLs from metafields and media
       const model3D = extract3DModelData(product);
-      
+
       return {
         id: product.id,
         title: product.title,
@@ -90,7 +90,7 @@ export async function loader({ request, context }) {
 
   } catch (error) {
     console.error('Error fetching Shopify products for 3D menu:', error);
-    
+
     return json({
       success: false,
       error: error.message,
@@ -120,7 +120,7 @@ function extract3DModelData(product) {
           case 'model_3d':
             if (field.reference?.sources) {
               // Handle Model3d reference
-              const glbSource = field.reference.sources.find(source => 
+              const glbSource = field.reference.sources.find(source =>
                 source.format === 'glb' || source.mimeType === 'model/gltf-binary'
               );
               if (glbSource) {
@@ -131,7 +131,7 @@ function extract3DModelData(product) {
               model3D.glbUrl = field.value;
             }
             break;
-          
+
           case 'video_preview':
             if (field.reference?.sources) {
               model3D.videoUrl = field.reference.sources[0]?.url;
@@ -139,18 +139,18 @@ function extract3DModelData(product) {
               model3D.videoUrl = field.value;
             }
             break;
-          
+
           case 'sound_effects':
           case 'audio_hover':
             if (field.value) {
               model3D.audioUrl = field.value;
             }
             break;
-          
+
           case 'floating_text':
             model3D.floatingText = field.value;
             break;
-          
+
           case 'carousel_tooltip':
             model3D.tooltipText = field.value;
             break;
@@ -163,8 +163,8 @@ function extract3DModelData(product) {
   if (!model3D.glbUrl && product.media?.nodes) {
     const glbMedia = product.media.nodes.find(media => {
       if (media.sources) {
-        return media.sources.some(source => 
-          source.format === 'glb' || 
+        return media.sources.some(source =>
+          source.format === 'glb' ||
           source.mimeType === 'model/gltf-binary' ||
           source.url.includes('.glb') ||
           source.url.includes('.gltf')
@@ -174,7 +174,7 @@ function extract3DModelData(product) {
     });
 
     if (glbMedia?.sources) {
-      const glbSource = glbMedia.sources.find(source => 
+      const glbSource = glbMedia.sources.find(source =>
         source.format === 'glb' || source.mimeType === 'model/gltf-binary'
       );
       if (glbSource) {
@@ -212,7 +212,7 @@ function extract3DModelData(product) {
 // Handle POST requests for custom product queries
 export async function action({ request, context }) {
   const { storefront } = context;
-  
+
   try {
     const body = await request.json();
     const { productHandles = [], menuStructure = null } = body;
@@ -221,7 +221,7 @@ export async function action({ request, context }) {
       // Map menu structure to products
       const menuItems = menuStructure.menu || [];
       const allProductHandles = [];
-      
+
       // Extract product handles from menu structure
       menuItems.forEach(item => {
         if (item.id) allProductHandles.push(item.id);
@@ -234,7 +234,7 @@ export async function action({ request, context }) {
 
       // Fetch products by handles
       const products = await fetchProductsByHandles(storefront, allProductHandles);
-      
+
       return json({
         success: true,
         products,
@@ -267,7 +267,7 @@ export async function action({ request, context }) {
 
 async function fetchProductsByHandles(storefront, handles) {
   const products = [];
-  
+
   for (const handle of handles) {
     try {
       const result = await storefront.query(`
