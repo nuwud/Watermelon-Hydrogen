@@ -402,7 +402,7 @@ export const COLLECTION_PRODUCTS_FRAGMENT = `#graphql
 `;
 
 export const COLLECTION_QUERY = `#graphql
-  query Collection($handle: String!) {
+  query CollectionFor3DMenu($handle: String!) {
     collection(handle: $handle) {
       ...CollectionProducts
     }
