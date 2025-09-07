@@ -5,7 +5,6 @@
  */
 
 import * as THREE from 'three';
-import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { FontLoader } from 'three/examples/jsm/loaders/FontLoader.js';
 import { TextGeometry } from 'three/examples/jsm/geometries/TextGeometry.js';
 import gsap from 'gsap';
@@ -82,8 +81,9 @@ export class Product3DDisplay {
             console.warn('⚠️ No shape assigned to product:', productData.title);
             return;
         }
-        
-        const gltfLoader = new GLTFLoader();
+    // Dynamically import GLTFLoader for better chunking and SSR safety
+    const { GLTFLoader } = await import('three/examples/jsm/loaders/GLTFLoader.js');
+    const gltfLoader = new GLTFLoader();
         const modelPath = `/assets/models/${shapeName}.glb`;
         
         try {

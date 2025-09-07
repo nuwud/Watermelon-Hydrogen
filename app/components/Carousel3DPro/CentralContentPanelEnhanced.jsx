@@ -3,9 +3,8 @@
  * Integrates Shopify products with 3D display system
  */
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import * as THREE from 'three';
-import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { TextGeometry } from 'three/examples/jsm/geometries/TextGeometry.js';
 import { FontLoader } from 'three/examples/jsm/loaders/FontLoader.js';
 
@@ -105,10 +104,10 @@ const CentralContentPanelEnhanced = ({
       }
       renderer.dispose();
     };
-  }, []);
+  }, [createGreenRing]);
 
   // Create the green ring frame
-  const createGreenRing = (scene) => {
+  const createGreenRing = useCallback((scene) => {
     const ringGeometry = new THREE.RingGeometry(2.8, 3.2, 64);
     const ringMaterial = new THREE.MeshBasicMaterial({ 
       color: 0x00ff96,
@@ -121,7 +120,7 @@ const CentralContentPanelEnhanced = ({
     ring.visible = showGreenRing;
     scene.add(ring);
     greenRingRef.current = ring;
-  };
+  }, [showGreenRing]);
 
   // Update green ring visibility
   useEffect(() => {
@@ -183,9 +182,8 @@ const CentralContentPanelEnhanced = ({
   // Load 3D content when data changes
   useEffect(() => {
     if (!contentData || !sceneRef.current) return;
-
     loadCentralContent(contentData);
-  }, [contentData]);
+  }, [contentData, loadCentralContent]);
 
   // Extract GLB URL from Shopify product
   const extractGLBFromShopifyProduct = (product) => {
@@ -229,7 +227,7 @@ const CentralContentPanelEnhanced = ({
   };
 
   // Load central content (3D model + text)
-  const loadCentralContent = async (data) => {
+  const loadCentralContent = useCallback(async (data) => {
     clearCentralContent();
     
     setLoadingState({
@@ -261,16 +259,26 @@ const CentralContentPanelEnhanced = ({
       });
       onError?.(error);
     }
-  };
+  }, [load3DModel, onContentLoad, onError]);
 
   // Load 3D model
-  const load3DModel = (glbUrl) => {
-    return new Promise((resolve, reject) => {
-      const loader = new GLTFLoader();
+  const load3DModel = useCallback((glbUrl) => {
+    return new Promise((resolve) => {
+      // Dynamic import for GLTFLoader to improve chunking and SSR safety
+      let loader;
+      const ensureLoader = async () => {
+        if (!loader) {
+          const { GLTFLoader } = await import('three/examples/jsm/loaders/GLTFLoader.js');
+          loader = new GLTFLoader();
+        }
+        return loader;
+      };
       
-      loader.load(
-        glbUrl,
-        (gltf) => {
+      const doLoad = async () => {
+        const l = await ensureLoader();
+        l.load(
+          glbUrl,
+          (gltf) => {
           const model = gltf.scene;
           model.name = 'centralModel';
           
@@ -302,22 +310,29 @@ const CentralContentPanelEnhanced = ({
           currentModelRef.current = model;
           
           resolve(model);
-        },
-        (progress) => {
+          },
+          (progress) => {
           const percent = (progress.loaded / progress.total) * 50; // Model is 50% of loading
           setLoadingState(prev => ({ ...prev, progress: percent }));
-        },
-        (error) => {
-          console.warn('Failed to load GLB model, using fallback:', error);
-          createFallbackModel(glbUrl);
+          },
+          (error) => {
+    console.warn('Failed to load GLB model, using fallback:', error);
+    createFallbackModel();
           resolve(null);
-        }
-      );
+          }
+        );
+      };
+
+      doLoad().catch((err) => {
+  console.warn('Failed to import GLTFLoader dynamically:', err);
+  createFallbackModel();
+        resolve(null);
+      });
     });
-  };
+  }, []);
 
   // Create fallback model when GLB fails
-  const createFallbackModel = (glbUrl) => {
+  const createFallbackModel = () => {
     const geometry = new THREE.BoxGeometry(1.5, 1.5, 1.5);
     const material = new THREE.MeshLambertMaterial({ 
       color: 0x00ff96,
@@ -344,7 +359,7 @@ const CentralContentPanelEnhanced = ({
 
           // Title text
           const titleGeometry = new TextGeometry(data.title, {
-            font: font,
+            font,
             size: 0.2,
             height: 0.05, // Preserve text depth
             curveSegments: 12,
@@ -371,7 +386,7 @@ const CentralContentPanelEnhanced = ({
           if (data.price) {
             const priceText = `$${data.price.amount} ${data.price.currencyCode}`;
             const priceGeometry = new TextGeometry(priceText, {
-              font: font,
+              font,
               size: 0.15,
               height: 0.03,
               curveSegments: 8
@@ -393,7 +408,7 @@ const CentralContentPanelEnhanced = ({
           const statusColor = data.isAvailable ? 0x00ff96 : 0xff6600;
           
           const statusGeometry = new TextGeometry(statusText, {
-            font: font,
+            font,
             size: 0.12,
             height: 0.02,
             curveSegments: 6
