@@ -146,15 +146,8 @@ export class Carousel3DPro extends Group {
    *  - Single-word remains unchanged
    */
   formatStackedLabel(label) {
-    if (typeof label !== 'string') return String(label ?? '');
-    // Find last space; if none, return as-is
-    const lastSpace = label.lastIndexOf(' ');
-    if (lastSpace === -1) return label;
-    const firstLine = label.slice(0, lastSpace);
-    const secondLine = label.slice(lastSpace + 1);
-    // Avoid empty lines if trailing space
-    if (!secondLine.trim()) return firstLine.trim();
-    return `${firstLine}\n${secondLine}`;
+  // Revert to single-line labels (no stacking)
+  return typeof label === 'string' ? label : String(label ?? '');
   }
 
   async loadFont() {
