@@ -26,6 +26,10 @@ export default [
     ignores: [
       '**/node_modules/',
       '**/build/',
+  '**/dist/**',
+  '**/backup/**',
+  '**/dev-workspace/**',
+  '**/*_WORKING.*',
       '**/*.graphql.d.ts',
       '**/*.graphql.ts',
       '**/*.generated.d.ts',
