@@ -5,7 +5,13 @@
 
 import { useState, useEffect, useRef } from 'react';
 import * as THREE from 'three';
-import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
+let GLTFLoader;
+async function ensureGLTFLoader() {
+  if (!GLTFLoader) {
+    GLTFLoader = (await import('three/examples/jsm/loaders/GLTFLoader.js')).GLTFLoader;
+  }
+  return GLTFLoader;
+}
 import { TextGeometry } from 'three/examples/jsm/geometries/TextGeometry.js';
 import { FontLoader } from 'three/examples/jsm/loaders/FontLoader.js';
 
@@ -265,8 +271,9 @@ const CentralContentPanelEnhanced = ({
 
   // Load 3D model
   const load3DModel = (glbUrl) => {
-    return new Promise((resolve, reject) => {
-      const loader = new GLTFLoader();
+    return new Promise(async (resolve, reject) => {
+      const Loader = await ensureGLTFLoader();
+      const loader = new Loader();
       
       loader.load(
         glbUrl,
