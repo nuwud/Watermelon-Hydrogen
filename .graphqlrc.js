@@ -18,7 +18,9 @@ export default {
 
     customer: {
       schema: getSchema('customer-account'),
-      documents: ['./app/graphql/customer-account/*.{ts,tsx,js,jsx}'],
+      documents: [
+        './app/graphql/customer-account/**/*.{ts,tsx,js,jsx,graphql,gql}',
+      ],
     },
 
     // Add your own GraphQL projects here for CMS, Shopify Admin API, etc.

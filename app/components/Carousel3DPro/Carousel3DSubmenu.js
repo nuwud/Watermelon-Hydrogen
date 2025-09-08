@@ -2,7 +2,14 @@ import * as THREE from 'three'; // Import Three.js core
 import { TextGeometry } from 'three/examples/jsm/geometries/TextGeometry.js'; // Import TextGeometry for 3D text rendering
 import { FontLoader } from 'three/examples/jsm/loaders/FontLoader.js'; // Import FontLoader for loading fonts
 // Removed unused imports: getGlowShaderMaterial, getOpacityFadeMaterial, defaultCarouselStyle
-// Note: GLTFLoader is dynamically imported at usage sites to improve chunking
+// Defer GLTFLoader to client via dynamic import to keep SSR safe and enable chunking
+let GLTFLoader;
+async function ensureGLTFLoader() {
+  if (!GLTFLoader) {
+    GLTFLoader = (await import('three/examples/jsm/loaders/GLTFLoader.js')).GLTFLoader;
+  }
+  return GLTFLoader;
+}
 // Access GSAP from the global scope
 import gsap from 'gsap'; // Import GSAP for animations
 // Import the utility
@@ -706,13 +713,12 @@ export class Carousel3DSubmenu extends THREE.Group { // Class definition for Car
       console.warn(`[Carousel3DSubmenu] Creating icon for item: ${itemName}, shape: ${itemShape}`);
       
       if (itemShape && itemShape !== 'null' && itemShape !== 'undefined') {
-        // Use the shape from content manager - load GLB model (dynamic import for better chunking)
+        // Use the shape from content manager - load GLB model
         const modelPath = `/assets/models/${itemShape}.glb`;
         console.warn(`[Carousel3DSubmenu] Loading GLB model: ${modelPath}`);
-        import('three/examples/jsm/loaders/GLTFLoader.js')
-          .then(({ GLTFLoader }) => {
-            const loader = new GLTFLoader();
-            loader.load(modelPath, (gltf) => {
+        ensureGLTFLoader().then((Loader) => {
+          const loader = new Loader();
+          loader.load(modelPath, (gltf) => {
               const model = gltf.scene;
               baseScale.set(0.3, 0.3, 0.3); // Set consistent scale for all GLB models
               model.scale.copy(baseScale);
@@ -766,17 +772,12 @@ export class Carousel3DSubmenu extends THREE.Group { // Class definition for Car
               // Fallback to regular shape
               this.createFallbackIcon(container, index, textWidth, iconOffset, baseScale);
             });
-          })
-          .catch((err) => {
-            console.warn(`[Carousel3DSubmenu] ⚠️ Failed to import GLTFLoader:`, err);
-            this.createFallbackIcon(container, index, textWidth, iconOffset, baseScale);
-          });
+        });
       } else if (itemName === 'Cart') {
-        // Load the GLTF cart model asynchronously (dynamic import)
-        import('three/examples/jsm/loaders/GLTFLoader.js')
-          .then(({ GLTFLoader }) => {
-            const loader = new GLTFLoader();
-            loader.load('/assets/Cart.glb', (gltf) => { // Load the GLTF model
+        // Load the GLTF cart model asynchronously
+        ensureGLTFLoader().then((Loader) => {
+          const loader = new Loader(); // Create a new GLTFLoader instance
+          loader.load('/assets/Cart.glb', (gltf) => { // Load the GLTF model
           const model = gltf.scene; // Get the loaded model from the GLTF
           // ✅ Step 1: Save original scale after loading model
           baseScale.set(0.3, 0.3, 0.3); // Set specific base scale for Cart
@@ -820,13 +821,10 @@ export class Carousel3DSubmenu extends THREE.Group { // Class definition for Car
                 }, "-=0.1"); // Overlap with previous animation for a seamless effect
             }
           }
-            }, undefined, (error) => { // Handle errors during model loading
-              console.error(`Error loading Cart.glb: ${error}`); // Log error if model fails to load
-            });
-          })
-          .catch((err) => {
-            console.error('Error importing GLTFLoader for Cart:', err);
+          }, undefined, (error) => { // Handle errors during model loading
+            console.error(`Error loading Cart.glb: ${error}`); // Log error if model fails to load
           });
+        });
       } else if (isGallerySubmenu && galleryShapes[item]) {
         // Use special Gallery icon (synchronous)
         iconMesh = galleryShapes[item](); // Create the specific icon for the Gallery submenu

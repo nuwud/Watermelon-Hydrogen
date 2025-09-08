@@ -1,12 +1,18 @@
 // app/components/cart-drawers/CartHUDIcon3D.js
 
 import * as THREE from 'three';
+let GLTFLoader;
+async function ensureGLTFLoader() {
+  if (!GLTFLoader) {
+    GLTFLoader = (await import('three/examples/jsm/loaders/GLTFLoader.js')).GLTFLoader;
+  }
+  return GLTFLoader;
+}
 
 export function createCartHUDIcon(camera, onClickCallback) {
   const group = new THREE.Group();
   group.name = 'CartHUDIconGroup';
-
-  let loader;
+  let loaderPromise = ensureGLTFLoader().then(L => new L());
   let cartModel = null;
   let originalEmissive = null;
   let originalIntensity = null;
@@ -18,16 +24,8 @@ export function createCartHUDIcon(camera, onClickCallback) {
   // --- GLTF Loading ---
   const forceFallback = false; // Set to true to always use the fallback box for testing
 
-  const ensureLoader = async () => {
-    if (!loader) {
-      const { GLTFLoader } = await import('three/examples/jsm/loaders/GLTFLoader.js');
-      loader = new GLTFLoader();
-    }
-    return loader;
-  };
-
   if (!forceFallback) {
-    ensureLoader().then((l) => l.load(
+  loaderPromise.then((loader) => loader.load(
       '/assets/Cart.gltf', // Path relative to the public directory
       (gltf) => {
         cartModel = gltf.scene;
@@ -59,10 +57,7 @@ export function createCartHUDIcon(camera, onClickCallback) {
         console.error('Error loading Cart GLTF, using fallback:', error);
         createFallback(); // Use fallback if loading fails
       }
-    )).catch((err) => {
-      console.warn('Failed to import GLTFLoader for CartHUDIcon3D:', err);
-      createFallback();
-    });
+    ));
   } else {
     console.warn('Forcing fallback for CartHUDIcon.');
     createFallback(); // Force fallback if flag is set

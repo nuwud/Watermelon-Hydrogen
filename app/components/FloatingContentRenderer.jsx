@@ -38,7 +38,7 @@ export default function FloatingContentRenderer() {
     }, [activeContentId]);
 
     useEffect(() => {
-        console.groupCollapsed('[FloatingContentRenderer]');
+    console.group('[FloatingContentRenderer]');
         console.warn('🔍 activeContentId:', activeContentId);
         console.warn('🧩 ActiveComponent:', ActiveComponent ? 'Component Loaded' : 'None');
         console.groupEnd();

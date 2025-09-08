@@ -5,6 +5,13 @@
 
 import { useState, useEffect, useRef } from 'react';
 import * as THREE from 'three';
+let GLTFLoader;
+async function ensureGLTFLoader() {
+  if (!GLTFLoader) {
+    GLTFLoader = (await import('three/examples/jsm/loaders/GLTFLoader.js')).GLTFLoader;
+  }
+  return GLTFLoader;
+}
 import { extractShopifyGLBUrl } from '../../utils/contentManager.js';
 
 const Carousel3DSubmenuEnhanced = ({ 
@@ -130,14 +137,7 @@ const Carousel3DSubmenuEnhanced = ({
   useEffect(() => {
     if (!sceneRef.current || !enhancedItems.length) return;
 
-    let loader;
-    const ensureLoader = async () => {
-      if (!loader) {
-        const { GLTFLoader } = await import('three/examples/jsm/loaders/GLTFLoader.js');
-        loader = new GLTFLoader();
-      }
-      return loader;
-    };
+  let loaderPromise = ensureGLTFLoader().then(L => new L());
     submenuItemsRef.current = [];
 
     // Clear existing submenu items
@@ -162,7 +162,7 @@ const Carousel3DSubmenuEnhanced = ({
       // Load GLB model
       setLoadingProgress(prev => ({ ...prev, [item.id]: 0 }));
 
-  ensureLoader().then((l) => l.load(
+  loaderPromise.then((loader) => loader.load(
         item.model3D.glbPath,
         (gltf) => {
           const model = gltf.scene;
@@ -204,11 +204,7 @@ const Carousel3DSubmenuEnhanced = ({
           addFallbackGeometry(item, x, z, newSubmenuGroup, index);
           setLoadingProgress(prev => ({ ...prev, [item.id]: 100 }));
         }
-      )).catch((err) => {
-        console.warn('Failed to import GLTFLoader for submenu item:', err);
-        addFallbackGeometry(item, x, z, newSubmenuGroup, index);
-        setLoadingProgress(prev => ({ ...prev, [item.id]: 100 }));
-      });
+  ));
     });
 
   }, [enhancedItems]);
