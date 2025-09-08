@@ -29,6 +29,7 @@ export default [
   '**/dist/**',
   '**/backup/**',
   '**/dev-workspace/**',
+  '**/docs/archives/**',
   '**/*_WORKING.*',
   '**/modules/archive/**',
       '**/*.graphql.d.ts',
