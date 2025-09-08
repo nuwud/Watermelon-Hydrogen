@@ -137,6 +137,26 @@ export class Carousel3DPro extends Group {
     this.state = 'idle'; // Initial state
   }
 
+  /**
+   * Formats a label for the main ring so multi-word titles stack across two lines.
+   * Rule: split at the last space to keep punctuation like "/" with the first line.
+   * Examples:
+   *  - "About Us" -> "About\nUs"
+   *  - "Cart / Account" -> "Cart /\nAccount"
+   *  - Single-word remains unchanged
+   */
+  formatStackedLabel(label) {
+    if (typeof label !== 'string') return String(label ?? '');
+    // Find last space; if none, return as-is
+    const lastSpace = label.lastIndexOf(' ');
+    if (lastSpace === -1) return label;
+    const firstLine = label.slice(0, lastSpace);
+    const secondLine = label.slice(lastSpace + 1);
+    // Avoid empty lines if trailing space
+    if (!secondLine.trim()) return firstLine.trim();
+    return `${firstLine}\n${secondLine}`;
+  }
+
   async loadFont() {
     try {
       const fontURL = '/helvetiker_regular.typeface.json';
@@ -204,7 +224,9 @@ export class Carousel3DPro extends Group {
     const angleStep = (2 * Math.PI) / this.items.length;
 
     this.items.forEach((item, index) => {
-      const geometry = new TextGeometry(item.toString(), {
+  const originalLabel = item.toString();
+  const displayLabel = this.formatStackedLabel(originalLabel);
+  const geometry = new TextGeometry(displayLabel, {
         font: this.font,
         size: 0.5,
         height: 0.1,
@@ -225,8 +247,10 @@ export class Carousel3DPro extends Group {
         opacity: this.config.opacity
       });
 
-      const mesh = new THREE.Mesh(geometry, material);
-      mesh.name = item.toString();
+  const mesh = new THREE.Mesh(geometry, material);
+  mesh.name = originalLabel; // Keep original label as name for lookups
+  mesh.userData.originalLabel = originalLabel;
+  mesh.userData.displayLabel = displayLabel;
 
       const angle = angleStep * index;
       mesh.position.x = this.cylinderRadius * Math.sin(angle);
