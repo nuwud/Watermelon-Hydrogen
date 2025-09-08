@@ -99,6 +99,12 @@
 
 ---
 
+## 🗓️ Daily Updates
+
+- [2025-09-07](./DAILY_UPDATE_2025_09_07.md) — Main stabilization, GLTFLoader normalization, conflict resolution, codegen fixes, and build verification.
+
+---
+
 ## 🎯 **Quick Commands**
 
 ### Development Server

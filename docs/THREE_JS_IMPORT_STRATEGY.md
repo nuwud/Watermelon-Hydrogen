@@ -295,3 +295,17 @@ import THREE from 'three';
 **Implementation Date**: December 24, 2024  
 **Status**: Fully Implemented ✅  
 **Build Compatibility**: SSR + Client ✅
+
+---
+
+## 2025-09-07 Addendum: GLTFLoader Standardization
+
+We standardized GLTFLoader usage across 3D components to a dynamic import helper for SSR safety and better code splitting:
+
+- Pattern: `const {GLTFLoader} = await import('three/examples/jsm/loaders/GLTFLoader.js');`
+- Wrapped via an `ensureGLTFLoader()` helper to reuse a single promise per module and avoid multiple chunks.
+- Confirmed Vite emits GLTFLoader as a separate client-only chunk, keeping SSR bundle clean.
+
+Reminders:
+- Guard all browser APIs with `typeof window !== 'undefined'` and/or render under `<ClientOnly>`.
+- Dispose geometries/materials and remove event listeners during cleanup to avoid leaks.

@@ -51,18 +51,34 @@ The Watermelon Hydrogen project now builds successfully with all major issues re
 - `app/routes/($locale).account.addresses.jsx`
 
 ## Current Build Status
-- ✅ Client build: Working
-- ⚠️ SSR build: Failing due to remaining customer account imports
+ ✅ SSR build: Working
 
-## Next Steps
-1. **Immediate**: Complete the customer account import fixes to enable full build
-2. **Future**: Update customer account GraphQL files to use correct Shopify Customer Account API schema
+1. Optional: Update customer account GraphQL files to latest schema when re-enabling account features
+2. Optional: Implement proper customer account functionality with updated schema
 3. **Enhancement**: Implement proper customer account functionality with updated schema
 
 ## Customer Account API Migration Notes
 The current customer account GraphQL files appear to use deprecated fields/types:
 - `MailingAddressInput` → should be `CustomerAddressInput` or `CustomerMailingAddressInput`
 - `customerUserErrors` → should be `userErrors`
+
+---
+
+## 2025-09-07 Update
+
+Status refreshed after main stabilization work:
+
+- Resolved merge conflicts in key 3D files and cart HUD; main is clean and pushed.
+- Normalized GLTFLoader via dynamic import for SSR safety and dedicated client chunking.
+- Restored Remix API route internals (`app/routes/api.products-3d.jsx`) and corrected fragment import path.
+- Codegen stabilized (unique operation names, broadened globs, placeholder present).
+- ESLint signal cleaned; backup/dev artifacts ignored (`*_WORKING.*`, backup, dev-workspace).
+- Archived `Carousel3DSubmenu_WORKING.js` to `backup/`.
+
+Build verification:
+
+- Client build: success; GLTFLoader emitted as separate chunk.
+- SSR build: success.
 - Missing required fields like `addressId` in mutations
 - `statusUrl` → should be `statusPageUrl`
 
