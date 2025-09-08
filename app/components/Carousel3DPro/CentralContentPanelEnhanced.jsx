@@ -3,7 +3,7 @@
  * Integrates Shopify products with 3D display system
  */
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import * as THREE from 'three';
 let GLTFLoader;
 async function ensureGLTFLoader() {
@@ -96,6 +96,22 @@ const CentralContentPanelEnhanced = ({
     scene.add(rimLight);
 
     // Create green ring (toggleable)
+    const createGreenRing = (targetScene) => {
+      const ringGeometry = new THREE.RingGeometry(2.8, 3.2, 64);
+      const ringMaterial = new THREE.MeshBasicMaterial({
+        color: 0x00ff96,
+        transparent: true,
+        opacity: 0.6,
+        side: THREE.DoubleSide,
+      });
+      const ring = new THREE.Mesh(ringGeometry, ringMaterial);
+      ring.name = 'greenRing';
+      // Initialize invisible and let the dedicated effect below control visibility
+      ring.visible = false;
+      targetScene.add(ring);
+      greenRingRef.current = ring;
+    };
+
     createGreenRing(scene);
 
     sceneRef.current = scene;
@@ -113,21 +129,7 @@ const CentralContentPanelEnhanced = ({
     };
   }, []);
 
-  // Create the green ring frame
-  const createGreenRing = (scene) => {
-    const ringGeometry = new THREE.RingGeometry(2.8, 3.2, 64);
-    const ringMaterial = new THREE.MeshBasicMaterial({ 
-      color: 0x00ff96,
-      transparent: true,
-      opacity: 0.6,
-      side: THREE.DoubleSide
-    });
-    const ring = new THREE.Mesh(ringGeometry, ringMaterial);
-    ring.name = 'greenRing';
-    ring.visible = showGreenRing;
-    scene.add(ring);
-    greenRingRef.current = ring;
-  };
+  // (green ring creation handled inside the mount effect above)
 
   // Update green ring visibility
   useEffect(() => {
@@ -184,14 +186,9 @@ const CentralContentPanelEnhanced = ({
     };
 
     processContentData();
-  }, [selectedItem, shopifyProduct]);
+  }, [selectedItem, shopifyProduct, clearCentralContent]);
 
-  // Load 3D content when data changes
-  useEffect(() => {
-    if (!contentData || !sceneRef.current) return;
-
-    loadCentralContent(contentData);
-  }, [contentData]);
+  // (content loading effect moved below after memoized helpers)
 
   // Extract GLB URL from Shopify product
   const extractGLBFromShopifyProduct = (product) => {
@@ -234,97 +231,25 @@ const CentralContentPanelEnhanced = ({
     return null;
   };
 
-  // Load central content (3D model + text)
-  const loadCentralContent = async (data) => {
-    clearCentralContent();
-    
-    setLoadingState({
-      model: true,
-      text: true,
-      progress: 0
-    });
+  // Clear central content
+  const clearCentralContent = useCallback(() => {
+    if (!sceneRef.current) return;
 
-    try {
-      // Load 3D model
-      await load3DModel(data.glbUrl);
-      
-      // Load text geometry
-      await loadTextGeometry(data);
-      
-      setLoadingState({
-        model: false,
-        text: false,
-        progress: 100
-      });
-
-      onContentLoad?.(data);
-    } catch (error) {
-      console.error('Error loading central content:', error);
-      setLoadingState({
-        model: false,
-        text: false,
-        progress: 100
-      });
-      onError?.(error);
+    // Remove current model
+    if (currentModelRef.current) {
+      sceneRef.current.remove(currentModelRef.current);
+      currentModelRef.current = null;
     }
-  };
 
-  // Load 3D model
-  const load3DModel = (glbUrl) => {
-    return new Promise(async (resolve, reject) => {
-      const Loader = await ensureGLTFLoader();
-      const loader = new Loader();
-      
-      loader.load(
-        glbUrl,
-        (gltf) => {
-          const model = gltf.scene;
-          model.name = 'centralModel';
-          
-          // Scale and position model
-          const box = new THREE.Box3().setFromObject(model);
-          const size = box.getSize(new THREE.Vector3());
-          const maxDim = Math.max(size.x, size.y, size.z);
-          const scale = 2.0 / maxDim;
-          model.scale.setScalar(scale);
-          
-          // Center the model
-          const center = box.getCenter(new THREE.Vector3());
-          model.position.sub(center.multiplyScalar(scale));
-          
-          // Enable shadows
-          model.traverse((child) => {
-            if (child.isMesh) {
-              child.castShadow = true;
-              child.receiveShadow = true;
-              
-              // Enhance materials for better product display
-              if (child.material) {
-                child.material.envMapIntensity = 0.8;
-              }
-            }
-          });
-
-          sceneRef.current.add(model);
-          currentModelRef.current = model;
-          
-          resolve(model);
-        },
-        (progress) => {
-          const percent = (progress.loaded / progress.total) * 50; // Model is 50% of loading
-          setLoadingState(prev => ({ ...prev, progress: percent }));
-        },
-        (error) => {
-          console.warn('Failed to load GLB model, using fallback:', error);
-          createFallbackModel(glbUrl);
-          resolve(null);
-        }
-      );
-    });
-  };
+    // Remove text group
+    if (textGroupRef.current) {
+      sceneRef.current.remove(textGroupRef.current);
+      textGroupRef.current = null;
+    }
+  }, []);
 
   // Create fallback model when GLB fails
-  const createFallbackModel = (glbUrl) => {
+  const createFallbackModel = useCallback(() => {
     const geometry = new THREE.BoxGeometry(1.5, 1.5, 1.5);
     const material = new THREE.MeshLambertMaterial({ 
       color: 0x00ff96,
@@ -336,10 +261,69 @@ const CentralContentPanelEnhanced = ({
     
     sceneRef.current.add(mesh);
     currentModelRef.current = mesh;
-  };
+  }, []);
+
+  // Load central content (3D model + text)
+  const load3DModel = useCallback((glbUrl) => {
+    return ensureGLTFLoader().then((Loader) =>
+      new Promise((resolve) => {
+        const loader = new Loader();
+
+        loader.load(
+          glbUrl,
+          (gltf) => {
+            const model = gltf.scene;
+            model.name = 'centralModel';
+
+            // Scale and position model
+            const box = new THREE.Box3().setFromObject(model);
+            const size = box.getSize(new THREE.Vector3());
+            const maxDim = Math.max(size.x, size.y, size.z);
+            const scale = 2.0 / maxDim;
+            model.scale.setScalar(scale);
+
+            // Center the model
+            const center = box.getCenter(new THREE.Vector3());
+            model.position.sub(center.multiplyScalar(scale));
+
+            // Enable shadows
+            model.traverse((child) => {
+              if (child.isMesh) {
+                child.castShadow = true;
+                child.receiveShadow = true;
+
+                // Enhance materials for better product display
+                if (child.material) {
+                  child.material.envMapIntensity = 0.8;
+                }
+              }
+            });
+
+            sceneRef.current.add(model);
+            currentModelRef.current = model;
+
+            resolve(model);
+          },
+          (progress) => {
+            const percent = (progress.loaded / progress.total) * 50; // Model is 50% of loading
+            setLoadingState((prev) => ({ ...prev, progress: percent }));
+          },
+          (error) => {
+            console.warn('Failed to load GLB model, using fallback:', error);
+            createFallbackModel();
+            resolve(null);
+          }
+        );
+      })
+    );
+  }, [createFallbackModel]);
+
+  // (load3DModel implemented above with dynamic import and non-async Promise executor)
+
+  // (createFallbackModel defined above)
 
   // Load text geometry with depth
-  const loadTextGeometry = (data) => {
+  const loadTextGeometry = useCallback((data) => {
     return new Promise((resolve, reject) => {
       const loader = new FontLoader();
       
@@ -351,7 +335,7 @@ const CentralContentPanelEnhanced = ({
 
           // Title text
           const titleGeometry = new TextGeometry(data.title, {
-            font: font,
+            font,
             size: 0.2,
             height: 0.05, // Preserve text depth
             curveSegments: 12,
@@ -378,7 +362,7 @@ const CentralContentPanelEnhanced = ({
           if (data.price) {
             const priceText = `$${data.price.amount} ${data.price.currencyCode}`;
             const priceGeometry = new TextGeometry(priceText, {
-              font: font,
+              font,
               size: 0.15,
               height: 0.03,
               curveSegments: 8
@@ -400,7 +384,7 @@ const CentralContentPanelEnhanced = ({
           const statusColor = data.isAvailable ? 0x00ff96 : 0xff6600;
           
           const statusGeometry = new TextGeometry(statusText, {
-            font: font,
+            font,
             size: 0.12,
             height: 0.02,
             curveSegments: 6
@@ -429,24 +413,45 @@ const CentralContentPanelEnhanced = ({
         }
       );
     });
-  };
+  }, []);
 
-  // Clear central content
-  const clearCentralContent = () => {
-    if (!sceneRef.current) return;
+  // Load 3D content when data changes
+  useEffect(() => {
+    if (!contentData || !sceneRef.current) return;
 
-    // Remove current model
-    if (currentModelRef.current) {
-      sceneRef.current.remove(currentModelRef.current);
-      currentModelRef.current = null;
-    }
+    const run = async () => {
+      clearCentralContent();
 
-    // Remove text group
-    if (textGroupRef.current) {
-      sceneRef.current.remove(textGroupRef.current);
-      textGroupRef.current = null;
-    }
-  };
+      setLoadingState({
+        model: true,
+        text: true,
+        progress: 0,
+      });
+
+      try {
+        await load3DModel(contentData.glbUrl);
+        await loadTextGeometry(contentData);
+
+        setLoadingState({
+          model: false,
+          text: false,
+          progress: 100,
+        });
+
+        onContentLoad?.(contentData);
+      } catch (error) {
+        console.error('Error loading central content:', error);
+        setLoadingState({
+          model: false,
+          text: false,
+          progress: 100,
+        });
+        onError?.(error);
+      }
+    };
+
+    run();
+  }, [contentData, onContentLoad, onError, load3DModel, loadTextGeometry, clearCentralContent]);
 
   // Animation loop
   const startAnimationLoop = () => {

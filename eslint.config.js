@@ -30,6 +30,7 @@ export default [
   '**/backup/**',
   '**/dev-workspace/**',
   '**/*_WORKING.*',
+  '**/modules/archive/**',
       '**/*.graphql.d.ts',
       '**/*.graphql.ts',
       '**/*.generated.d.ts',
