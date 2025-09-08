@@ -213,13 +213,13 @@ export class Carousel3DPro extends Group {
    */
   createItems() {
     if (!this.font) return;
-
     const angleStep = (2 * Math.PI) / this.items.length;
 
-    this.items.forEach((item, index) => {
-  const originalLabel = item.toString();
-  const displayLabel = this.formatStackedLabel(originalLabel);
-  const geometry = new TextGeometry(displayLabel, {
+    // 1) Precompute geometries and measure widths to balance visual sizes
+    const prepared = this.items.map((item) => {
+      const originalLabel = item.toString();
+      const displayLabel = this.formatStackedLabel(originalLabel);
+      const geometry = new TextGeometry(displayLabel, {
         font: this.font,
         size: 0.5,
         height: 0.1,
@@ -233,17 +233,31 @@ export class Carousel3DPro extends Group {
       });
       geometry.computeBoundingBox();
       geometry.center();
+      const width = geometry.boundingBox.max.x - geometry.boundingBox.min.x;
+      const height = geometry.boundingBox.max.y - geometry.boundingBox.min.y;
+      return { originalLabel, displayLabel, geometry, width, height };
+    });
 
+    const avgWidth = prepared.reduce((sum, p) => sum + p.width, 0) / Math.max(1, prepared.length);
+    // Choose a target width close to average, within sensible bounds for legibility
+    const targetWidth = Math.min(2.2, Math.max(1.6, avgWidth));
+
+    // 2) Create meshes with normalized widths and place them evenly by angle
+    prepared.forEach((p, index) => {
       const material = new THREE.MeshStandardMaterial({
         color: this.config.textColor,
         transparent: true,
         opacity: this.config.opacity
       });
 
-  const mesh = new THREE.Mesh(geometry, material);
-  mesh.name = originalLabel; // Keep original label as name for lookups
-  mesh.userData.originalLabel = originalLabel;
-  mesh.userData.displayLabel = displayLabel;
+      const mesh = new THREE.Mesh(p.geometry, material);
+      mesh.name = p.originalLabel;
+      mesh.userData.originalLabel = p.originalLabel;
+      mesh.userData.displayLabel = p.displayLabel;
+
+      // Normalize width slightly for a more balanced ring, but clamp scale to avoid extremes
+      const scaleFactor = THREE.MathUtils.clamp(targetWidth / Math.max(0.001, p.width), 0.75, 1.15);
+      mesh.scale.setScalar(scaleFactor);
 
       const angle = angleStep * index;
       mesh.position.x = this.cylinderRadius * Math.sin(angle);
@@ -253,10 +267,10 @@ export class Carousel3DPro extends Group {
       mesh.userData.originalScale = new THREE.Vector3().copy(mesh.scale);
       mesh.userData.originalColor = material.color.clone();
 
-      const textWidth = geometry.boundingBox.max.x - geometry.boundingBox.min.x;
-      const textHeight = geometry.boundingBox.max.y - geometry.boundingBox.min.y;
-      const hitAreaWidth = textWidth * 1.5;
-      const hitAreaHeight = textHeight * 2;
+      const scaledWidth = p.width * scaleFactor;
+      const scaledHeight = p.height * scaleFactor;
+      const hitAreaWidth = scaledWidth * 1.5;
+      const hitAreaHeight = scaledHeight * 2;
       const hitAreaDepth = 0.5;
       const hitAreaGeometry = new THREE.BoxGeometry(hitAreaWidth, hitAreaHeight, hitAreaDepth);
       const hitAreaMaterial = new THREE.MeshBasicMaterial({
@@ -268,7 +282,6 @@ export class Carousel3DPro extends Group {
       const hitArea = new THREE.Mesh(hitAreaGeometry, hitAreaMaterial);
       hitArea.position.copy(mesh.position);
       hitArea.rotation.copy(mesh.rotation);
-
       this.itemGroup.add(hitArea);
 
       hitArea.userData = { index, mesh };
