@@ -1,3 +1,5 @@
+# Ignore duplicate app asset copy of favicon; use public/assets/favicon.svg instead
+app/assets/favicon.svg
 node_modules
 /.cache
 /build
