@@ -18,6 +18,9 @@ export default async function handleRequest(
   remixContext,
   context,
 ) {
+  // Avoid unused var warning in JS while keeping Remix signature
+  void context;
+
   const {nonce, header, NonceProvider} = createContentSecurityPolicy({
     shop: {
       checkoutDomain: envPublic.PUBLIC_CHECKOUT_DOMAIN,
