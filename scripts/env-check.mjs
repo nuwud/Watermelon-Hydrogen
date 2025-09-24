@@ -18,6 +18,7 @@ const required = [
   'PUBLIC_STORE_DOMAIN',
   'PUBLIC_STOREFRONT_API_TOKEN',
   'PUBLIC_STOREFRONT_ID',
+  'PUBLIC_STOREFRONT_API_VERSION',
 ];
 
 for (const name of required) assert(name);
