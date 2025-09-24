@@ -10,7 +10,8 @@
     "preview": "shopify hydrogen preview --build",
     "lint": "eslint --no-error-on-unmatched-pattern .",
     "codegen": "shopify hydrogen codegen",
-    "export-copilot-chats": "node scripts/tools/export-copilot-chats.mjs"
+    "export-copilot-chats": "node scripts/tools/export-copilot-chats.mjs",
+    "archive-pruned-chats": "node scripts/tools/archive-pruned-chats.mjs"
   },
   "prettier": "@shopify/prettier-config",
   "dependencies": {

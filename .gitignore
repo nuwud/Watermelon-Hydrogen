@@ -11,3 +11,6 @@ node_modules
 
 # Copilot/Chat export JSONs (can be very large)
 docs/chats/*.json
+
+# Local archives of pruned chat logs (keep manifests only)
+dev-workspace/chat-archives/**/*.gz

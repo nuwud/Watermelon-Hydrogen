@@ -1,0 +1,26 @@
+{
+  "createdAt": "2025-09-24T21:36:11.449Z",
+  "files": [
+    {
+      "name": "watermelon-hydrogen-copilot_sessions-2025-09-24T20-45-42-598Z.json",
+      "src": "C:\\Users\\Nuwud\\Projects\\watermelon-hydrogen\\docs\\chats\\watermelon-hydrogen-copilot_sessions-2025-09-24T20-45-42-598Z.json",
+      "archived": "C:\\Users\\Nuwud\\Projects\\watermelon-hydrogen\\dev-workspace\\chat-archives\\archive-2025-09-24T21-36-11-447Z\\watermelon-hydrogen-copilot_sessions-2025-09-24T20-45-42-598Z.json.gz",
+      "sizeBytes": 170009014,
+      "gzSizeBytes": 20013203
+    },
+    {
+      "name": "watermelon-hydrogen-copilot_memento-2025-09-24T20-45-42-598Z.json",
+      "src": "C:\\Users\\Nuwud\\Projects\\watermelon-hydrogen\\docs\\chats\\watermelon-hydrogen-copilot_memento-2025-09-24T20-45-42-598Z.json",
+      "archived": "C:\\Users\\Nuwud\\Projects\\watermelon-hydrogen\\dev-workspace\\chat-archives\\archive-2025-09-24T21-36-11-447Z\\watermelon-hydrogen-copilot_memento-2025-09-24T20-45-42-598Z.json.gz",
+      "sizeBytes": 21099,
+      "gzSizeBytes": 3383
+    },
+    {
+      "name": "watermelon-hydrogen-interactive.sessions-2025-09-24T20-44-04-144Z.json",
+      "src": "C:\\Users\\Nuwud\\Projects\\watermelon-hydrogen\\docs\\chats\\watermelon-hydrogen-interactive.sessions-2025-09-24T20-44-04-144Z.json",
+      "archived": "C:\\Users\\Nuwud\\Projects\\watermelon-hydrogen\\dev-workspace\\chat-archives\\archive-2025-09-24T21-36-11-447Z\\watermelon-hydrogen-interactive.sessions-2025-09-24T20-44-04-144Z.json.gz",
+      "sizeBytes": 2,
+      "gzSizeBytes": 22
+    }
+  ]
+}
