@@ -1,13 +1,26 @@
-# Ignore duplicate app asset copy of favicon; use public/assets/favicon.svg instead
-app/assets/favicon.svg
+# Watermelon Hydrogen - .gitignore
+
+# Dependencies
 node_modules
+
+# Build outputs
 /.cache
 /build
 /dist
 /public/build
 /.mf
-.env
+
+# Shopify
 .shopify
+
+# Env files (do not commit secrets)
+.env
+.env.production
+.env.development
+.env.local
+
+# App assets duplicate (use public/assets/favicon.svg instead)
+app/assets/favicon.svg
 
 # Copilot/Chat export JSONs (can be very large)
 docs/chats/*.json

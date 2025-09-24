@@ -2,6 +2,7 @@ import {RemixServer} from '@remix-run/react';
 import {isbot} from 'isbot';
 import {renderToReadableStream} from 'react-dom/server';
 import {createContentSecurityPolicy} from '@shopify/hydrogen';
+import {envPublic} from '~/utils/env.public';
 
 /**
  * @param {Request} request
@@ -19,8 +20,8 @@ export default async function handleRequest(
 ) {
   const {nonce, header, NonceProvider} = createContentSecurityPolicy({
     shop: {
-      checkoutDomain: context.env.PUBLIC_CHECKOUT_DOMAIN,
-      storeDomain: context.env.PUBLIC_STORE_DOMAIN,
+      checkoutDomain: envPublic.PUBLIC_CHECKOUT_DOMAIN,
+      storeDomain: envPublic.PUBLIC_STORE_DOMAIN,
     },
   });
 
