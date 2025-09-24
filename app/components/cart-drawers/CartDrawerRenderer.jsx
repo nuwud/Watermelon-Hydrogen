@@ -8,6 +8,7 @@ import { createCartDrawerOverlay } from './CartDrawer3D.scene'; // Import scene 
 import { createCartHUDIcon } from './CartHUDIcon3D'; // Import HUD icon function
 import ClientOnly from '../ClientOnly';
 import { CartHUDDebugPanel } from './CartHUDDebugPanel'; // Import Debug Panel
+import {envPublic} from '~/utils/env.public'; // Import envPublic
 
 
 // Define the CartDrawer3D component
@@ -240,7 +241,7 @@ function CartDrawer3D() {
   return (
     <>
       {/* Render debug panel only in development */}
-      {process.env.NODE_ENV !== 'production' && <CartHUDDebugPanel hudRef={hudCartRef} />}
+  {envPublic.IS_DEV && <CartHUDDebugPanel hudRef={hudCartRef} />}
     </>
   );
 }

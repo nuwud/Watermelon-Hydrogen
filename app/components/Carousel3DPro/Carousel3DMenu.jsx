@@ -1,5 +1,6 @@
 //import React from 'react';
 import { useEffect, useRef, useState } from 'react';
+import {envPublic} from '~/utils/env.public';
 import { ClientOnly } from '../ClientOnly';
 import { setupCarousel } from './main';
 
@@ -104,7 +105,7 @@ function Carousel3DMenu() {
         <div ref={containerRef} style={{ width: '100%', height: '100%' }} />
 
         {/* Optional debug controls */}
-        {process.env.NODE_ENV !== 'production' && (
+        {envPublic.IS_DEV && (
           <div className="carousel-debug" style={{ position: 'absolute', top: 0, right: 0, zIndex: 100 }}>
             <button 
               onClick={() => window.fixCarousel()} 
