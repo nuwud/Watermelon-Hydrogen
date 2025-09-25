@@ -1,140 +1,42 @@
 /**
- * A 3D carousel component built with Three.js that creates an interactive rotating cylinder of text items.
- * This component creates a circular arrangement of text items that can be rotated, selected, and animated.
- * The carousel supports cylinder-style rotation, item selection, glow effects, and transparent backgrounds.
- *
- * @class
- * @extends {THREE.Group}
- * @example
- * // Basic usage
- * const items = ['Home', 'Products', 'About', 'Contact'];
- * const carousel = new Carousel3DPro(items);
- * scene.add(carousel);
- *
- * // With custom configuration
- * const config = {
- * textColor: 0x00ff00,
- * glowColor: 0x00ffff,
- * opacity: 0.8
- * };
- * const carousel = new Carousel3DPro(items, config);
- *
- * @property {Array} items - The array of items to display in the carousel
- * @property {Object} config - Configuration options for the carousel's appearance
- * @property {Array} itemMeshes - Array of Three.js meshes representing each item
- * @property {Number} currentIndex - The index of the currently selected item
- * @property {Number} targetRotation - The target rotation angle for the carousel
- * @property {Number} rotationSpeed - The speed at which the carousel rotates
- * @property {Number} cylinderRadius - The radius of the carousel cylinder
- * @property {Boolean} isAnimating - Whether the carousel is currently animating
- * @property {THREE.Group} itemGroup - Group containing all the item meshes
- * @property {THREE.Object3D} carouselCenter - Central anchor for positioning references
- * @property {THREE.Raycaster} raycaster - Raycaster for handling click interactions
- * @property {String} state - Current state of the carousel ('idle', 'transitioning', 'selecting')
+ * Carousel3DPro – Interactive 3D text carousel with optional (flagged) physics motion.
+ * Rebuilt after corruption; keeps selection + guard invariants intact.
  */
-/**
- * @AI-PROMPT
- * This file defines the Carousel3DSubmenu class.
- * It handles circular submenu logic when a parent item is selected in the main carousel (Carousel3DPro).
- *
- * 🧠 ROLE:
- * This class spawns submenu items around a parent item, using predefined angles (from carouselAngleUtils.js).
- * It visually highlights selected items and rotates them to the front (3 o'clock) position.
- *
- * 🔁 IMPORTANT:
- * Submenu items are arranged clockwise starting at angle 0 (3 o'clock).
- * The rotation logic assumes angle alignment with parentItem + its parent (carousel) rotation.
- * Syncing with `Carousel3DPro.js` is essential to avoid override glitches.
- *
- * 🔧 PRIMARY METHODS:
- * - selectItem(index): rotates and highlights item at given index.
- * - update(): checks if a different item appears to be "front-facing" and may override `currentIndex`.
- * 🛑 This causes the highlight hijack bug unless locked.
- *
- * ⚙️ DEPENDENCIES:
- * - main.js → calls .selectItem(index) on this submenu.
- * - Carousel3DPro.js → provides parentItem and rotation context.
- * - carouselAngleUtils.js → provides getItemAngles(count)
- *
- * ✅ GOALS:
- * - When .selectItem() is triggered externally, always rotate smoothly to that item at 3 o'clock.
- * - Never override state unless the carousel is idle and no animation is in progress.
- *
- * ⚠️ HAZARDS:
- * - If `update()` or `updateFrontItemHighlight()` recompute `currentIndex` during animation,
- * it will override intended user interaction (visual hijack bug).
- */
-
 import * as THREE from 'three';
-import { Group } from 'three';
-import { TextGeometry } from 'three/examples/jsm/geometries/TextGeometry.js';
-import { FontLoader } from 'three/examples/jsm/loaders/FontLoader.js';
-import { getGlowShaderMaterial } from './CarouselShaderFX.js';
-import { defaultCarouselStyle } from './CarouselStyleConfig.js';
-import { SelectionGuard, withSelectionLock } from './modules/selectionGuards.js';
-
-
+import {Group} from 'three';
+import {TextGeometry} from 'three/examples/jsm/geometries/TextGeometry.js';
+import {FontLoader} from 'three/examples/jsm/loaders/FontLoader.js';
 import gsap from 'gsap';
-// const gsap = typeof window !== 'undefined' && window.gsap ? window.gsap : null;
-console.log('GSAP availability check:', gsap ? 'Available' : 'Not available');
+import {defaultCarouselStyle, carouselConfig} from './CarouselStyleConfig.js';
+import {getGlowShaderMaterial} from './CarouselShaderFX.js';
+import {SelectionGuard, withSelectionLock} from './modules/selectionGuards.js';
 
 export class Carousel3DPro extends Group {
   constructor(items = [], config = {}) {
     super();
     this.items = items;
-    this.config = { ...defaultCarouselStyle, ...config };
+    this.config = {...defaultCarouselStyle, ...config};
     this.itemMeshes = [];
     this.currentIndex = 0;
     this.targetRotation = 0;
     this.rotationSpeed = 0.05;
-    this.cylinderRadius = 5;
-    this.isSpinning = false; // Flag for smooth scroll animation in update
-
+    this.cylinderRadius = this.config.cylinderRadius || 5;
+    this.isSpinning = false;
     this.guard = new SelectionGuard();
-    // For backward compatibility, keep the main isAnimating flag synced
-    Object.defineProperty(this, 'isAnimating', {
-      get: () => this.guard.isAnimating,
-      set: (value) => { this.guard.isAnimating = value; }
-    });
-
+    Object.defineProperty(this, 'isAnimating', {get: () => this.guard.isAnimating, set: (v) => {this.guard.isAnimating = v;}});
     this.itemGroup = new THREE.Group();
     this.add(this.itemGroup);
-
     this.carouselCenter = new THREE.Object3D();
     this.carouselCenter.name = 'carouselCenter';
-    this.carouselCenter.position.set(0, 0, 0);
     this.add(this.carouselCenter);
     this.userData.carouselCenter = this.carouselCenter;
-
-    if (this.config.debug) {
-      const helperGeo = new THREE.SphereGeometry(0.2, 16, 16);
-      const helperMat = new THREE.MeshBasicMaterial({ color: 0xff00ff });
-      const helper = new THREE.Mesh(helperGeo, helperMat);
-      this.carouselCenter.add(helper);
-    }
-
-    this.userData.carouselCenter = this.carouselCenter;
-    this.onItemClick = null;
     this.font = null;
-
-    this.lastInteractionType = 'idle'; // Track interaction type ('click', 'scroll', 'idle')
-
-
-    this.loadFont().then(() => {
-      this.createItems();
-      // After items are created and initial state set by selectItem(false),
-      // ensure the target rotation matches the initial rotation.
-      const angleStep = (2 * Math.PI) / this.items.length;
-      this.targetRotation = -this.currentIndex * angleStep;
-      console.log(`[Constructor] Font loaded, items created. Initial currentIndex: ${this.currentIndex}, targetRotation: ${this.targetRotation.toFixed(2)}`); // Debug log
-    });
-
+    this.lastInteractionType = 'idle';
+    // Physics (flagged)
+    this._angle = 0; this._velocity = 0; this._angleTarget = 0; this._hasBootstrappedHome = false;
+    this.loadFont().then(()=>{this.createItems(); const step=(2*Math.PI)/Math.max(1,this.items.length); this.targetRotation = -this.currentIndex*step;});
     this.raycaster = new THREE.Raycaster();
     this.setupEventListeners();
-
-    this.levelingSpeed = 0.1;
-    this.maxTilt = Math.PI / 24;
-    this.state = 'idle'; // Initial state
   }
 
   /**
@@ -212,128 +114,36 @@ export class Carousel3DPro extends Group {
    * - `this.selectItem`: A method to select and animate to a specific item.
    */
   createItems() {
-    if (!this.font) return;
-    const angleStep = (2 * Math.PI) / this.items.length;
-
-    // 1) Precompute geometries and measure widths to balance visual sizes
-    const prepared = this.items.map((item) => {
-      const originalLabel = item.toString();
-      const displayLabel = this.formatStackedLabel(originalLabel);
-      const geometry = new TextGeometry(displayLabel, {
-        font: this.font,
-        size: 0.5,
-        height: 0.1,
-        depth: 0.1,
-        curveSegments: 12,
-        bevelEnabled: true,
-        bevelThickness: 0.03,
-        bevelSize: 0.02,
-        bevelOffset: 0,
-        bevelSegments: 5
+      if (!this.font || !this.items.length) return;
+      const angleStep = (2 * Math.PI) / this.items.length;
+      const prepared = this.items.map(raw => {
+        const originalLabel = raw.toString();
+        const displayLabel = this.formatStackedLabel(originalLabel);
+        const geometry = new TextGeometry(displayLabel, {font: this.font, size: 0.5, height: 0.1, depth: 0.1, curveSegments: 12, bevelEnabled: true, bevelThickness: 0.03, bevelSize: 0.02, bevelOffset: 0, bevelSegments: 5});
+        geometry.computeBoundingBox(); geometry.center();
+        const w = geometry.boundingBox.max.x - geometry.boundingBox.min.x;
+        const h = geometry.boundingBox.max.y - geometry.boundingBox.min.y;
+        return {originalLabel, displayLabel, geometry, w, h};
       });
-      geometry.computeBoundingBox();
-      geometry.center();
-      const width = geometry.boundingBox.max.x - geometry.boundingBox.min.x;
-      const height = geometry.boundingBox.max.y - geometry.boundingBox.min.y;
-      return { originalLabel, displayLabel, geometry, width, height };
-    });
-
-    const avgWidth = prepared.reduce((sum, p) => sum + p.width, 0) / Math.max(1, prepared.length);
-    // Choose a target width close to average, within sensible bounds for legibility
-    const targetWidth = Math.min(2.2, Math.max(1.6, avgWidth));
-
-    // 2) Create meshes with normalized widths and place them evenly by angle
-    prepared.forEach((p, index) => {
-      const material = new THREE.MeshStandardMaterial({
-        color: this.config.textColor,
-        transparent: true,
-        opacity: this.config.opacity
+      const avgW = prepared.reduce((s,p)=>s+p.w,0)/Math.max(1,prepared.length);
+      const targetW = Math.min(2.2, Math.max(1.6, avgW));
+      prepared.forEach((p,index)=>{
+        const mat = new THREE.MeshStandardMaterial({color: this.config.textColor, transparent: true, opacity: this.config.opacity});
+        const mesh = new THREE.Mesh(p.geometry, mat);
+        mesh.name = p.originalLabel; mesh.userData.originalLabel = p.originalLabel; mesh.userData.displayLabel = p.displayLabel;
+        const scaleFactor = THREE.MathUtils.clamp(targetW/Math.max(0.001,p.w),0.75,1.15); mesh.scale.setScalar(scaleFactor);
+        const angle = angleStep*index; mesh.position.x = this.cylinderRadius*Math.sin(angle); mesh.position.z = this.cylinderRadius*Math.cos(angle); mesh.rotation.y = Math.atan2(mesh.position.x, mesh.position.z);
+        mesh.userData.originalScale = mesh.scale.clone(); mesh.userData.originalColor = mat.color.clone();
+        const hitGeo = new THREE.BoxGeometry(p.w*scaleFactor*1.5, p.h*scaleFactor*2, 0.5);
+        const hitMat = new THREE.MeshBasicMaterial({color:0x00ff00, transparent:true, opacity:0.01});
+        const hit = new THREE.Mesh(hitGeo, hitMat); hit.position.copy(mesh.position); hit.rotation.copy(mesh.rotation); hit.userData = {index, mesh}; mesh.userData.hitArea = hit;
+        this.itemGroup.add(hit); this.itemMeshes.push(mesh); this.itemGroup.add(mesh);
       });
-
-      const mesh = new THREE.Mesh(p.geometry, material);
-      mesh.name = p.originalLabel;
-      mesh.userData.originalLabel = p.originalLabel;
-      mesh.userData.displayLabel = p.displayLabel;
-
-      // Normalize width slightly for a more balanced ring, but clamp scale to avoid extremes
-      const scaleFactor = THREE.MathUtils.clamp(targetWidth / Math.max(0.001, p.width), 0.75, 1.15);
-      mesh.scale.setScalar(scaleFactor);
-
-      const angle = angleStep * index;
-      mesh.position.x = this.cylinderRadius * Math.sin(angle);
-      mesh.position.z = this.cylinderRadius * Math.cos(angle);
-      mesh.rotation.y = Math.atan2(mesh.position.x, mesh.position.z);
-
-      mesh.userData.originalScale = new THREE.Vector3().copy(mesh.scale);
-      mesh.userData.originalColor = material.color.clone();
-
-      const scaledWidth = p.width * scaleFactor;
-      const scaledHeight = p.height * scaleFactor;
-      const hitAreaWidth = scaledWidth * 1.5;
-      const hitAreaHeight = scaledHeight * 2;
-      const hitAreaDepth = 0.5;
-      const hitAreaGeometry = new THREE.BoxGeometry(hitAreaWidth, hitAreaHeight, hitAreaDepth);
-      const hitAreaMaterial = new THREE.MeshBasicMaterial({
-        color: 0x00ff00,
-        transparent: true,
-        opacity: 0.01
-      });
-
-      const hitArea = new THREE.Mesh(hitAreaGeometry, hitAreaMaterial);
-      hitArea.position.copy(mesh.position);
-      hitArea.rotation.copy(mesh.rotation);
-      this.itemGroup.add(hitArea);
-
-      hitArea.userData = { index, mesh };
-      mesh.userData.hitArea = hitArea;
-
-      this.itemMeshes.push(mesh);
-      this.itemGroup.add(mesh);
-    });
-
-    this.clickableObjects = this.itemMeshes.map(mesh => mesh.userData.hitArea).filter(Boolean);
-
-    if (this.itemMeshes.length > 0) {
+      this.clickableObjects = this.itemMeshes.map(m=>m.userData.hitArea).filter(Boolean);
       let savedIndex = 0;
-      if (typeof localStorage !== 'undefined') {
-        const storedIndex = localStorage.getItem('carouselIndex');
-        if (storedIndex !== null) {
-          savedIndex = parseInt(storedIndex, 10);
-          if (isNaN(savedIndex) || savedIndex < 0 || savedIndex >= this.itemMeshes.length) {
-            savedIndex = 0;
-            localStorage.setItem('carouselIndex', '0');
-          }
-        }
-      }
-
-    //   // First set the initial position without animation
-    //   this.selectItem(savedIndex, false);
-
-    //   // If you still want a delayed animation for visual polish, you could add:
-    //   setTimeout(() => {
-    //     if (!this.isAnimating) {
-    //       this.selectItem(savedIndex, true);
-    //     }
-    //   }, 300);
-    // }
-
-    setTimeout(() => { // Delay to ensure scene is fully ready
-      // Only animate if carousel is not already rotating
-      if (!this.isAnimating && savedIndex >= 0 && savedIndex < this.itemMeshes.length) { // Check if savedIndex is valid
-        this.selectItem(savedIndex, true); // Animate to the saved index
-      }
-    }, 300); // Delay to ensure scene is fully ready       
-
-    // --- Use selectItem to set the initial state instantly ---
-    // This ensures the same logic for setting currentIndex, targetRotation,
-    // and applying visuals is used on load as for a click, but without animation.
-    // Calling it here, after itemMeshes is populated, should ensure the meshes are ready.
-    // this.selectItem(savedIndex, false); // Select the restored/default item instantly
-    console.log(`[createItems] selectItem(${savedIndex}, false) called on load.`); // Debug log
-
-    // No manual state setting or retry logic needed here anymore.
-  }
-}
+      if (typeof localStorage !== 'undefined') { const s = localStorage.getItem('carouselIndex'); if (s!==null) { const v=parseInt(s,10); if(!Number.isNaN(v)&&v>=0&&v<this.itemMeshes.length) savedIndex=v; }}
+      setTimeout(()=>{ if(!this.isAnimating && savedIndex>=0 && savedIndex < this.itemMeshes.length) this.selectItem(savedIndex, true); },300);
+    }
 
 /**
  * Sets up event listeners for user interactions with the 3D carousel.
@@ -475,7 +285,17 @@ selectItem(index, animate = true) {
       }
     });
 
-    if (animate) {
+    if (carouselConfig.startup.enableNewMotion) {
+      // Flagged physics path: set target angle and seed velocity for smooth easing
+      const angleStep = (2 * Math.PI) / this.itemMeshes.length;
+      this._angleTarget = -index * angleStep;
+      // Small impulse toward target so spring engages even if starting at rest
+      const delta = this._angleTarget - this._angle;
+      this._velocity += 0.02 * Math.sign(delta || 1);
+      // Immediate highlight logic handled below (we still respect animate for visual scale tweens)
+    }
+
+    if (animate && !carouselConfig.startup.enableNewMotion) {
       gsap.to(this.itemGroup.rotation, {
         y: newRotation,
         duration: 0.6,
@@ -484,7 +304,7 @@ selectItem(index, animate = true) {
           this.applyHighlightVisuals(this.currentIndex);
         }
       });
-    } else {
+    } else if (!carouselConfig.startup.enableNewMotion) {
       this.itemGroup.rotation.y = newRotation;
       this.applyHighlightVisuals(this.currentIndex);
     }
@@ -570,35 +390,17 @@ applyHighlightVisuals(indexToHighlight) {
  * @param {WheelEvent} event - The wheel event object containing scroll information
  * @returns {void}
  */
-handleWheel(event) {
-  event.preventDefault(); // Prevent default browser scroll behavior
-
-  // Use the guard to check if wheel input is allowed
-  if (!this.guard.canScroll()) {
-    console.log('[handleWheel] Wheel input blocked: animation or transition in progress.');
+handleWheel(event){
+  event.preventDefault();
+  if(!this.guard.canScroll()) return;
+  if (carouselConfig.startup.enableNewMotion) {
+    const angleStep = (2*Math.PI)/this.items.length;
+    const dir = event.deltaY>0?1:-1;
+    this._angleTarget += -dir*angleStep;
     return;
   }
-
-  this.lastInteractionType = 'scroll'; // <<< Mark interaction as scroll by setting the flag
-
-  // Determine scroll direction: +1 for down/forward, -1 for up/backward
-  const scrollAmount = event.deltaY > 0 ? 1 : -1;
-  // Calculate the angle corresponding to one item step
-  const angleStep = (2 * Math.PI) / this.items.length;
-  // Calculate the change in rotation angle for this scroll tick
-  const rotationDelta = scrollAmount * angleStep;
-
-  // --- Update Target Rotation for Smooth Scroll ---
-  // Add the rotationDelta to the targetRotation.
-  // The update loop will smoothly move the current rotation towards this new target.
-  this.targetRotation -= rotationDelta; // Keep this sign as it seems to match desired direction
-
-
-  console.log(`[handleWheel] New targetRotation: ${this.targetRotation.toFixed(2)}`); // Debug log
-
-  // Note: We DO NOT call goToNext/goToPrev or selectItem here during wheel input.
-  // The update() loop handles the smooth rotation towards targetRotation,
-  // and updateCurrentItemFromRotation() handles the highlighting based on the current visual rotation.
+  this.lastInteractionType='scroll';
+  const scrollAmount = event.deltaY>0?1:-1; const angleStep=(2*Math.PI)/this.items.length; this.targetRotation -= scrollAmount*angleStep;
 }
 
 /**
@@ -616,47 +418,16 @@ handleWheel(event) {
  * proper synchronization between the visual carousel position and the internal
  * currentIndex state.
  */
-update() {
-  // Only handle smooth rotation if not in a locked state
+update(){
+  if (carouselConfig.startup.enableNewMotion){ this._updatePhysics(); return; }
   if (this.guard.canAnimate()) {
-    const current = this.itemGroup.rotation.y;
-    const diff = this.targetRotation - current;
-    const twoPi = Math.PI * 2;
-
-    // Normalize to shortest path
-    let shortest = (diff + Math.PI) % twoPi - Math.PI;
-    if (shortest < -Math.PI) shortest += twoPi;
-
+    const current = this.itemGroup.rotation.y; const diff = this.targetRotation - current; const twoPi = Math.PI*2;
+    let shortest = (diff + Math.PI) % twoPi - Math.PI; if (shortest < -Math.PI) shortest += twoPi;
     const threshold = 0.005;
-
-    if (Math.abs(shortest) > threshold) {
-      this.itemGroup.rotation.y += shortest * this.rotationSpeed;
-      this.isSpinning = true;
-      
-      // Only update highlighting if not locked
-      if (this.guard.canUpdateHighlight()) {
-        this.updateCurrentItemFromRotation();
-      }
-    } else if (this.isSpinning) {
-      this.itemGroup.rotation.y = this.targetRotation;
-      this.isSpinning = false;
-
-      // Only update the current index if not locked
-      if (this.guard.canUpdateHighlight()) {
-        const finalIndex = this.calculateIndexFromRotation(this.itemGroup.rotation.y);
-        if (finalIndex !== this.currentIndex) {
-          this.currentIndex = finalIndex;
-          this.applyHighlightVisuals(finalIndex);
-        }
-      }
-    }
+    if (Math.abs(shortest) > threshold){ this.itemGroup.rotation.y += shortest * this.rotationSpeed; this.isSpinning = true; if (this.guard.canUpdateHighlight()) this.updateCurrentItemFromRotation(); }
+    else if (this.isSpinning){ this.itemGroup.rotation.y = this.targetRotation; this.isSpinning = false; if (this.guard.canUpdateHighlight()){ const finalIndex = this.calculateIndexFromRotation(this.itemGroup.rotation.y); if (finalIndex !== this.currentIndex){ this.currentIndex = finalIndex; this.applyHighlightVisuals(finalIndex); }}}
   }
-
-  // Maintain shader glow if applicable
-  const currentMesh = this.itemMeshes[this.currentIndex];
-  if (currentMesh?.material?.uniforms?.time) {
-    currentMesh.material.uniforms.time.value = performance.now() * 0.001;
-  }
+  const currentMesh = this.itemMeshes[this.currentIndex]; if (currentMesh?.material?.uniforms?.time) currentMesh.material.uniforms.time.value = performance.now()*0.001;
 }
 
 /**
@@ -823,7 +594,8 @@ getCurrentItem() {
  * @method
  * @memberof Carousel3DPro
  */
-resize() {
-  // Update for responsive layout 
+resize() { /* responsive hook */ }
+applyImpulse(sign){ if(!carouselConfig.startup.enableNewMotion) return; const {inputBoost}=carouselConfig.physics; this._velocity += inputBoost * sign; }
+_updatePhysics(){ if(!this.itemMeshes.length) return; const {springK,damping,snapEpsilon}=carouselConfig.physics; const angleStep=(2*Math.PI)/this.itemMeshes.length; if(!this._hasBootstrappedHome){ this._hasBootstrappedHome=true; const label=carouselConfig.startup.startOnLabel; let idx=0; if(label){ const f=this.items.findIndex(it=>String(it).toLowerCase()===label.toLowerCase()); if(f>=0) idx=f; } this.currentIndex=idx; this._angle=-idx*angleStep; this._angleTarget=this._angle; this.itemGroup.rotation.y=this._angle; this.applyHighlightVisuals(idx);} const rawIndex=-this._angle/angleStep; const snappedIndex=Math.round(rawIndex); this._angleTarget=-snappedIndex*angleStep; let delta=this._angle - this._angleTarget; delta=(delta+Math.PI)%(Math.PI*2)-Math.PI; const dt=1/60; this._velocity += -springK*delta*dt; this._velocity*=damping; this._angle += this._velocity*dt; this.itemGroup.rotation.y=this._angle; if(Math.abs(this._velocity)<snapEpsilon && Math.abs(delta)<snapEpsilon){ this._angle=this._angleTarget; this._velocity=0; if(snappedIndex!==this.currentIndex){ this.currentIndex=((snappedIndex%this.items.length)+this.items.length)%this.items.length; this.applyHighlightVisuals(this.currentIndex); if(typeof localStorage!=='undefined') localStorage.setItem('carouselIndex', String(this.currentIndex)); }} const currentMesh=this.itemMeshes[this.currentIndex]; if(currentMesh?.material?.uniforms?.time) currentMesh.material.uniforms.time.value=performance.now()*0.001; }
 }
-}
+export default Carousel3DPro;

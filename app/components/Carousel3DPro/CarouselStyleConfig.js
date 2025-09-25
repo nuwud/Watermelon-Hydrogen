@@ -105,3 +105,10 @@ export const getThemeByName = (themeName) => {
   
   return themes[themeName] || defaultCarouselStyle;
 };
+
+// Motion / physics config (flagged off by default)
+export const carouselConfig = {
+  physics: { inputBoost: 0.18, damping: 0.88, springK: 10.0, snapEpsilon: 0.008 },
+  wheel:   { sensitivity: 0.9, thresholdPx: 120, maxBurst: 4 },
+  startup: { startOnLabel: 'Home', enableNewMotion: false },
+};

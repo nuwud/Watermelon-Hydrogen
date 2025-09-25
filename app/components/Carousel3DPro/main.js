@@ -119,7 +119,9 @@ import {
     darkTheme,
     cyberpunkTheme,
     lightTheme,
+    carouselConfig,
 } from './CarouselStyleConfig.js';
+import { WheelNormalizer } from './input/WheelNormalizer.js';
 import gsap from 'gsap';
 import { getItemAngles } from '../../utils/carouselAngleUtils.js';
 import { globalGuard, withTransition, SelectionGuard } from './modules/selectionGuards.js';
@@ -202,26 +204,50 @@ export function setupCarousel(container, menuData = null) {
         // For all other cases, prevent default and stop propagation
         event.preventDefault(); // Prevent default scrolling behavior
         event.stopPropagation(); // Stop propagation to prevent interference with other handlers
-        // Navigate menus based on wheel direction
-        const delta = event.deltaY; // Get the wheel delta
-        // Use the guard to check if scrolling is allowed
+        // Flagged new motion path
+        if (carouselConfig.startup.enableNewMotion) {
+            if (!wheelNormalizerRef && !activeSubmenu && globalGuard.canScroll()) {
+                tryInitWheelNormalizer();
+            }
+            if (activeSubmenu) {
+                if (activeSubmenu.guard && activeSubmenu.guard.canScroll()) {
+                    activeSubmenu.scrollSubmenu(event.deltaY > 0 ? 1 : -1);
+                }
+                return;
+            }
+            if (wheelNormalizerRef) {
+                wheelNormalizerRef.handleEvent(event);
+            }
+            return;
+        }
+        // Legacy behavior (unchanged)
+        const delta = event.deltaY;
         if (activeSubmenu) {
-            // Only scroll submenu if it allows scrolling
             if (activeSubmenu.guard && activeSubmenu.guard.canScroll()) {
-                activeSubmenu.scrollSubmenu(delta > 0 ? 1 : -1); // Invert for natural feel
+                activeSubmenu.scrollSubmenu(delta > 0 ? 1 : -1);
             } else {
                 console.warn('[Watermelon] Submenu scroll blocked by guard.');
             }
         } else if (isWheelHandlerActive && globalGuard.canScroll()) {
-            // Only navigate main carousel if scrolling is allowed
-            const angleStep = (2 * Math.PI) / items.length; // Calculate angle step based on number of items
-            carousel.spin(delta > 0 ? -angleStep : angleStep); // Invert direction for natural feel
+            const angleStep = (2 * Math.PI) / items.length;
+            carousel.spin(delta > 0 ? -angleStep : angleStep);
         } else {
             console.warn('[Watermelon] Main carousel scroll blocked by guard or handler inactive.');
         }
     };
     // Attach wheel handler with capture phase
     window.addEventListener('wheel', wheelEventHandler, { passive: false, capture: true }); // Attach wheel event listener with capture phase
+
+    // New wheel normalizer (lazy init) when flag enabled
+    let wheelNormalizerRef = null;
+    function tryInitWheelNormalizer() {
+        if (!carouselConfig.startup.enableNewMotion || wheelNormalizerRef) return;
+        wheelNormalizerRef = new WheelNormalizer(carouselConfig.wheel, (sign) => {
+            if (globalGuard.canScroll()) {
+                carousel.applyImpulse?.(sign);
+            }
+        });
+    }
     // FIX 3: Override OrbitControls wheel handler to only work with middle mouse
     const originalOnWheel = controls.onMouseWheel; // Store the original onMouseWheel method
     controls.onMouseWheel = function (event) { // Override the onMouseWheel method
