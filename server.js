@@ -17,6 +17,11 @@ export default {
    */
   async fetch(request, env, executionContext) {
     try {
+      if (!('__WM_FETCH_ENV_LOGGED' in globalThis)) {
+        globalThis.__WM_FETCH_ENV_LOGGED = true;
+        const keys = Object.keys(env || {}).filter((k) => ['PRIVATE_STOREFRONT_API_TOKEN','SESSION_SECRET','SHOP_ID'].includes(k));
+        console.error('[server] Worker env keys subset:', keys);
+      }
       const appLoadContext = await createAppLoadContext(
         request,
         env,

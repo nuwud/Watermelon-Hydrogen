@@ -15,7 +15,8 @@ export async function createAppLoadContext(request, env, executionContext) {
    * Open a cache instance in the worker and a custom session instance.
    */
   const {getEnvServer} = await import('~/utils/env.server');
-  const envServer = getEnvServer();
+  // Pass the worker runtime env to avoid relying solely on process.env in MiniOxygen
+  const envServer = getEnvServer(env);
 
   const waitUntil = executionContext.waitUntil.bind(executionContext);
   const [cache, session] = await Promise.all([
