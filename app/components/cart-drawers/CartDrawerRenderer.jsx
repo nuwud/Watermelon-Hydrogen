@@ -3,7 +3,8 @@ import { useEffect, useRef, useState } from 'react'; // Import hooks
 import { createRoot } from 'react-dom/client';
 import * as THREE from 'three'; // Import THREE
 // Assume useCart hook exists and provides isCartOpen state
-import { useCart } from '~/hooks/useCart'; // Adjust path as needed
+// Use Cart UI context for cart open/close state
+import { useCartUI } from '../context/cart-ui';
 import { createCartDrawerOverlay } from './CartDrawer3D.scene'; // Import scene function
 import { createCartHUDIcon } from './CartHUDIcon3D'; // Import HUD icon function
 import ClientOnly from '../ClientOnly';
@@ -15,7 +16,7 @@ import {envPublic} from '~/utils/env.public'; // Import envPublic
 function CartDrawer3D() {
   const drawerGroupRef = useRef(null);
   const hudCartRef = useRef(null); // Ref specifically for the HUD icon
-  const { isCartOpen, openDrawer, closeDrawer } = useCart(); // Get cart state and actions
+  const { isCartOpen, toggleCart } = useCartUI(); // Get cart UI state and toggle
   const raycasterRef = useRef(new THREE.Raycaster()); // Ref for raycaster
   const mouseRef = useRef(new THREE.Vector2()); // Ref for mouse vector
   const rendererRef = useRef(null); // Ref for renderer
@@ -51,13 +52,8 @@ function CartDrawer3D() {
     // Global listener for the cart toggle event
     const handleCartToggle = () => {
       console.warn('[HUD Renderer] cart-toggle-clicked event received.');
-      // Use the cart context function to open/toggle the drawer
-      // Replace openDrawer('mainCart') with your actual drawer opening logic
-      if (isCartOpen) {
-         closeDrawer();
-      } else {
-         openDrawer(); // Assuming openDrawer handles the 'mainCart' aspect
-      }
+      // Toggle the cart open state in UI context
+      toggleCart();
     };
     window.addEventListener('cart-toggle-clicked', handleCartToggle);
 
@@ -227,7 +223,7 @@ function CartDrawer3D() {
       cameraRef.current = null;
     };
    
-  }, [isHudHovered, isCartOpen, openDrawer, closeDrawer]); // Added cart state/actions dependencies
+  }, [isHudHovered, isCartOpen, toggleCart]); // Added cart state/actions dependencies
 
   // Effect to update drawer visibility based on cart state
   // This effect remains the same, controlling only the drawer group visibility
