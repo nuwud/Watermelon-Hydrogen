@@ -1,19 +1,14 @@
 #!/usr/bin/env node
 
-// This script validates required env vars. It's usually invoked with Node's --env-file.
-// If SESSION_SECRET is missing and a local .env.development exists, we'll attempt to
-// load it as a fallback for convenience in local dev.
+// Environment validation script
+// Modes:
+// - PR CI (WM_CI_CONTEXT=pr): validate PUBLIC_* only (no secrets required)
+// - Default / main: validate full server + public set
+// Local dev: allows .env.development fallback for convenience
 
-function assert(name) {
-  const v = process.env[name];
-  if (!v || v.trim() === '') {
-    throw new Error(`Missing required env: ${name}`);
-  }
-}
-const required = [
-  'PRIVATE_STOREFRONT_API_TOKEN',
-  'SESSION_SECRET',
-  'SHOP_ID',
+const CI_CONTEXT = process.env.WM_CI_CONTEXT; // 'pr' | undefined
+
+const publicRequired = [
   'PUBLIC_CUSTOMER_ACCOUNT_API_CLIENT_ID',
   'PUBLIC_CUSTOMER_ACCOUNT_API_URL',
   'PUBLIC_STORE_DOMAIN',
@@ -21,6 +16,20 @@ const required = [
   'PUBLIC_STOREFRONT_ID',
   'PUBLIC_STOREFRONT_API_VERSION',
 ];
+
+const serverRequired = [
+  'PRIVATE_STOREFRONT_API_TOKEN',
+  'SESSION_SECRET',
+  'SHOP_ID',
+];
+
+function assert(name) {
+  const v = process.env[name];
+  if (!v || v.trim() === '') {
+    throw new Error(`Missing required env: ${name}`);
+  }
+}
+const required = CI_CONTEXT === 'pr' ? publicRequired : [...serverRequired, ...publicRequired];
 
 try {
   for (const name of required) assert(name);
@@ -54,4 +63,4 @@ try {
   }
 }
 
-console.log('env:check OK');
+console.log(`env:check OK (mode=${CI_CONTEXT === 'pr' ? 'public-only' : 'full'})`);

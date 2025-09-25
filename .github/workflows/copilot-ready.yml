@@ -3,6 +3,8 @@ name: Copilot Ready (Env + Hygiene + Build)
 on:
   push:
     branches: [main]
+  pull_request:
+    branches: [main]
 
 jobs:
   hygiene:
@@ -46,10 +48,12 @@ jobs:
           fi
           echo "✅ No obvious secrets in tracked text"
 
-      - name: Forbid raw env in app/**
+      - name: Forbid raw env in app/** (exclude helpers)
         run: |
           set -e
-          if git grep -nE '(process\.env|import\.meta\.env|context\.env)' -- app/ ; then
+          if git grep -nE '(process\.env|import\.meta\.env|context\.env)' -- 'app/' \
+            | grep -v 'app/utils/env.server' \
+            | grep -v 'app/utils/env.public' ; then
             echo "❌ Raw env usage in app/**"
             exit 1
           fi
@@ -78,7 +82,7 @@ jobs:
       - run: npm ci
 
       # Seed benign PUBLIC env for PR builds so build can run without secrets
-      - name: Seed public env for PR
+      - name: Seed public env + CI context for PR
         if: github.event_name == 'pull_request'
         run: |
           {
@@ -88,11 +92,10 @@ jobs:
             echo "PUBLIC_STOREFRONT_API_VERSION=2025-04"
             echo "PUBLIC_CUSTOMER_ACCOUNT_API_CLIENT_ID=dummy"
             echo "PUBLIC_CUSTOMER_ACCOUNT_API_URL=https://shopify.com/00000000000"
+            echo "WM_CI_CONTEXT=pr"
           } >> "$GITHUB_ENV"
 
-      # Only require full env check on non-PR builds (e.g., push to main)
-      - name: env:check (skip on PRs)
-        if: github.event_name != 'pull_request'
+      - name: env:check (mode aware)
         run: npm run env:check
 
       - run: npm run lint --if-present
