@@ -300,7 +300,7 @@ export async function spawnSubmenuAsync(item, index, options) {
         console.warn('[Watermelon] Added submenu to scene, checking scene children:', 
                     scene.children.includes(submenu));
         
-        setActiveSubmenu(submenu);
+    setActiveSubmenu(submenu, { parentIndex: index });
         scene.userData.activeSubmenu = submenu;
         
         // Show animation

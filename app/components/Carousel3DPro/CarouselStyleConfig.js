@@ -98,10 +98,41 @@ export const getThemeByName = (themeName) => {
   const themes = {
     default: defaultCarouselStyle,
     light: lightTheme,
-    dark: darkTheme,
-    cyberpunk: cyberpunkTheme,
+  dark: darkTheme,
+  cyberpunk: cyberpunkTheme,
     minimal: minimalTheme
   };
   
   return themes[themeName] || defaultCarouselStyle;
+};
+
+// Runtime configuration flags for physics, input normalization, and visual modes
+export const carouselConfig = {
+  physics: {
+    inputBoost: 0.18,
+    damping: 0.88,
+    springK: 10.0,
+    snapEpsilon: 0.008,
+  },
+  wheel: {
+    sensitivity: 0.9,
+    thresholdPx: 120,
+    maxBurst: 4,
+  },
+  startup: {
+    startOnLabel: 'Home',
+    enableNewMotion: false,
+  },
+  mobile: {
+    enableMobileEnhancements: false,
+    longPressMs: 350,
+    tapSlopPx: 8,
+    raycastPadding: 0.06,
+  },
+  visual: {
+    submenuDim: 0.55,
+    mainDimWhenSubmenu: 0.6,
+    cameraFade: { near: 2.0, far: 8.0 },
+    effectsEnabled: false,
+  },
 };

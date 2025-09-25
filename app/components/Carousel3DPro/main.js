@@ -1,144 +1,57 @@
-/**
- * Sets up an interactive 3D carousel with Three.js and mounts it to a DOM container.
- * This creates a complete carousel system with main items and nested submenus.
- * 
- * @param {HTMLElement} container - DOM element to mount the Three.js canvas to
- * @returns {Object} Control interface for the carousel
- * @returns {Object} .carousel - Reference to the main Carousel3DPro instance
- * @returns {THREE.Scene} .scene - Reference to the Three.js scene
- * @returns {THREE.Camera} .camera - Reference to the Three.js camera
- * @returns {THREE.WebGLRenderer} .renderer - Reference to the Three.js renderer
- * @returns {Function} .nextItem - Function to navigate to the next carousel item
- * @returns {Function} .prevItem - Function to navigate to the previous carousel item
- * @returns {Function} .toggleTheme - Function to cycle through available themes
- * @returns {Function} .closeSubmenu - Function to manually close any active submenu
- * @returns {Function} .dispose - Function to clean up all resources and event listeners
- * 
- * @example
- * const container = document.getElementById('carousel-container');
- * const carouselControls = setupCarousel(container);
- * 
- * // Navigate carousel
- * carouselControls.nextItem();
- * 
- * // Clean up when done
- * carouselControls.dispose();
- */
-// app/components/Carousel3DPro/main.js
-/**
- * @AI-PROMPT
- * This file manages the parent–submenu interaction flow.
- * It listens for carousel clicks, spawns submenus, injects camera/scene, and calls `.selectItem()` on submenus.
- *
- * 🚨 IMPORTANT
- * This file is critical for ensuring submenu state is managed correctly.
- * It must:
- * - Prevent submenu state hijacks by coordinating locked index setting and correct input propagation.
- * 
- * 🧠 ROLE:
- * This file orchestrates the overall 3D interface:
- * - Injects Three.js scene and camera into submenu instances.
- * - Spawns and disposes submenus in response to user clicks.
- * - Binds parent carousel (`Carousel3DPro`) to submenu logic.
- *
- * 🖱️ EVENT PIPELINE:
- * 1. User clicks parent item → `handleCarouselClick()`
- * 2. Spawns submenu → `spawnSubmenuAsync(parentItem)`
- * 3. Sets submenu with scene, camera → `submenu.show()`
- * 4. Calls `submenu.selectItem(index)` with clicked submenu index
- *
- * 🧩 SPECIAL NOTES:
- * - Rotation bugs often originate here by miscalculating `index` or allowing menu override.
- * - `handleCarouselClick()` is the main entry point for submenu interaction.
- * - Avoid referencing submenuItems before they are defined.
- *
- * 🔍 DEPENDENCIES:
- * - Carousel3DSubmenu.js → show(), selectItem(), dispose()
- * - Carousel3DPro.js → provides parentItem, rotation
- *
- * ✅ GOAL:
- * Prevent submenu state hijacks by coordinating locked index setting and correct input propagation.
- * - When a carousel item is clicked, spawn a submenu with items centered around it.
- * - Ensure the submenu always highlights the clicked index at the 3 o’clock position.
- * 
- * 🔧 KEY INTERACTIONS:
- * - `spawnSubmenuAsync(index)` → creates and positions submenu based on parent item rotation
- * - `handleCarouselClick()` → relays click index to submenu’s `.selectItem(index)`
- *
- * 🔁 RISK:
- * - If the submenu overrides the `currentIndex` visually (e.g., via `update()`), the click highlight may be lost.
- * - Ensure `forceLockedIndex` or similar guards are respected in submenu.
- *
- * ✅ CONTEXT:
- * This file is part of a custom 3D menu system using Three.js for Shopify Hydrogen (WatermelonOS).
- * The system includes a parent carousel (main ring), and nested submenus (submenu ring).
- * Each submenu pops out of a selected parent item and must:
- * - Always highlight the *clicked* item.
- * - Rotate so that the clicked item lands at the 3 o’clock (front-facing) position.
- * - Avoid flipping, skipping, or overriding state due to visual alignment mismatches.
- *
- * 🚨 IMPORTANT CONSIDERATIONS:
- * - Do NOT override currentIndex during animations unless forceLockedIndex is null.
- * - Items are laid out in clockwise rotation using angles from `carouselAngleUtils.js`.
- * - Rotation logic must resolve based on index, not just angle.
- * - Rotation direction may be counterclockwise but should result in correct alignment.
- * - `selectItem()` is the only safe place to set `currentIndex` intentionally.
- * - `update()` and `updateFrontItemHighlight()` may override state unintentionally — guard them!
- *
- * 🔁 WORK IN PROGRESS:
- * - Replace all “angle-based guessing” with an index-based locking mechanism.
- * - Visual snap-to-rotation must feel smooth, not teleporting.
- * - Optional utility `getItemAngles(itemCount)` from `carouselAngleUtils.js` is available.
- *
- * 🧠 DEV STYLE:
- * Patrick (Nuwud) prefers full function rewrites, strong guardrails, and traceable debug logs.
- * The goal is stability, clarity, and modularity — this is a *real* production UI, not a demo.
- *
- * 🛠️ KEY METHODS INVOLVED:
- * - selectItem(index, options)
- * - getFrontItemIndex()
- * - update()
- * - updateFrontItemHighlight()
- * - createItems()
- *
- * 🧩 Primary file interactions:
- * - Carousel3DSubmenu.js (submenu logic)
- * - main.js (instantiates submenus, injects camera/scene, handles clicks)
- * - Carousel3DPro.js (handles parent carousel logic)
- * - carouselAngleUtils.js (source of angle map or angle calculation per index)
- */
-
 import * as THREE from 'three';
-import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
-import { Carousel3DPro } from './Carousel3DPro.js';
-import { Carousel3DSubmenu } from './Carousel3DSubmenu';
-import { spawnSubmenuAsync } from './SubmenuManager.js'; // Import the extracted function
-import { CentralContentPanel } from './CentralContentPanel.js'; // Import central content panel system
+import gsap from 'gsap';
+import {OrbitControls} from 'three/examples/jsm/controls/OrbitControls.js';
+
 import {
     defaultCarouselStyle,
+    lightTheme,
     darkTheme,
     cyberpunkTheme,
-    lightTheme,
+    minimalTheme,
+    carouselConfig,
 } from './CarouselStyleConfig.js';
-import gsap from 'gsap';
-import { getItemAngles } from '../../utils/carouselAngleUtils.js';
-import { globalGuard, withTransition, SelectionGuard } from './modules/selectionGuards.js';
-import { ContentManager } from '../../utils/contentManager.js';
-import enhanceCartIntegration from '../../utils/cartIntegrationEnhancer.js';
-import watermelonIntegrationTests from '../../utils/watermelonIntegrationTests.js';
-import cartTestUtils from '../../utils/cartTestUtils.js';
-// import { getHomeAngleRadians } from '@/utils/homePositionUtils';
+import {Carousel3DPro} from './Carousel3DPro.js';
+import {Carousel3DSubmenu} from './Carousel3DSubmenu.js';
+import {spawnSubmenuAsync} from './SubmenuManager.js';
+import {SelectionGuard, withTransition, globalGuard} from './modules/selectionGuards.js';
+import {CentralContentPanel} from './CentralContentPanel.js';
+import {ContentManager} from '../../utils/contentManager.js';
+import {getItemAngles} from '../../utils/carouselAngleUtils.js';
+import {enhanceCartIntegration} from '../../utils/cartIntegrationEnhancer.js';
 
-/**
- * Sets up a 3D carousel instance and mounts it to the provided container
- * @param {HTMLElement} container - DOM element to mount the canvas to
- * @returns {Object} - carousel controls and diagnostics
- */
-export function setupCarousel(container, menuData = null) {
+// --- RUNTIME FACTORY (browser-only) ---
+// Builds and mounts the 3D carousel and returns control hooks.
+// Keep behavior the same; this only restores correct scoping.
+export function mountCarousel3D(container, menuData) {
     if (typeof window === 'undefined') return null; // Ensure we're in a browser environment
     let animationFrameId = null; // Declare animationFrameId
     const timeoutIds = []; // Array to store timeout IDs
     let wmCheckIntervalId = null; // Variable to store the interval ID for waitForWindowWM
+    const mobileSettings = {
+        enableMobileEnhancements: carouselConfig?.mobile?.enableMobileEnhancements ?? false,
+        longPressMs: carouselConfig?.mobile?.longPressMs ?? 350,
+        tapSlopPx: carouselConfig?.mobile?.tapSlopPx ?? 8,
+        raycastPadding: carouselConfig?.mobile?.raycastPadding ?? 0.06,
+    };
+    const submenuEmphasisState = { open: false, parentIndex: null, selectedChildIndex: null };
+    const pointerState = {
+        active: false,
+        pointerId: null,
+        downTime: 0,
+        downPos: new THREE.Vector2(),
+        moved: false,
+        longPressTimer: null,
+        candidateIndex: null,
+        longPressTriggered: false,
+        lastDownEvent: null,
+        captureTarget: null,
+        preventClick: false,
+    };
+    const pointerRaycaster = new THREE.Raycaster();
+    const pointerVector = new THREE.Vector2();
+    let pointerEventTarget = null;
+    let submenuCloseProxyButton = null;
+    let activeSubmenu = null; // Track the currently active submenu
     // Add the waitForWindowWM helper function here
     function waitForWindowWM(id, maxRetries = 30) { // Function to wait for window.__wm__ to be ready
         let retries = 0; // Initialize retry count
@@ -171,6 +84,37 @@ export function setupCarousel(container, menuData = null) {
     renderer.setSize(window.innerWidth, window.innerHeight); // Set renderer size
     renderer.setPixelRatio(window.devicePixelRatio); // Set pixel ratio for high DPI displays
     container.appendChild(renderer.domElement); // Append renderer to the container
+
+    // Ensure a hidden, focusable button exists for keyboard-based submenu closing
+    if (!submenuCloseProxyButton) {
+        submenuCloseProxyButton = document.createElement('button');
+        submenuCloseProxyButton.type = 'button';
+        submenuCloseProxyButton.textContent = 'Close submenu';
+        submenuCloseProxyButton.setAttribute('aria-label', 'Close submenu');
+        submenuCloseProxyButton.dataset.carouselSubmenuClose = 'true';
+        Object.assign(submenuCloseProxyButton.style, {
+            position: 'absolute',
+            width: '1px',
+            height: '1px',
+            padding: '0',
+            margin: '-1px',
+            overflow: 'hidden',
+            clip: 'rect(0, 0, 0, 0)',
+            whiteSpace: 'nowrap',
+            border: '0',
+            pointerEvents: 'none',
+        });
+        submenuCloseProxyButton.tabIndex = -1;
+        submenuCloseProxyButton.addEventListener('click', () => {
+            if (activeSubmenu) {
+                closeSubmenu();
+            }
+        });
+        if (getComputedStyle(container).position === 'static') {
+            container.style.position = 'relative';
+        }
+        container.appendChild(submenuCloseProxyButton);
+    }
     // Setup OrbitControls with correct zoom handling
     const controls = new OrbitControls(camera, renderer.domElement); // Initialize OrbitControls
     controls.enableDamping = true; // Enable damping (inertia) for smoother controls
@@ -446,10 +390,6 @@ export function setupCarousel(container, menuData = null) {
     window.contentManager = contentManager;    // Initialize enhanced cart integration
     enhanceCartIntegration();
     
-    // Initialize testing utilities
-    window.integrationTests = watermelonIntegrationTests;
-    window.cartTestUtils = cartTestUtils;
-    
     // Function to load content for a selected menu item
     const loadContentForItem = async (itemTitle, submenuItem = null) => {
         try {
@@ -538,7 +478,7 @@ export function setupCarousel(container, menuData = null) {
     console.log(`📋 Items: ${items.length} (${items.join(', ')})`);
     console.log(`📁 Submenus: ${Object.keys(submenus).length}`);
     console.log('🔧 Admin: Type watermelonAdmin.showHelp() for commands');
-    console.groupEnd();    let activeSubmenu = null; // Track the currently active submenu
+    console.groupEnd();
     let isTransitioning = false; // New flag for async handling, initially false
     const carousel = new Carousel3DPro(items, currentTheme); // Create the carousel instance
     carousel.userData = { camera }; // Store camera reference in userData for later access
@@ -564,6 +504,195 @@ export function setupCarousel(container, menuData = null) {
     
     console.warn("[Watermelon] Added central content panel to scene");
     console.warn("[Watermelon] Central panel available:", !!window.centralPanel);
+
+    const mobileEnhancementsEnabled = mobileSettings.enableMobileEnhancements;
+
+    function normalizePointerCoordinates(clientX, clientY) {
+        if (!renderer?.domElement) return null;
+        const rect = renderer.domElement.getBoundingClientRect();
+        pointerVector.set(
+            ((clientX - rect.left) / rect.width) * 2 - 1,
+            -((clientY - rect.top) / rect.height) * 2 + 1
+        );
+        return pointerVector;
+    }
+
+    function resolveMainCarouselHit(clientX, clientY) {
+        if (!mobileEnhancementsEnabled || !carousel?.itemGroup) return null;
+        const normalized = normalizePointerCoordinates(clientX, clientY);
+        if (!normalized) return null;
+        pointerRaycaster.setFromCamera(normalized, camera);
+        const hits = pointerRaycaster.intersectObjects(carousel.itemGroup.children, true);
+        for (const hit of hits) {
+            let node = hit.object;
+            while (node && node !== carousel.itemGroup) {
+                if (typeof node.userData?.index === 'number' && node.parent === carousel.itemGroup) {
+                    return { index: node.userData.index, object: node };
+                }
+                node = node.parent;
+            }
+        }
+        return null;
+    }
+
+    function updateSubmenuInteractionState(nextState = {}) {
+        Object.assign(submenuEmphasisState, nextState);
+        if (mobileEnhancementsEnabled && typeof carousel?.setSubmenuState === 'function') {
+            carousel.setSubmenuState({ ...submenuEmphasisState });
+        }
+    }
+
+    function clearSubmenuInteractionState() {
+        updateSubmenuInteractionState({ open: false, parentIndex: null, selectedChildIndex: null });
+    }
+
+    function clearLongPressTimer() {
+        if (pointerState.longPressTimer) {
+            clearTimeout(pointerState.longPressTimer);
+            pointerState.longPressTimer = null;
+        }
+    }
+
+    function resetPointerState() {
+        pointerState.active = false;
+        pointerState.pointerId = null;
+        pointerState.downTime = 0;
+        pointerState.downPos.set(0, 0);
+        pointerState.moved = false;
+        pointerState.longPressTriggered = false;
+        pointerState.candidateIndex = null;
+        pointerState.lastDownEvent = null;
+        pointerState.captureTarget = null;
+    }
+
+    function triggerMobileSubmenuOpen() {
+        if (!mobileEnhancementsEnabled || !pointerState.lastDownEvent || pointerState.candidateIndex === null) return;
+        pointerState.preventClick = true;
+        const { clientX, clientY } = pointerState.lastDownEvent;
+        handleCarouselClick({ clientX, clientY });
+    }
+
+    function handlePointerDown(event) {
+        if (!mobileEnhancementsEnabled || event.pointerType !== 'touch') return;
+
+        pointerState.active = true;
+        pointerState.pointerId = event.pointerId;
+        pointerState.downTime = performance.now();
+        pointerState.downPos.set(event.clientX, event.clientY);
+        pointerState.moved = false;
+        pointerState.longPressTriggered = false;
+        pointerState.lastDownEvent = { clientX: event.clientX, clientY: event.clientY };
+        pointerState.preventClick = false;
+
+        const hit = resolveMainCarouselHit(event.clientX, event.clientY);
+        if (hit && submenus?.[items?.[hit.index]]) {
+            pointerState.candidateIndex = hit.index;
+            updateSubmenuInteractionState({
+                open: !!activeSubmenu,
+                parentIndex: hit.index,
+                selectedChildIndex: activeSubmenu ? activeSubmenu.currentIndex ?? null : null,
+            });
+        } else {
+            pointerState.candidateIndex = null;
+            clearSubmenuInteractionState();
+        }
+
+        clearLongPressTimer();
+        pointerState.longPressTimer = window.setTimeout(() => {
+            pointerState.longPressTriggered = true;
+            triggerMobileSubmenuOpen();
+        }, mobileSettings.longPressMs);
+
+        if (event.target?.setPointerCapture) {
+            event.target.setPointerCapture(event.pointerId);
+            pointerState.captureTarget = event.target;
+        }
+
+        event.preventDefault();
+    }
+
+    function handlePointerMove(event) {
+        if (!mobileEnhancementsEnabled || !pointerState.active || event.pointerId !== pointerState.pointerId) return;
+        const dx = event.clientX - pointerState.downPos.x;
+        const dy = event.clientY - pointerState.downPos.y;
+        const distance = Math.hypot(dx, dy);
+        if (!pointerState.moved && distance > mobileSettings.tapSlopPx) {
+            pointerState.moved = true;
+            if (!pointerState.longPressTriggered) {
+                clearLongPressTimer();
+                clearSubmenuInteractionState();
+            }
+        }
+    }
+
+    function handlePointerUp(event) {
+        if (!mobileEnhancementsEnabled || !pointerState.active || event.pointerId !== pointerState.pointerId) return;
+
+        if (pointerState.captureTarget?.releasePointerCapture) {
+            pointerState.captureTarget.releasePointerCapture(event.pointerId);
+        }
+
+        if (pointerState.longPressTriggered) {
+            event.preventDefault();
+        } else if (!pointerState.moved && pointerState.candidateIndex !== null) {
+            pointerState.preventClick = true;
+            handleCarouselClick({ clientX: event.clientX, clientY: event.clientY });
+            event.preventDefault();
+        }
+
+        clearLongPressTimer();
+        clearSubmenuInteractionState();
+        resetPointerState();
+        window.setTimeout(() => {
+            pointerState.preventClick = false;
+        }, 200);
+    }
+
+    function handlePointerCancel(event) {
+        if (!mobileEnhancementsEnabled) return;
+        if (pointerState.captureTarget?.releasePointerCapture && typeof event?.pointerId === 'number') {
+            pointerState.captureTarget.releasePointerCapture(event.pointerId);
+        }
+        clearLongPressTimer();
+        clearSubmenuInteractionState();
+        resetPointerState();
+        pointerState.preventClick = false;
+    }
+
+    function suppressClick(event) {
+        if (!mobileEnhancementsEnabled || !pointerState.preventClick) return;
+        event.stopImmediatePropagation();
+        event.preventDefault();
+        pointerState.preventClick = false;
+    }
+
+    function attachMobilePointerHandlers() {
+        if (!mobileEnhancementsEnabled || pointerEventTarget || !renderer?.domElement) return;
+        pointerEventTarget = renderer.domElement;
+        pointerEventTarget.addEventListener('pointerdown', handlePointerDown, { passive: false });
+        pointerEventTarget.addEventListener('pointermove', handlePointerMove, { passive: false });
+        pointerEventTarget.addEventListener('pointerup', handlePointerUp, { passive: false });
+        pointerEventTarget.addEventListener('pointercancel', handlePointerCancel, { passive: false });
+        pointerEventTarget.addEventListener('pointerleave', handlePointerCancel, { passive: false });
+        pointerEventTarget.addEventListener('click', suppressClick, true);
+    }
+
+    function detachMobilePointerHandlers() {
+        if (!pointerEventTarget) return;
+        pointerEventTarget.removeEventListener('pointerdown', handlePointerDown, { passive: false });
+        pointerEventTarget.removeEventListener('pointermove', handlePointerMove, { passive: false });
+        pointerEventTarget.removeEventListener('pointerup', handlePointerUp, { passive: false });
+        pointerEventTarget.removeEventListener('pointercancel', handlePointerCancel, { passive: false });
+        pointerEventTarget.removeEventListener('pointerleave', handlePointerCancel, { passive: false });
+        pointerEventTarget.removeEventListener('click', suppressClick, true);
+        pointerEventTarget = null;
+        resetPointerState();
+        pointerState.preventClick = false;
+    }
+
+    if (mobileEnhancementsEnabled) {
+        attachMobilePointerHandlers();
+    }
     
     // Fix 1: Ensure carousel is added to scene
     scene.add(carousel);
@@ -612,8 +741,27 @@ export function setupCarousel(container, menuData = null) {
     };
     
     // New function to update the activeSubmenu reference
-    function setActiveSubmenu(submenu) {
+    function setActiveSubmenu(submenu, { parentIndex = null } = {}) {
         activeSubmenu = submenu;
+
+        if (mobileEnhancementsEnabled) {
+            if (submenu) {
+                carousel.lockRing?.();
+                updateSubmenuInteractionState({
+                    open: true,
+                    parentIndex: parentIndex ?? carousel.currentIndex ?? null,
+                    selectedChildIndex: typeof submenu.currentIndex === 'number' ? submenu.currentIndex : null,
+                });
+            } else {
+                carousel.unlockRing?.();
+            }
+        } else if (!submenu) {
+            carousel.unlockRing?.();
+        }
+
+        if (!submenu) {
+            clearSubmenuInteractionState();
+        }
     }
     
     // Use the global guard for transitions between carousel and submenus
@@ -718,7 +866,7 @@ export function setupCarousel(container, menuData = null) {
         
         return new Promise((resolve) => {
             const closingSubmenu = activeSubmenu;
-            activeSubmenu = null; // Clear the reference immediately
+            setActiveSubmenu(null);
             
             // Hide animation
             closingSubmenu.hide?.();
@@ -732,6 +880,10 @@ export function setupCarousel(container, menuData = null) {
                 }
                 closingSubmenu.dispose?.();
                 console.warn('[Watermelon] Existing submenu closed and disposed.');
+                scene.userData.activeSubmenu = null;
+                if (carousel && carousel.parent && carousel.parent.userData) {
+                    carousel.parent.userData.activeSubmenu = null;
+                }
                 
                 // Re-enable handlers *after* the old submenu is fully gone
                 enableAllEventHandlers();
@@ -760,6 +912,8 @@ export function setupCarousel(container, menuData = null) {
             }
             return;
         }
+        const closingSubmenu = activeSubmenu;
+        setActiveSubmenu(null);
         
         // Use the guard to manage transition state
         globalGuard.isTransitioning = true;
@@ -767,9 +921,9 @@ export function setupCarousel(container, menuData = null) {
         
         console.warn('[Watermelon] Manual closeSubmenu called.');
         
-        if (activeSubmenu.floatingPreview) { // Check if the submenu has a floating preview
-            activeSubmenu.stopFloatingPreviewSpin(); // Stop any spinning animation on the floating preview
-            gsap.to(activeSubmenu.floatingPreview.scale, { // Animate the scale of the floating preview to zero
+        if (closingSubmenu.floatingPreview) { // Check if the submenu has a floating preview
+            closingSubmenu.stopFloatingPreviewSpin(); // Stop any spinning animation on the floating preview
+            gsap.to(closingSubmenu.floatingPreview.scale, { // Animate the scale of the floating preview to zero
                 x: 0,
                 y: 0,
                 z: 0,
@@ -777,24 +931,25 @@ export function setupCarousel(container, menuData = null) {
                 ease: 'back.in', // Easing function for the animation
             });
         }
-        if (activeSubmenu.closeButton) { // Check if the submenu has a close button
-            activeSubmenu.closeButton.material.color.set(0xff0000); // Change the close button color to red
+        if (closingSubmenu.closeButton) { // Check if the submenu has a close button
+            closingSubmenu.closeButton.material.color.set(0xff0000); // Change the close button color to red
         }
-        if (activeSubmenu.parentItem?.material) { // Check if the parent item has a material
-            gsap.to(activeSubmenu.parentItem.material, { // Animate the opacity of the parent item material to 1.0
+        if (closingSubmenu.parentItem?.material) { // Check if the parent item has a material
+            gsap.to(closingSubmenu.parentItem.material, { // Animate the opacity of the parent item material to 1.0
                 opacity: 1.0, // Set opacity to fully opaque
                 duration: 0.5, // Duration of the opacity animation
             });
         }
         const remove = () => { // Remove the submenu from the scene
-            scene.remove(activeSubmenu); // Remove the submenu from the scene
+            if (closingSubmenu) {
+                scene.remove(closingSubmenu); // Remove the submenu from the scene
+            }
             scene.userData.activeSubmenu = null; // Clear the active submenu reference in scene userData
             if (carousel && carousel.parent && carousel.parent.userData) { // Check if carousel has a parent with userData
                 carousel.parent.userData.activeSubmenu = null; // Clear the active submenu reference in carousel parent userData
             }
             // IMPORTANT: Clear this BEFORE enabling handlers
-            const closedSubmenu = activeSubmenu; // Keep ref for dispose check
-            activeSubmenu = null; // Clear the active submenu reference
+            const closedSubmenu = closingSubmenu; // Keep ref for dispose check
             // Dispose if the submenu has a dispose method
             closedSubmenu?.dispose?.(); // Call the dispose method if it exists
             console.warn('[Watermelon] Manual closeSubmenu disposed.'); // Debug log
@@ -824,7 +979,7 @@ export function setupCarousel(container, menuData = null) {
         if (immediate) { // If immediate is true, close immediately without animation
             remove(); // Remove the submenu immediately
         } else { // If immediate is false, animate the close
-            activeSubmenu.hide(); // Call the hide method if it exists
+            closingSubmenu?.hide?.(); // Call the hide method if it exists
             const timeoutId = setTimeout(() => { // Reset the animation flag after a delay
                 remove(); // Remove the submenu from the scene
                 // Remove this ID from the tracking array once executed
@@ -907,6 +1062,14 @@ export function setupCarousel(container, menuData = null) {
                         return; // Exit if no item is found
                     }                    // Force index sync
                     activeSubmenu.currentIndex = index; // Sync the current index of the submenu to the clicked index
+                    if (mobileEnhancementsEnabled) {
+                        const parentIndex = activeSubmenu.parentItem?.userData?.index ?? carousel.currentIndex ?? null;
+                        updateSubmenuInteractionState({
+                            open: true,
+                            parentIndex,
+                            selectedChildIndex: index,
+                        });
+                    }
                     
                     // Load contextual content for the selected submenu item
                     const parentItem = activeSubmenu.parentItem?.userData?.item || 'Unknown';
@@ -959,6 +1122,14 @@ export function setupCarousel(container, menuData = null) {
                 
                 console.warn(`[🍉 Click] Clicked main carousel item at index ${i}: ${itemName}`);
                 console.warn(`[🍉 Click] This item has submenu: ${!!submenus[itemName]}`);
+
+                if (mobileEnhancementsEnabled) {
+                    updateSubmenuInteractionState({
+                        open: !!activeSubmenu,
+                        parentIndex: i,
+                        selectedChildIndex: activeSubmenu ? activeSubmenu.currentIndex ?? null : null,
+                    });
+                }
                 
                 // Load content for the main carousel item
                 loadContentForItem(itemName).then(contentData => {
@@ -994,9 +1165,13 @@ export function setupCarousel(container, menuData = null) {
     const keydownHandler = (e) => { // Check if a submenu is active
         if (e.key === 'ArrowRight') carousel.goToNext(); // Check if the right arrow key is pressed
         else if (e.key === 'ArrowLeft') carousel.goToPrev(); // Check if the left arrow key is pressed
+        else if (e.key === 'Escape' && activeSubmenu) {
+            closeSubmenu();
+            submenuCloseProxyButton?.focus?.();
+        }
     };
     window.addEventListener('keydown', keydownHandler); // Attach keydown event listener to the window
-    const themes = [defaultCarouselStyle, darkTheme, cyberpunkTheme, lightTheme]; // Define available themes
+    const themes = [defaultCarouselStyle, darkTheme, cyberpunkTheme, lightTheme, minimalTheme]; // Define available themes
     let themeIndex = 0; // Initialize theme index to 0
     const toggleTheme = () => { // Cycle through themes
         themeIndex = (themeIndex + 1) % themes.length; // Update theme index to cycle through available themes
@@ -1167,6 +1342,7 @@ export function setupCarousel(container, menuData = null) {
         console.warn("Timeouts and intervals cleared."); // Debug log
         // Phase 2: Remove Global Event Listeners
         console.warn("Removing global event listeners..."); // Debug log
+        detachMobilePointerHandlers();
         window.removeEventListener('resize', resizeHandler); // Remove resize event listener
         window.removeEventListener('wheel', wheelEventHandler, { capture: true }); // Ensure capture matches addEventListener
         window.removeEventListener('click', handleCarouselClick); // Remove click event listener 
@@ -1175,6 +1351,10 @@ export function setupCarousel(container, menuData = null) {
         window.removeEventListener('touchmove', touchMoveHandler, { passive: false }); // Ensure options match
         window.removeEventListener('touchend', touchEndHandler, { passive: false }); // Ensure options match
         console.warn("Global event listeners removed."); // Debug log
+        if (submenuCloseProxyButton?.parentNode) {
+            submenuCloseProxyButton.parentNode.removeChild(submenuCloseProxyButton);
+            submenuCloseProxyButton = null;
+        }
         // Phase 3: Kill Active GSAP Animations
         console.warn("Killing GSAP animations..."); // Debug log
         if (carousel?.itemGroup) { // Check if carousel.itemGroup exists
@@ -1199,14 +1379,15 @@ export function setupCarousel(container, menuData = null) {
         // Phase 4: Dispose Submenu and Carousel
         console.warn("Disposing Three.js objects..."); // Debug log
         if (activeSubmenu) {
+            const disposingSubmenu = activeSubmenu;
             // Ensure GSAP tweens targeting the submenu are killed *before* disposal
-            gsap.killTweensOf(activeSubmenu);
-            activeSubmenu.children.forEach(child => gsap.killTweensOf(child)); // Kill children tweens too
-            if (activeSubmenu.floatingPreview) gsap.killTweensOf(activeSubmenu.floatingPreview); // Kill floating
-            if (activeSubmenu.closeButton) gsap.killTweensOf(activeSubmenu.closeButton.material); // Kill close button material tweens
-            activeSubmenu.dispose?.(); // Call the dispose method if it exists
-            scene.remove(activeSubmenu); // Remove the submenu from the scene
-            activeSubmenu = null; // Clear reference
+            gsap.killTweensOf(disposingSubmenu);
+            disposingSubmenu.children.forEach(child => gsap.killTweensOf(child)); // Kill children tweens too
+            if (disposingSubmenu.floatingPreview) gsap.killTweensOf(disposingSubmenu.floatingPreview); // Kill floating
+            if (disposingSubmenu.closeButton) gsap.killTweensOf(disposingSubmenu.closeButton.material); // Kill close button material tweens
+            setActiveSubmenu(null);
+            disposingSubmenu.dispose?.(); // Call the dispose method if it exists
+            scene.remove(disposingSubmenu); // Remove the submenu from the scene
             console.warn("Active submenu disposed and removed during main dispose."); // Debug log
         }
         if (carousel) { // Check if carousel exists

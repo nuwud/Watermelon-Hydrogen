@@ -23,12 +23,12 @@ export function Carousel3DMenu({ menuData }) {
         window.gsap = gsap;
         window.OrbitControls = OrbitControls;
 
-        // Dynamic import only the main carousel setup function
-        const {setupCarousel} = await import('./Carousel3DPro/main.js');
+        // Dynamic import only the main carousel runtime factory
+        const {mountCarousel3D} = await import('./Carousel3DPro/main.js');
 
         if (containerRef.current && !carouselInstanceRef.current) {
-          // Pass menuData to setupCarousel
-          carouselInstanceRef.current = setupCarousel(containerRef.current, menuData);
+          // Pass menuData to the runtime factory
+          carouselInstanceRef.current = mountCarousel3D(containerRef.current, menuData);
           window.debugCarousel = carouselInstanceRef.current;
           
           // Expose menu transform utilities for testing

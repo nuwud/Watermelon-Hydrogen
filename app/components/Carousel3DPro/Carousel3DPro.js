@@ -90,6 +90,10 @@ export class Carousel3DPro extends Group {
     this.cylinderRadius = 5;
     this.isSpinning = false; // Flag for smooth scroll animation in update
 
+    this.userData.ringLocked = false;
+    this.submenuState = { open: false, parentIndex: null, selectedChildIndex: null };
+    this.userData.submenuState = { ...this.submenuState };
+
     this.guard = new SelectionGuard();
     // For backward compatibility, keep the main isAnimating flag synced
     Object.defineProperty(this, 'isAnimating', {
@@ -135,6 +139,35 @@ export class Carousel3DPro extends Group {
     this.levelingSpeed = 0.1;
     this.maxTilt = Math.PI / 24;
     this.state = 'idle'; // Initial state
+  }
+
+  lockRing() {
+    this.guard.targetRotationLocked = true;
+    this.userData.ringLocked = true;
+  }
+
+  unlockRing() {
+    this.guard.targetRotationLocked = false;
+    this.userData.ringLocked = false;
+  }
+
+  setSubmenuState(nextState = {}) {
+    const merged = {
+      open: typeof nextState.open === 'boolean' ? nextState.open : this.submenuState.open,
+      parentIndex: nextState.parentIndex ?? this.submenuState.parentIndex,
+      selectedChildIndex: nextState.selectedChildIndex ?? this.submenuState.selectedChildIndex,
+    };
+    this.submenuState = merged;
+    this.userData.submenuState = { ...merged };
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(
+        new CustomEvent('carousel-submenu-state', { detail: { ...merged } })
+      );
+    }
+  }
+
+  getSubmenuState() {
+    return { ...this.submenuState };
   }
 
   /**
@@ -576,6 +609,11 @@ handleWheel(event) {
   // Use the guard to check if wheel input is allowed
   if (!this.guard.canScroll()) {
     console.log('[handleWheel] Wheel input blocked: animation or transition in progress.');
+    return;
+  }
+
+  if (this.userData?.ringLocked) {
+    console.log('[handleWheel] Wheel input blocked: ring locked while submenu open.');
     return;
   }
 
