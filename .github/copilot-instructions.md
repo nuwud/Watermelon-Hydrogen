@@ -1,209 +1,249 @@
-# 🍉 Watermelon Hydrogen - GitHub Copilot Instructions (Extended)
+# 🍉 Watermelon Hydrogen — Copilot Instructions (Project‑Specific Guardrails, v2)
 
-## Project Overview
+**Repo:** Watermelon Hydrogen V1
+**Stack:** Shopify Hydrogen (Remix) • Three.js • GSAP • Tailwind • Vite • Oxygen
+**This file is for Copilot (Chat, Edit, Coding Agent) when working in this repo.**
+*Last updated: 2025‑09‑24*
 
-This is **Watermelon Hydrogen V1**, an immersive 3D e-commerce interface built with **Shopify Hydrogen (Remix)** and **Three.js**. It offers an interactive 3D product navigation experience powered by modular architecture, dynamic content loading, and advanced animation control.
+---
 
-## 🎯 Development Philosophy
+## 0) Prime Directives (must follow)
 
-### WatermelonOS Methodology: Investigation-First Engineering
+* **No raw env in `app/**`.** Use:
 
-* 🔍 **Investigate First**: Use semantic search + `console.warn('[🍉 Watermelon]')` markers before modifying code
-* 🤮 **Test Before Patch**: Always ask "Why is this breaking?" before fixing
-* 🛠 **Surgical Commits**: One isolated change at a time
-* ⏪ **Trace It Backwards**: Reverse-engineer from symptoms to root cause
+  * `~/utils/env.server` for **server‑only**: `PRIVATE_STOREFRONT_API_TOKEN`, `SESSION_SECRET`, `SHOP_ID`.
+  * `~/utils/env.public` for **public**: `PUBLIC_STORE_DOMAIN`, `PUBLIC_STOREFRONT_API_TOKEN`, `PUBLIC_STOREFRONT_ID`, `PUBLIC_STOREFRONT_API_VERSION`, `PUBLIC_CUSTOMER_ACCOUNT_API_CLIENT_ID`, `PUBLIC_CUSTOMER_ACCOUNT_API_URL`, optional `PUBLIC_CHECKOUT_DOMAIN`, optional `PUBLIC_CANONICAL_HOST`.
+  * **Forbidden in `app/**`:** `process.env`, `import.meta.env`, `context.env`.
+* **No hard‑coded domains** anywhere in `app/**`. Always read from `envPublic`. (Never inline `nuwudorder.com`, `nx40dr-bu.myshopify.com`, or `*.o2.myshopify.dev`.)
+* **SSR safety for 3D.** Three.js and browser APIs must be guarded: `typeof window !== 'undefined'`, `<ClientOnly>`, and dynamic imports.
+* **Secrets & files.** Don’t print secrets. Don’t commit `.env*` (only `.env.sample`). Don’t add files > **80 MB**; exclude `docs/chats/*.json`.
+* **Definition of Done:** `npm run env:check && npm run lint && npm run build` all pass; scans show no forbidden env usage or hard‑coded domains; diffs are minimal and explained.
 
-### Project Maturity
+---
 
-* Enterprise-grade, production-ready foundation
-* Architecture audits, performance targets, and accessibility roadmaps completed
-* Bundled with strategic 2025 roadmap and full dev documentation
+## 1) Golden Files & High‑Risk Modules (ask‑before‑edit)
 
-## 🎓 Technology Stack
+**Golden files**
 
-* **Frontend**: Shopify Hydrogen v2025.4.1 (Remix-based)
-* **3D Engine**: Three.js v0.177.0
-* **Animations**: GSAP v3.12.7
-* **Styling**: Tailwind CSS (used for HUD)
-* **Build Tooling**: Vite + Remix
-* **Deployment**: Shopify Oxygen + GitHub Actions
+* `app/entry.server.jsx`, `app/root.jsx`
+* `app/utils/env.server.ts`, `app/utils/env.public.ts`
+* `scripts/env-check.mjs`
+* Configs: `hydrogen.config.*`, `remix.config.*`, `vite.config.*`
 
-## 🏠 File System Overview
+**High‑risk modules (preserve invariants)**
 
-```
-app/
-├── components/
-│   ├── Carousel3DPro/          # 3D carousel system
-│   ├── cart-drawers/           # Cart drawer logic and icons
-│   ├── context/                # React Context for cart/state
-│   ├── panels/                 # Floating panels and overlays
-│   └── admin/                  # Admin tools
-├── routes/                     # Remix routes
-├── utils/                      # Shared utilities
-├── lib/                        # GraphQL and backend utils
-└── styles/                     # Tailwind and global styles
-```
+* `app/components/Carousel3DPro/**`
+* `app/components/Carousel3DPro/Carousel3DSubmenu.js`
+* `app/components/FloatingPreview.js`
+* `app/components/cart-drawers/**` (renderer/mount)
+* `app/components/context/cart-ui.jsx`
 
-## 🔹 Copilot Role Map
+> If modification seems necessary, **propose diffs first** with rationale and risks. Provide BEFORE→AFTER snippets.
 
-| File                   | Copilot Role                                |
-| ---------------------- | ------------------------------------------- |
-| `main.js`              | Orchestrator: load/unload, scene manager    |
-| `Carousel3DPro.js`     | Highlight and menu rotation logic           |
-| `Carousel3DSubmenu.js` | Submenu controller, transition guard logic  |
-| `FloatingPreview.js`   | Positioning, text centering, face alignment |
-| `cart-ui.jsx`          | Cart state and UI controller                |
-| `CartHUDIcon3D.js`     | 3D ↔ UI cart trigger bridge                 |
+---
 
-## 🪡 Common Copilot Patterns
+## 2) Edit Protocol (Scan → Plan → Patch)
 
-### Dynamic Import (SSR Safety)
+**Scan**
 
-```js
+* Env misuse in `app/**`:
+  `process\.env|import\.meta\.env|context\.env`
+* Hard‑coded domains:
+  `ynx40dr|nx40dr-bu\.myshopify\.com|nuwudorder\.com|o2\.myshopify\.dev`
+* SSR hazards: direct DOM/Three usage outside `<ClientOnly>` or without `typeof window`.
+
+**Plan**
+
+* Keep patches small and localized.
+* State acceptance: env\:check, lint, build must pass.
+
+**Patch**
+
+* Replace raw env reads with `envServer`/`envPublic`.
+* Parameterize or remove hard‑coded domains.
+* Move browser‑only code behind dynamic import + `<ClientOnly>`.
+* Include BEFORE→AFTER code in PR description.
+
+---
+
+## 3) 3D + UI Invariants (don’t break these)
+
+**Carousel3D (Pro/Submenu)**
+
+* GSAP controls rotation; only **one authority** updates `currentIndex` at a time.
+* Allowed mutation points:
+
+  * End of `selectItem()` animation (via `onComplete`).
+  * Explicit non‑animated snap when `isTransitioning === false`.
+* Guard flags: `isTransitioning`, `forceLockedIndex`, `selectItemLock`.
+  Do **not** change indices mid‑animation outside guarded sections.
+* Front‑face highlight logic must not override a user‑initiated selection until locks clear.
+* Maintain “3 o’clock” home position (config via homePosition utils) regardless of submenu length.
+
+**FloatingPreview**
+
+* Always center text/mesh relative to itemGroup world position; keep Y‑axis spin (no tumble).
+* Avoid stretched text by normalizing scale and using `TextGeometry.center()`.
+
+**Cart Drawer Bridge**
+
+* Communication is via event + context only: `window.dispatchEvent(new Event('cart-toggle-clicked'))` ↔ `cart-ui.jsx`.
+* Don’t manually poke DOM outside of ClientOnly.
+
+**Disposal**
+
+* On teardown: `GSAP.killTweensOf(targets)`, remove listeners, and `obj.traverse()` to `.dispose()` geometries/materials.
+* Ensure renderer and controls are properly disposed.
+
+---
+
+## 4) Patterns & Snippets
+
+**SSR‑safe dynamic import (Three.js)**
+
+```tsx
 useEffect(() => {
   if (typeof window === 'undefined') return;
-  import('./threeScene.js').then(({ setupScene }) => {
+  (async () => {
+    const {setupScene} = await import('./threeScene.js');
     setupScene(containerRef.current);
-  });
+  })();
 }, []);
 ```
 
-### ClientOnly Three.js Mount
+**ClientOnly mount**
 
-```jsx
-<ClientOnly fallback={<div>Loading...</div>}>
-  {() => <ActualThreeComponent />}
+```tsx
+<ClientOnly fallback={<div>Loading…</div>}>
+  {() => <ThreeHUD />}
 </ClientOnly>
 ```
 
-### React Context + Event Dispatch
+**Cart toggle event bridge**
 
-```js
+```ts
+// Dispatch
 window.dispatchEvent(new Event('cart-toggle-clicked'));
+
+// Listen
+useEffect(() => {
+  const onToggle = () => toggleCart();
+  window.addEventListener('cart-toggle-clicked', onToggle);
+  return () => window.removeEventListener('cart-toggle-clicked', onToggle);
+}, [toggleCart]);
 ```
 
-## 👩‍💻 Copilot Trigger Comments
+**Disposal**
 
-```js
-// 🧐 copilot-suggest: Improve HUD layout on mobile
-// @copilot optimize: Reduce memory allocation in loop
-// TODO: Migrate submenu lock state to context
-// ? Should we extract floating panel to utility class?
+```ts
+obj.traverse((child) => {
+  child.geometry?.dispose?.();
+  if (Array.isArray(child.material)) child.material.forEach((m) => m?.dispose?.());
+  else child.material?.dispose?.();
+});
+renderer?.dispose?.();
 ```
 
-## 🔢 Core Systems
+---
 
-### Carousel3D System (`Carousel3DPro`)
+## 5) Shopify/Hydrogen Integration Rules
 
-* Uses GSAP for rotation transitions
-* Highlights and centers the front-facing item
-* Submenus use `Carousel3DSubmenu.js`
+**Loader pattern**
 
-### Cart Drawer Integration
-
-* `window.dispatchEvent('cart-toggle-clicked')` ↔ `CartDrawerController`
-* Syncs 3D cart with UI drawer via `cart-ui.jsx` React Context
-
-### Content Loader
-
-* Uses `ContentManager.js` with template fallback for dynamic page loading
-
-### Templates
-
-* Supports 5 templates: `page`, `cart`, `product`, `collection`, `custom`
-
-## 🔎 Copilot Suggestion Targets
-
-| Area            | Prompt                                                |
-| --------------- | ----------------------------------------------------- |
-| Bundle size     | Suggest tree-shaking, dynamic import                  |
-| Submenu         | Refactor select/lock logic to avoid highlight flicker |
-| Floating panels | Center preview based on camera FOV + offset           |
-| Disposal        | Use `.traverse()` to dispose child objects            |
-| HUD themes      | Suggest color/shape variation modules                 |
-| Cart icons      | Suggest HUD positioning variants                      |
-
-## 🚫 Critical Rules
-
-### SSR Safety
-
-* Wrap ALL Three.js code in `<ClientOnly>`
-* `typeof window !== 'undefined'` before accessing browser APIs
-* Use dynamic imports for browser-only code
-
-### Memory Management
-
-* Call `.dispose()` on geometries, materials, renderers
-* Remove all event listeners in cleanup
-* Use `objectPool.js` patterns when creating repeating objects
-
-### Performance
-
-* Enable frustum culling
-* Reuse objects and materials
-* Target <500KB bundle (currently 781KB)
-* Keep 3D load time <2s
-
-## 🚀 Shopify Integration
-
-### GraphQL Query Pattern
-
-```js
-export async function loader({ context }) {
-  const data = await context.storefront.query(QUERY, {
-    variables: { handle }
-  });
+```ts
+export async function loader({context, params}) {
+  const data = await context.storefront.query(QUERY, {variables: {handle: params.handle}});
   return json(data);
 }
 ```
 
-### Metafield Loading
+**Env usage**
 
-```js
-const content = await contentManager.loadContent('my-id', {
-  template: 'product',
-  fallback: 'default'
-});
-```
+* Public: from `envPublic` only.
+* Server: from `envServer` only (never leak to client).
+* Storefront client must use `envPublic.PUBLIC_STOREFRONT_API_VERSION`.
 
-## 🚧 Known Issues
+**CSP / headers**
 
-* [ ] Submenu highlight overrides on fast item changes
-* [ ] Cart drawer fails to open after certain scene loads
-* [ ] Floating preview text still stretches in some camera positions
-* [ ] Panel misalignment on mobile portrait mode
-* [ ] Scene disposal misses nested objects unless `.traverse()` used
+* `createContentSecurityPolicy({ shop: { storeDomain, checkoutDomain } })` reads from `envPublic` only.
+* No secrets in headers or logs.
 
-## 📊 Deployment
+**Canonical host (if enabled)**
 
-* `npm run dev` - Local development
-* `npm run build` - Production build
-* Shopify CLI required for Oxygen deploy
-* Uses GitHub Actions CI/CD
-
-### Pre-Deployment Checklist
-
-* [ ] No SSR violations (`ClientOnly` present)
-* [ ] No console errors in browser
-* [ ] All GraphQL loaders return correct data
-* [ ] Cart + scene load time under 2s
-* [ ] Mobile HUD position tested
-
-## 📄 Documentation Index
-
-* `docs/README.md` - Entry point
-* `docs/3D_SYSTEMS_COMPREHENSIVE_DOCUMENTATION.md`
-* `docs/STRATEGIC_ROADMAP_2025.md`
-* `docs/improvements/` folder for proposals, audits, enhancement plans
-
-## ✨ Success Metrics
-
-* ✅ Copilot suggestions match modular architecture
-* ✅ Performance or maintainability improved
-* ✅ Matches documented naming and structure conventions
-* ✅ Includes cleanup + error handling logic
-* ✅ Adheres to accessibility roadmap
+* If `envPublic.PUBLIC_CANONICAL_HOST` is set, perform HTTPS 301 to that host while preserving path + query.
 
 ---
 
-*Last Updated: July 2025 — Includes merged insight from all changelogs and docume
+## 6) Performance Targets
+
+* 3D bundle increment: **≤ 800 KB** (ideal ≤ 500 KB).
+* Prefer dynamic imports for heavy submodules and debug UIs.
+* Reuse geometries/materials; enable frustum culling.
+* Scene init budget: \~2s on mid‑range mobile.
+
+> If a change adds >400 KB to client bundle, propose code‑split plan before patching.
+
+---
+
+## 7) Known Issues (where help is welcome)
+
+* Submenu highlight override during rapid selection (race between rotation & highlight).
+* Intermittent cart drawer non‑open after heavy scene transitions.
+* Floating preview text stretch in specific FOV setups.
+* Mobile portrait panel alignment.
+
+**Good Copilot targets**
+
+* Unify `select/lock/highlight` via small state machine.
+* Extract floating preview math; test across FOV/offsets.
+* Add `disposeManager` helper for deterministic teardown.
+
+---
+
+## 8) Validation Gates (must pass)
+
+* `npm run env:check` (no secrets printed)
+* `npm run lint`
+* `npm run build`
+* No files > 80 MB; no `docs/chats/*.json` tracked
+
+**Never commit:** `.env`, `.env.development`, `.env.production` (use `.env.sample` only)
+
+---
+
+## 9) Delegation & Prompt Macros
+
+**Delegate to Coding Agent (safe scope)**
+
+```
+Implement /health and /version routes and set SSR headers.
+Constraints: no secrets; env via envPublic only; minimal diffs; green build.
+Acceptance: routes return JSON with no-store; headers X-WM-Env/Store/Build; CI passes.
+#copilotCodingAgent
+```
+
+**Bug‑fix macro (Scan → Plan → Patch)**
+
+```
+Task: Remove raw env usage and hard-coded domains in app/**
+Scan: grep (process.env|import.meta.env|context.env) and (ynx40dr|nuwudorder.com|o2.myshopify.dev)
+Plan: minimal diffs; acceptance = env:check, lint, build
+Patch: apply diffs; show BEFORE→AFTER
+```
+
+**Golden file policy**
+
+```
+Do not modify golden files unless explicitly requested.
+If needed, first propose diffs with rationale & risk notes.
+```
+
+---
+
+## 10) Documentation Index
+
+* `docs/README.md` (entry)
+* `docs/3D_SYSTEMS_COMPREHENSIVE_DOCUMENTATION.md`
+* `docs/STRATEGIC_ROADMAP_2025.md`
+* `docs/improvements/*` (audits & proposals)
+* `docs/chats/*` (Copilot chat transcripts)

@@ -1,7 +1,6 @@
 import {getShopAnalytics} from '@shopify/hydrogen';
 import {Outlet, useRouteError, isRouteErrorResponse} from '@remix-run/react';
 import {FOOTER_QUERY, HEADER_QUERY} from '~/lib/fragments';
-import {envPublic} from '~/utils/env.public';
 
 /**
  * This is important to avoid re-fetching root queries on sub-navigations
@@ -62,18 +61,20 @@ export async function loader(args) {
   const criticalData = await loadCriticalData(args);
 
   const {storefront} = args.context;
+  const {getEnvPublic} = await import('~/utils/env.public');
+  const envPublic = getEnvPublic();
 
   return {
     ...deferredData,
     ...criticalData,
-  publicStoreDomain: envPublic.PUBLIC_STORE_DOMAIN,
+    publicStoreDomain: envPublic.PUBLIC_STORE_DOMAIN,
     shop: getShopAnalytics({
       storefront,
-  publicStorefrontId: envPublic.PUBLIC_STOREFRONT_ID,
+      publicStorefrontId: envPublic.PUBLIC_STOREFRONT_ID,
     }),
     consent: {
-  checkoutDomain: envPublic.PUBLIC_CHECKOUT_DOMAIN,
-  storefrontAccessToken: envPublic.PUBLIC_STOREFRONT_API_TOKEN,
+      checkoutDomain: envPublic.PUBLIC_CHECKOUT_DOMAIN,
+      storefrontAccessToken: envPublic.PUBLIC_STOREFRONT_API_TOKEN,
       withPrivacyBanner: false,
       // localize the privacy banner
       country: args.context.storefront.i18n.country,

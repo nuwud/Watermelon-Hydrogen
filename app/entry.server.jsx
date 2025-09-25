@@ -2,7 +2,7 @@ import {RemixServer} from '@remix-run/react';
 import {isbot} from 'isbot';
 import {renderToReadableStream} from 'react-dom/server';
 import {createContentSecurityPolicy} from '@shopify/hydrogen';
-import {envPublic} from '~/utils/env.public';
+// Lazily import env and build info inside the handler to ensure MiniOxygen env is loaded
 
 /**
  * @param {Request} request
@@ -20,6 +20,24 @@ export default async function handleRequest(
 ) {
   // Avoid unused var warning in JS while keeping Remix signature
   void context;
+  const {getEnvPublic} = await import('~/utils/env.public');
+  const envPublic = getEnvPublic();
+  const {BUILD_SHA, ENV_NAME, STORE_DOMAIN} = await import('~/utils/buildInfo.server');
+
+  // Canonical host redirect (optional)
+  const canonical = envPublic.PUBLIC_CANONICAL_HOST;
+  if (canonical) {
+    const url = new URL(request.url);
+    const reqHost = request.headers.get('host');
+    if (reqHost && reqHost.toLowerCase() !== canonical.toLowerCase()) {
+      url.host = canonical;
+      url.protocol = 'https:';
+      return new Response(null, {
+        status: 301,
+        headers: {Location: url.toString()},
+      });
+    }
+  }
 
   const {nonce, header, NonceProvider} = createContentSecurityPolicy({
     shop: {
@@ -48,6 +66,10 @@ export default async function handleRequest(
 
   responseHeaders.set('Content-Type', 'text/html');
   responseHeaders.set('Content-Security-Policy', header);
+  // Observability headers (no secrets)
+  responseHeaders.set('X-WM-Env', ENV_NAME);
+  responseHeaders.set('X-WM-Store', STORE_DOMAIN);
+  responseHeaders.set('X-WM-Build', BUILD_SHA || 'local');
 
   return new Response(body, {
     headers: responseHeaders,

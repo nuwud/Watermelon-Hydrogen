@@ -1,0 +1,78 @@
+name: Copilot Ready (Env + Hygiene + Build)
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+  push:
+    branches: [main]
+
+jobs:
+  hygiene:
+    name: Hygiene (secrets, env misuse, domains, size)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Determine diff range
+        id: diff
+        run: |
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            echo "range=${{ github.event.pull_request.base.sha }}..HEAD" >> "$GITHUB_OUTPUT"
+          else
+            echo "range=HEAD^..HEAD" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Block files >80MB
+        run: |
+          set -e
+          RANGE="${{ steps.diff.outputs.range }}"
+          for f in $(git diff --name-only "$RANGE"); do
+            [ -f "$f" ] || continue
+            sz=$(wc -c <"$f")
+            if [ "$sz" -gt 80000000 ]; then
+              echo "❌ $f is >80MB"
+              exit 1
+            fi
+          done
+          echo "✅ No files >80MB"
+
+      - name: Lightweight secret scan
+        run: |
+          set -e
+          if git grep -nE '(PRIVATE_STOREFRONT_API_TOKEN|SESSION_SECRET|shpat_[0-9a-f]{8,})' -- . ; then
+            echo "❌ Potential secret found"
+            exit 1
+          fi
+          echo "✅ No obvious secrets in tracked text"
+
+      - name: Forbid raw env in app/**
+        run: |
+          set -e
+          if git grep -nE '(process\.env|import\.meta\.env|context\.env)' -- app/ ; then
+            echo "❌ Raw env usage in app/**"
+            exit 1
+          fi
+          echo "✅ No raw env usage in app/**"
+
+      - name: Hard-coded domain scan in app/**
+        run: |
+          set -e
+          if git grep -nE '(ynx40dr-bu\.myshopify\.com|nuwudorder\.com|o2\.myshopify\.dev)' -- app/ ; then
+            echo "❌ Hard-coded domain(s) in app/**"
+            exit 1
+          fi
+          echo "✅ No hard-coded domains in app/**"
+
+  build:
+    name: Build & Lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+      - run: npm ci
+      - run: npm run env:check
+      - run: npm run lint --if-present
+      - run: npm run build

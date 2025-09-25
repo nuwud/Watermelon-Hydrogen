@@ -1,0 +1,9 @@
+# Golden files require @nuwud review
+/app/entry.server.jsx @nuwud
+/app/root.jsx @nuwud
+/app/utils/env.server.ts @nuwud
+/app/utils/env.public.ts @nuwud
+/scripts/env-check.mjs @nuwud
+/hydrogen.config.* @nuwud
+/remix.config.* @nuwud
+/vite.config.* @nuwud

@@ -1,6 +1,5 @@
 import {createHydrogenContext} from '@shopify/hydrogen';
 import {AppSession} from '~/lib/session';
-import {envServer} from '~/utils/env.server';
 import {CART_QUERY_FRAGMENT} from '~/lib/fragments';
 import {getLocaleFromRequest} from '~/lib/i18n';
 
@@ -15,14 +14,18 @@ export async function createAppLoadContext(request, env, executionContext) {
   /**
    * Open a cache instance in the worker and a custom session instance.
    */
-  // Validate required server envs early
-  void envServer;
+  const {getEnvServer} = await import('~/utils/env.server');
+  const envServer = getEnvServer();
 
   const waitUntil = executionContext.waitUntil.bind(executionContext);
   const [cache, session] = await Promise.all([
     caches.open('hydrogen'),
-  AppSession.init(request, [envServer.SESSION_SECRET]),
+    AppSession.init(request, [envServer.SESSION_SECRET]),
   ]);
+
+  // Defer reading public env until runtime to avoid MiniOxygen pre-injection errors
+  const {getEnvPublic} = await import('~/utils/env.public');
+  const envPublic = getEnvPublic();
 
   const hydrogenContext = createHydrogenContext({
     env,
@@ -31,6 +34,7 @@ export async function createAppLoadContext(request, env, executionContext) {
     waitUntil,
     session,
     i18n: getLocaleFromRequest(request),
+    storefrontApiVersion: envPublic.PUBLIC_STOREFRONT_API_VERSION,
     cart: {
       queryFragment: CART_QUERY_FRAGMENT,
     },
