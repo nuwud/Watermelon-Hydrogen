@@ -17,7 +17,7 @@ export default {
    */
   async fetch(request, env, executionContext) {
     try {
-      const appLoadContext = await createAppLoadContext(
+      const loadContextPromise = createAppLoadContext(
         request,
         env,
         executionContext,
@@ -29,11 +29,12 @@ export default {
        */
       const handleRequest = createRequestHandler({
         build: remixBuild,
-        mode: process.env.NODE_ENV,
-        getLoadContext: () => appLoadContext,
+        mode: env.NODE_ENV ?? process.env.NODE_ENV,
+        getLoadContext: () => loadContextPromise,
       });
 
       const response = await handleRequest(request);
+      const appLoadContext = await loadContextPromise;
 
       if (appLoadContext.session.isPending) {
         response.headers.set(

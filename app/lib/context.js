@@ -2,6 +2,7 @@ import {createHydrogenContext} from '@shopify/hydrogen';
 import {AppSession} from '~/lib/session';
 import {CART_QUERY_FRAGMENT} from '~/lib/fragments';
 import {getLocaleFromRequest} from '~/lib/i18n';
+import {getEnvServer} from '~/utils/env.server';
 
 /**
  * The context implementation is separate from server.ts
@@ -14,14 +15,12 @@ export async function createAppLoadContext(request, env, executionContext) {
   /**
    * Open a cache instance in the worker and a custom session instance.
    */
-  const {getEnvServer} = await import('~/utils/env.server');
-  // Pass the worker runtime env to avoid relying solely on process.env in MiniOxygen
-  const envServer = getEnvServer(env);
+  const serverEnv = getEnvServer(env);
 
-  const waitUntil = executionContext.waitUntil.bind(executionContext);
+  const waitUntil = executionContext?.waitUntil?.bind(executionContext);
   const [cache, session] = await Promise.all([
     caches.open('hydrogen'),
-    AppSession.init(request, [envServer.SESSION_SECRET]),
+    AppSession.init(request, [serverEnv.SESSION_SECRET]),
   ]);
 
   // Defer reading public env until runtime to avoid MiniOxygen pre-injection errors
@@ -43,6 +42,7 @@ export async function createAppLoadContext(request, env, executionContext) {
 
   return {
     ...hydrogenContext,
-    // declare additional Remix loader context
+    env: serverEnv,
+    rawEnv: env,
   };
 }
