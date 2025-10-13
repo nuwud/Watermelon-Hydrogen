@@ -1493,6 +1493,34 @@ export function mountCarousel3D(container, menuData) {
     // Start periodic checks
     setTimeout(checkCarouselValidity, 1000);
 
+    // Pause/Resume rendering functions for checkout integration
+    let isRenderingPaused = false;
+    
+    /**
+     * Pause 3D rendering (for checkout panel)
+     * Stops the animation loop to save resources
+     */
+    function pauseRendering() {
+        console.log('[Carousel] Pausing 3D rendering');
+        isRenderingPaused = true;
+        if (animationFrameId) {
+            cancelAnimationFrame(animationFrameId);
+            animationFrameId = null;
+        }
+    }
+    
+    /**
+     * Resume 3D rendering (after checkout closes)
+     * Restarts the animation loop
+     */
+    function resumeRendering() {
+        console.log('[Carousel] Resuming 3D rendering');
+        if (isRenderingPaused && !animationFrameId) {
+            isRenderingPaused = false;
+            animate();
+        }
+    }
+
     return {
         carousel, // Return the carousel instance
         scene, // Return the scene instance
@@ -1504,6 +1532,9 @@ export function mountCarousel3D(container, menuData) {
         closeSubmenu, // Keep returning the manual close function
         dispose, // Return the dispose function
         guard: globalGuard, // Export the guard for external access if needed
+        pauseRendering, // Export pause rendering function for checkout
+        resumeRendering, // Export resume rendering function for checkout
+        isTransitioning, // Export transitioning state for coordination
         // Add debugging utilities
         debug: {
             forceSpawnSubmenu: async (itemName, itemIndex) => {

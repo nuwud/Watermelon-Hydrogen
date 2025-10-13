@@ -9,6 +9,7 @@ import appStyles from '~/styles/app.css?url';
 import carouselStyles from '~/styles/carousel.css?url';
 import {CartUIProvider} from '~/components/context/cart-ui';
 import {CheckoutProvider} from '~/components/context/checkout-context';
+import {CheckoutPanelController} from '~/components/checkout-panel/CheckoutPanelController';
 
 export default function Layout() {
   const nonce = useNonce();
@@ -37,6 +38,8 @@ export default function Layout() {
         <CartUIProvider>
           <CheckoutProvider>
             <Outlet />
+            {/* Checkout panel controller - always mounted to handle checkout state */}
+            <CheckoutPanelController />
           </CheckoutProvider>
         </CartUIProvider>
         <ScrollRestoration nonce={nonce} />
