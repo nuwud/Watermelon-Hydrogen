@@ -27,3 +27,8 @@ docs/chats/*.json
 
 # Local archives of pruned chat logs (keep manifests only)
 dev-workspace/chat-archives/**/*.gz
+
+# Spec-Kit sensitive files (may contain credentials or private information)
+.specify/memory/*.md
+specs/**/research.md
+specs/**/quickstart.md

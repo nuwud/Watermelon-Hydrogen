@@ -211,7 +211,67 @@ export async function loader({context, params}) {
 
 ---
 
-## 9) Delegation & Prompt Macros
+## 9) Spec-Driven Development with Spec-Kit
+
+**GitHub Spec-Kit Integration**
+
+This project uses [GitHub Spec-Kit][spec-kit] for spec-driven development workflows. Available slash commands:
+
+[spec-kit]: https://github.com/github/spec-kit
+
+**Core Commands (use in order):**
+* `/speckit.constitution` — Establish project principles and development guidelines
+* `/speckit.specify` — Define feature requirements (focus on WHAT and WHY, not tech stack)
+* `/speckit.plan` — Create technical implementation plan with tech stack choices
+* `/speckit.tasks` — Generate actionable task breakdown with dependencies
+* `/speckit.implement` — Execute implementation according to plan
+
+**Enhancement Commands (optional):**
+* `/speckit.clarify` — Clarify underspecified areas before planning
+* `/speckit.analyze` — Cross-artifact consistency analysis (run after tasks, before implement)
+* `/speckit.checklist` — Generate quality validation checklists
+
+**Spec-Kit Workflow Pattern:**
+
+```
+1. /speckit.constitution (if new feature area)
+2. /speckit.specify "Build a feature that allows users to..."
+3. /speckit.clarify (optional - if requirements unclear)
+4. /speckit.plan "Use Shopify Hydrogen with Three.js..."
+5. /speckit.tasks
+6. /speckit.analyze (optional - validate consistency)
+7. /speckit.implement
+```
+
+**Spec-Kit File Structure:**
+
+```
+.specify/
+  memory/
+    constitution.md   — Project principles (gitignored)
+  scripts/bash/       — Automation scripts
+  templates/          — Spec/plan/task templates
+specs/
+  001-feature-name/   — Each feature gets a numbered directory
+    spec.md          — Feature specification
+    plan.md          — Technical implementation plan
+    tasks.md         — Task breakdown
+    research.md      — Technical decisions (gitignored)
+    quickstart.md    — Validation scenarios (gitignored)
+    data-model.md    — Data models (optional)
+    contracts/       — API specs (optional)
+```
+
+**Spec-Kit Integration with This Project:**
+
+* Constitution should reference Prime Directives (env safety, SSR, no hard-coded domains)
+* Plans must specify: Hydrogen/Remix, Three.js, GSAP, Tailwind
+* Tasks must include: `npm run env:check && npm run lint && npm run build` validation
+* Implementation must follow 3D invariants and golden file policies
+
+---
+
+## 10) Delegation & Prompt Macros
 
 **Delegate to Coding Agent (safe scope)**
 
@@ -219,7 +279,7 @@ export async function loader({context, params}) {
 Implement /health and /version routes and set SSR headers.
 Constraints: no secrets; env via envPublic only; minimal diffs; green build.
 Acceptance: routes return JSON with no-store; headers X-WM-Env/Store/Build; CI passes.
-#copilotCodingAgent
+#github.vscode-pull-request-github/copilotCodingAgent
 ```
 
 **Bug‑fix macro (Scan → Plan → Patch)**
@@ -231,6 +291,16 @@ Plan: minimal diffs; acceptance = env:check, lint, build
 Patch: apply diffs; show BEFORE→AFTER
 ```
 
+**Spec-Kit feature development macro**
+
+```
+/speckit.specify [Feature description focusing on user value and behavior]
+Wait for spec.md generation, then:
+/speckit.plan Tech stack: Hydrogen/Remix, Three.js r180, GSAP, Tailwind. 
+Constraints: SSR-safe, no raw env, no hard-coded domains. 
+Follow carousel invariants if 3D changes needed.
+```
+
 **Golden file policy**
 
 ```
@@ -240,7 +310,7 @@ If needed, first propose diffs with rationale & risk notes.
 
 ---
 
-## 10) Data Flow & Content Architecture
+## 11) Data Flow & Content Architecture
 
 **Content Management System (CMS)**
 
@@ -282,7 +352,7 @@ Loader (route) → context.storefront.query(QUERY) → json(data) → Component
 
 ---
 
-## 11) File Structure Patterns
+## 12) File Structure Patterns
 
 **Route Structure (Remix conventions)**
 
@@ -316,7 +386,7 @@ app/components/
 
 ---
 
-## 12) Build & Development Commands
+## 13) Build & Development Commands
 
 **Essential Commands**
 
@@ -354,7 +424,7 @@ All three must pass. Additionally:
 
 ---
 
-## 13) Common Debugging Workflows
+## 14) Common Debugging Workflows
 
 **Issue: 3D Scene Not Rendering**
 
@@ -393,7 +463,7 @@ All three must pass. Additionally:
 
 ---
 
-## 14) Documentation Index
+## 15) Documentation Index
 
 * **Entry Points:**
   * `docs/README.md` — Main documentation hub
