@@ -10,6 +10,7 @@ import carouselStyles from '~/styles/carousel.css?url';
 import {CartUIProvider} from '~/components/context/cart-ui';
 import {CheckoutProvider} from '~/components/context/checkout-context';
 import {CheckoutPanelController} from '~/components/checkout-panel/CheckoutPanelController';
+import {CheckoutSettingsWrapper} from '~/components/admin/CheckoutSettingsWrapper';
 
 export default function Layout() {
   const nonce = useNonce();
@@ -40,6 +41,8 @@ export default function Layout() {
             <Outlet />
             {/* Checkout panel controller - always mounted to handle checkout state */}
             <CheckoutPanelController />
+            {/* Checkout settings admin panel - accessible via window.watermelonAdmin */}
+            <CheckoutSettingsWrapper />
           </CheckoutProvider>
         </CartUIProvider>
         <ScrollRestoration nonce={nonce} />
