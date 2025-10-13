@@ -127,10 +127,51 @@ export const CheckoutProvider = ({ children }) => {
    * Preview animation without opening checkout
    * @param {string} style - Animation style to preview
    */
-  const previewAnimation = (style) => {
+  const previewAnimation = async (style) => {
+    if (typeof window === 'undefined' || !window.debugCarousel) {
+      console.warn('[Checkout Context] Cannot preview: debugCarousel not available');
+      return;
+    }
+
     console.log('[Checkout Context] Preview animation:', style);
-    // This will be implemented with actual animation logic in Phase 4
-    // For now, just log the preview request
+
+    // Dynamically import animation module
+    let animationModule;
+    try {
+      if (style === 'dramatic') {
+        animationModule = await import('~/components/checkout-panel/animations/dramatic');
+      } else if (style === 'subtle') {
+        animationModule = await import('~/components/checkout-panel/animations/subtle');
+      } else if (style === 'elegant') {
+        animationModule = await import('~/components/checkout-panel/animations/elegant');
+      } else {
+        console.warn('[Checkout Context] Invalid animation style:', style);
+        return;
+      }
+    } catch (error) {
+      console.error('[Checkout Context] Failed to load animation module:', error);
+      return;
+    }
+
+    // Play animation
+    const timeline = animationModule.animateOpen(null, {
+      duration: style === 'elegant' ? 1.0 : style === 'subtle' ? 0.6 : 0.8,
+      onComplete: () => {
+        console.log('[Checkout Context] Preview animation complete, reversing...');
+        
+        // Auto-reverse after 2 seconds
+        setTimeout(() => {
+          animationModule.animateClose(null, null, {
+            duration: style === 'elegant' ? 1.0 : style === 'subtle' ? 0.6 : 0.8,
+            onComplete: () => {
+              console.log('[Checkout Context] Preview complete');
+            },
+          });
+        }, 2000);
+      },
+    });
+
+    return timeline;
   };
 
   const value = {
