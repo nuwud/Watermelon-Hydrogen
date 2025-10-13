@@ -7,6 +7,8 @@ import {useNonce} from '@shopify/hydrogen';
 import resetStyles from '~/styles/reset.css?url';
 import appStyles from '~/styles/app.css?url';
 import carouselStyles from '~/styles/carousel.css?url';
+import {CartUIProvider} from '~/components/context/cart-ui';
+import {CheckoutProvider} from '~/components/context/checkout-context';
 
 export default function Layout() {
   const nonce = useNonce();
@@ -31,8 +33,12 @@ export default function Layout() {
         <Links />
       </head>
       <body style={{margin: 0, overflow: 'hidden'}}>
-        {/* Skip PageLayout */}
-        <Outlet />
+        {/* Wrap with context providers */}
+        <CartUIProvider>
+          <CheckoutProvider>
+            <Outlet />
+          </CheckoutProvider>
+        </CartUIProvider>
         <ScrollRestoration nonce={nonce} />
         <Scripts nonce={nonce} />
       </body>

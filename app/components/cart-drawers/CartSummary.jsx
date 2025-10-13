@@ -1,5 +1,6 @@
 import {CartForm, Money} from '@shopify/hydrogen';
 import {useRef} from 'react';
+import {useCheckout} from '~/components/context/checkout-context';
 
 /**
  * @param {CartSummaryProps}
@@ -31,13 +32,47 @@ export function CartSummary({cart, layout}) {
  * @param {{checkoutUrl?: string}}
  */
 function CartCheckoutActions({checkoutUrl}) {
+  const {openCheckout, setIsLoading, setError} = useCheckout();
+
   if (!checkoutUrl) return null;
+
+  const handleCheckout = async (e) => {
+    e.preventDefault();
+    
+    try {
+      setIsLoading(true);
+      setError(null);
+      
+      // Open checkout with the URL from the cart
+      // The checkout context will handle mode-specific logic
+      openCheckout(checkoutUrl);
+      
+    } catch (error) {
+      console.error('[Cart] Checkout error:', error);
+      setError(error.message || 'Failed to open checkout');
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   return (
     <div>
-      <a href={checkoutUrl} target="_self">
-        <p>Continue to Checkout &rarr;</p>
-      </a>
+      <button 
+        onClick={handleCheckout}
+        style={{
+          width: '100%',
+          padding: '12px',
+          backgroundColor: '#000',
+          color: '#fff',
+          border: 'none',
+          borderRadius: '4px',
+          cursor: 'pointer',
+          fontSize: '16px',
+          fontWeight: 'bold',
+        }}
+      >
+        Continue to Checkout &rarr;
+      </button>
       <br />
     </div>
   );
