@@ -1,0 +1,131 @@
+# graphql-config project: admin
+# Shopify Admin GraphQL operations for background presets
+
+# Paginated list of background preset metaobjects
+query BackgroundPresetList($first: Int = 50, $after: String) {
+  metaobjects(first: $first, after: $after, type: "background_preset") {
+    edges {
+      cursor
+      node {
+        id
+        handle
+        type
+        fields {
+          key
+          value
+          references(first: 5) {
+            nodes {
+              __typename
+              ... on MediaImage {
+                id
+                image {
+                  url
+                  altText
+                }
+              }
+              ... on GenericFile {
+                id
+                url
+              }
+            }
+          }
+        }
+        updatedAt
+      }
+    }
+    pageInfo {
+      hasNextPage
+      endCursor
+    }
+  }
+}
+
+# Fetch a single background preset by ID
+query BackgroundPresetById($id: ID!) {
+  metaobject(id: $id) {
+    id
+    handle
+    type
+    fields {
+      key
+      value
+      references(first: 5) {
+        nodes {
+          __typename
+          ... on MediaImage {
+            id
+            image {
+              url
+              altText
+            }
+          }
+          ... on GenericFile {
+            id
+            url
+          }
+        }
+      }
+    }
+    updatedAt
+  }
+}
+
+# Create a new background preset metaobject
+mutation CreateBackgroundPreset($metaobject: MetaobjectCreateInput!) {
+  metaobjectCreate(metaobject: $metaobject) {
+    metaobject {
+      id
+      handle
+      updatedAt
+    }
+    userErrors {
+      field
+      message
+      code
+    }
+  }
+}
+
+# Update an existing background preset metaobject
+mutation UpdateBackgroundPreset($id: ID!, $metaobject: MetaobjectUpdateInput!) {
+  metaobjectUpdate(id: $id, metaobject: $metaobject) {
+    metaobject {
+      id
+      handle
+      updatedAt
+    }
+    userErrors {
+      field
+      message
+      code
+    }
+  }
+}
+
+# Delete a background preset metaobject
+mutation DeleteBackgroundPreset($id: ID!) {
+  metaobjectDelete(id: $id) {
+    deletedId
+    userErrors {
+      field
+      message
+      code
+    }
+  }
+}
+
+# Activate a background preset by updating a dedicated activation metaobject entry
+mutation ActivateBackgroundPreset($id: ID!, $metaobject: MetaobjectUpdateInput!) {
+  metaobjectUpdate(id: $id, metaobject: $metaobject) {
+    metaobject {
+      id
+      handle
+      updatedAt
+    }
+    userErrors {
+      field
+      message
+      code
+    }
+  }
+}

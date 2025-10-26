@@ -1,0 +1,26 @@
+{
+  "projects": {
+    "default": {
+      "schema": "./node_modules/@shopify/hydrogen/dist/storefront.schema.json",
+      "documents": [
+        "./*.{ts,tsx,js,jsx}",
+        "./app/**/*.{ts,tsx,js,jsx}",
+        "!./app/graphql/**/*.{ts,tsx,js,jsx}",
+        "!./app/graphql/**/*.graphql"
+      ]
+    },
+    "customer": {
+      "schema": "./node_modules/@shopify/hydrogen/dist/customer-account.schema.json",
+      "documents": [
+        "./app/graphql/customer-account/**/*.{ts,tsx,js,jsx,graphql,gql}"
+      ]
+    },
+    "admin": {
+      "schema": "./app/graphql/admin.schema.graphql",
+      "documents": [
+        "./app/graphql/**/*.admin.graphql",
+        "./app/graphql/admin/**/*.graphql"
+      ]
+    }
+  }
+}

@@ -1,0 +1,133 @@
+schema {
+  query: Query
+  mutation: Mutation
+}
+
+scalar DateTime
+scalar URL
+
+"Pagination information for connections."
+type PageInfo {
+  hasNextPage: Boolean!
+  hasPreviousPage: Boolean!
+  startCursor: String
+  endCursor: String
+}
+
+"Metaobject edge in a connection."
+type MetaobjectEdge {
+  cursor: String!
+  node: Metaobject!
+}
+
+"Connection of metaobjects."
+type MetaobjectConnection {
+  edges: [MetaobjectEdge!]!
+  pageInfo: PageInfo!
+}
+
+"A generic metaobject field."
+type MetaobjectField {
+  key: String!
+  value: String
+  references(first: Int, after: String): MetaobjectReferenceConnection
+}
+
+"Connection of metaobject references."
+type MetaobjectReferenceConnection {
+  edges: [MetaobjectReferenceEdge!]!
+  nodes: [MetaobjectReference!]
+}
+
+"Edge for metaobject reference connection."
+type MetaobjectReferenceEdge {
+  node: MetaobjectReference
+}
+
+"Possible reference target for a metaobject field."
+union MetaobjectReference = MediaImage | GenericFile
+
+"Media image reference."
+type MediaImage {
+  id: ID!
+  image: Image
+}
+
+"Underlying image data."
+type Image {
+  url: URL!
+  altText: String
+}
+
+"Generic file reference."
+type GenericFile {
+  id: ID!
+  url: URL!
+}
+
+"Represents a Shopify metaobject."
+type Metaobject {
+  id: ID!
+  handle: String
+  type: String!
+  fields: [MetaobjectField!]!
+  updatedAt: DateTime!
+}
+
+"User error returned from metaobject mutations."
+type MetaobjectUserError {
+  field: [String!]
+  message: String!
+  code: String
+}
+
+"Payload for metaobjectCreate mutation."
+type MetaobjectCreatePayload {
+  metaobject: Metaobject
+  userErrors: [MetaobjectUserError!]!
+}
+
+"Payload for metaobjectUpdate mutation."
+type MetaobjectUpdatePayload {
+  metaobject: Metaobject
+  userErrors: [MetaobjectUserError!]!
+}
+
+"Payload for metaobjectDelete mutation."
+type MetaobjectDeletePayload {
+  deletedId: ID
+  userErrors: [MetaobjectUserError!]!
+}
+
+"Input for creating a metaobject field."
+input MetaobjectFieldInput {
+  key: String!
+  value: String
+  references: [ID!]
+}
+
+"Input for creating a metaobject."
+input MetaobjectCreateInput {
+  type: String!
+  handle: String
+  fields: [MetaobjectFieldInput!]!
+}
+
+"Input for updating a metaobject."
+input MetaobjectUpdateInput {
+  handle: String
+  fields: [MetaobjectFieldInput!]
+}
+
+"Root query type."
+type Query {
+  metaobjects(first: Int, after: String, type: String!): MetaobjectConnection
+  metaobject(id: ID!): Metaobject
+}
+
+"Root mutation type."
+type Mutation {
+  metaobjectCreate(metaobject: MetaobjectCreateInput!): MetaobjectCreatePayload
+  metaobjectUpdate(id: ID!, metaobject: MetaobjectUpdateInput!): MetaobjectUpdatePayload
+  metaobjectDelete(id: ID!): MetaobjectDeletePayload
+}
