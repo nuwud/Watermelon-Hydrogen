@@ -1,0 +1,295 @@
+.wm-admin-background-manager {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  padding: 1rem;
+  background: rgba(10, 14, 22, 0.95);
+  border: 1px solid rgba(94, 234, 212, 0.2);
+  border-radius: 12px;
+  color: #f7f9fc;
+  pointer-events: auto;
+  max-height: 80vh;
+  overflow-y: auto;
+}
+
+.wm-admin-background-manager h4 {
+  margin: 0 0 0.5rem;
+  font-size: 0.95rem;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  color: #93c5fd;
+}
+
+.wm-admin-background-manager__section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  background: rgba(15, 23, 42, 0.7);
+  border: 1px solid rgba(59, 130, 246, 0.12);
+  border-radius: 10px;
+  padding: 0.75rem;
+}
+
+.wm-admin-background-manager__section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.wm-admin-background-manager__section-actions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.wm-admin-background-manager__section-actions button {
+  padding: 0.35rem 0.75rem;
+  border-radius: 6px;
+  border: 1px solid rgba(96, 165, 250, 0.4);
+  background: rgba(59, 130, 246, 0.15);
+  color: #dbeafe;
+  font-size: 0.75rem;
+  cursor: pointer;
+  transition: background 160ms ease;
+}
+
+.wm-admin-background-manager__token-form {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0.5rem;
+}
+
+.wm-admin-background-manager__token-form label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  font-size: 0.75rem;
+}
+
+.wm-admin-background-manager__token-form input {
+  border-radius: 6px;
+  border: 1px solid rgba(148, 163, 184, 0.4);
+  background: rgba(15, 23, 42, 0.6);
+  color: inherit;
+  padding: 0.4rem 0.5rem;
+}
+
+.wm-admin-background-manager__token-actions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.wm-admin-background-manager__token-actions button,
+.wm-admin-background-manager__actions button,
+.wm-admin-background-manager__status-actions button {
+  padding: 0.4rem 0.9rem;
+  border-radius: 999px;
+  border: 1px solid rgba(96, 165, 250, 0.35);
+  background: rgba(59, 130, 246, 0.2);
+  color: #e0f2fe;
+  font-size: 0.7rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 160ms ease, color 160ms ease;
+}
+
+.wm-admin-background-manager__token-actions button:disabled,
+.wm-admin-background-manager__actions button:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.wm-admin-background-manager__preset-list {
+  display: grid;
+  gap: 0.4rem;
+  max-height: 260px;
+  overflow-y: auto;
+}
+
+.wm-admin-background-manager__preset {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.1rem;
+  border-radius: 8px;
+  border: 1px solid transparent;
+  background: rgba(30, 41, 59, 0.6);
+  padding: 0.55rem 0.65rem;
+  cursor: pointer;
+  transition: border 150ms ease, background 150ms ease;
+  text-align: left;
+  color: inherit;
+}
+
+.wm-admin-background-manager__preset:hover,
+.wm-admin-background-manager__preset.is-selected {
+  border-color: rgba(96, 165, 250, 0.45);
+  background: rgba(59, 130, 246, 0.18);
+}
+
+.wm-admin-background-manager__preset.is-active::after {
+  content: 'Active';
+  margin-left: auto;
+  font-size: 0.6rem;
+  padding: 0.1rem 0.35rem;
+  border-radius: 999px;
+  background: rgba(16, 185, 129, 0.85);
+  color: #022c22;
+  font-weight: 600;
+}
+
+.wm-admin-background-manager__preset-title {
+  font-weight: 600;
+  font-size: 0.85rem;
+}
+
+.wm-admin-background-manager__preset-meta {
+  font-size: 0.65rem;
+  opacity: 0.75;
+}
+
+.wm-admin-background-manager__message {
+  font-size: 0.75rem;
+  opacity: 0.75;
+  padding: 0.5rem 0;
+}
+
+.wm-admin-background-manager__form-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 0.75rem;
+}
+
+.wm-admin-background-manager__form-grid label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  font-size: 0.75rem;
+}
+
+.wm-admin-background-manager__form-grid input,
+.wm-admin-background-manager__form-grid select {
+  border-radius: 6px;
+  border: 1px solid rgba(148, 163, 184, 0.4);
+  background: rgba(15, 23, 42, 0.6);
+  color: inherit;
+  padding: 0.4rem 0.5rem;
+}
+
+.wm-admin-background-manager__checkbox {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.75rem;
+}
+
+.wm-admin-background-manager__checkbox input {
+  width: 1rem;
+  height: 1rem;
+}
+
+.wm-admin-background-manager__textarea {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  font-size: 0.75rem;
+}
+
+.wm-admin-background-manager__textarea textarea {
+  min-height: 6rem;
+  border-radius: 8px;
+  border: 1px solid rgba(148, 163, 184, 0.35);
+  background: rgba(15, 23, 42, 0.6);
+  color: inherit;
+  padding: 0.6rem;
+  font-family: 'Fira Code', 'SFMono-Regular', Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace;
+  font-size: 0.75rem;
+}
+
+.wm-admin-background-manager__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.wm-admin-background-manager__danger {
+  border-color: rgba(248, 113, 113, 0.5) !important;
+  background: rgba(239, 68, 68, 0.2) !important;
+  color: #fee2e2 !important;
+}
+
+.wm-admin-background-manager__status,
+.wm-admin-background-manager__error {
+  font-size: 0.7rem;
+  margin: 0;
+  padding: 0.25rem 0.5rem;
+  border-radius: 6px;
+}
+
+.wm-admin-background-manager__status {
+  background: rgba(16, 185, 129, 0.15);
+  color: #6ee7b7;
+}
+
+.wm-admin-background-manager__error {
+  background: rgba(248, 113, 113, 0.2);
+  color: #fecaca;
+}
+
+.wm-admin-background-manager__preview {
+  background: rgba(12, 18, 30, 0.8);
+  border: 1px solid rgba(96, 165, 250, 0.2);
+  border-radius: 10px;
+  height: 200px;
+  position: relative;
+  overflow: hidden;
+}
+
+.wm-background-preview-empty,
+.wm-background-preview-error {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  font-size: 0.75rem;
+  color: rgba(226, 232, 240, 0.7);
+}
+
+.wm-admin-background-manager__status-card {
+  border-radius: 10px;
+  padding: 0.75rem;
+  border: 1px solid rgba(148, 163, 184, 0.25);
+  background: rgba(15, 23, 42, 0.6);
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  font-size: 0.75rem;
+}
+
+.wm-admin-background-manager__status-card ul {
+  margin: 0;
+  padding-left: 1rem;
+  display: grid;
+  gap: 0.2rem;
+}
+
+.wm-admin-background-manager__status-card li {
+  list-style: disc;
+}
+
+.wm-status--ok {
+  border-color: rgba(16, 185, 129, 0.35);
+}
+
+.wm-status--warn {
+  border-color: rgba(250, 204, 21, 0.35);
+}
+
+.wm-status--error {
+  border-color: rgba(248, 113, 113, 0.35);
+}
+
+.wm-admin-background-manager__status-actions {
+  display: flex;
+  gap: 0.5rem;
+}

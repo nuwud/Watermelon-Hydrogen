@@ -68,3 +68,14 @@ try {
 }
 
 console.log(`env:check OK (mode=${CI_CONTEXT === 'pr' ? 'public-only' : 'full'})`);
+tests/
+└── backgrounds/
+    ├── backgroundPresets.server.test.ts
+    └── sanitizePreset.test.ts
+```
+
+**Structure Decision**: Extend existing Hydrogen single-app structure with a dedicated `backgrounds` component folder, Remix admin/API routes for preset management, server utilities for persistence, and targeted tests under `tests/backgrounds`.
+
+## Complexity Tracking
+
+No constitutional violations anticipated; complexity table not required.

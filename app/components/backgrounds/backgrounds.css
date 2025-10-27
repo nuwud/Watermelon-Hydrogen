@@ -1,0 +1,79 @@
+.wm-background-stage {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  overflow: hidden;
+}
+
+.wm-background-stage__gradient {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at 50% 35%, rgba(255, 240, 200, 0.25), rgba(20, 12, 40, 0.85) 65%, rgba(4, 8, 20, 0.95));
+  transform: scale(1.1);
+  z-index: 0;
+  filter: blur(6px);
+}
+
+.wm-background-stage__honeycomb {
+  position: absolute;
+  inset: -10%;
+  z-index: 1;
+  pointer-events: none;
+}
+
+.wm-background-stage__canvas {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  z-index: 2;
+}
+
+.wm-background-stage__iframe {
+  width: 100%;
+  height: 100%;
+  border: 0;
+  display: block;
+  background: transparent;
+}
+
+.wm-background-stage__overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  padding: 1rem;
+  pointer-events: none;
+  z-index: 3;
+}
+
+.wm-background-stage__overlay > span {
+  background: rgba(0, 0, 0, 0.45);
+  color: #fafafa;
+  padding: 0.25rem 0.5rem;
+  border-radius: 0.25rem;
+  font-size: 0.75rem;
+  pointer-events: auto;
+}
+
+.wm-background-stage__refresh {
+  pointer-events: auto;
+  align-self: flex-end;
+  border: 0;
+  border-radius: 9999px;
+  padding: 0.4rem 0.9rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #111;
+  background: rgba(255, 255, 255, 0.85);
+  cursor: pointer;
+  transition: background 160ms ease;
+}
+
+.wm-background-stage__refresh:hover,
+.wm-background-stage__refresh:focus-visible {
+  background: rgba(255, 255, 255, 0.95);
+}

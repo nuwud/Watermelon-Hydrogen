@@ -171,7 +171,49 @@ export const integrationTests = {
       total: cartContent.total,
       hasRealData: !cartContent.isDummy
     });
-  }
+  },
+
+  backgrounds: {
+    async runHoneycombTest() {
+      console.log('🍯 Honeycomb Background Smoke Test start');
+      try {
+        const response = await fetch('/api/backgrounds/active', {
+          headers: {'Accept': 'application/json'},
+        });
+        const active = await response.json();
+        console.log('🎨 Active preset snapshot:', {
+          id: active.id,
+          handle: active.handle,
+          motionProfile: active.motionProfile,
+          calmRadius: active.calmRadius,
+          calmIntensity: active.calmIntensity,
+          supportsReducedMotion: active.supportsReducedMotion,
+          status: active.status?.state,
+        });
+
+        const stage = document.querySelector('.wm-background-stage');
+        const honeycomb = document.querySelector('.wm-background-stage__honeycomb');
+        if (!stage || !honeycomb) {
+          console.warn('⚠️ Background stage not mounted');
+        } else {
+          console.log('✅ Background stage layer present');
+        }
+
+        const reducedMotion = typeof window.matchMedia === 'function'
+          ? window.matchMedia('(prefers-reduced-motion: reduce)').matches
+          : false;
+        console.log('🧘 Reduced motion preference:', reducedMotion ? 'reduce' : 'no-preference');
+
+        if (window.integrationTests?.backgrounds?.pulseHoneycomb) {
+          window.integrationTests.backgrounds.pulseHoneycomb();
+        }
+
+        console.log('✅ Honeycomb background smoke test complete');
+      } catch (error) {
+        console.error('❌ Honeycomb background test failed', error);
+      }
+    },
+  },
 };
 
 // Auto-run on load
@@ -181,6 +223,7 @@ if (typeof window !== 'undefined') {
   console.log('🧪 Integration Tests loaded. Available commands:');
   console.log('   window.integrationTests.runFullIntegrationTest()');
   console.log('   window.integrationTests.testWithSimulatedCart()');
+  console.log('   window.integrationTests.backgrounds.runHoneycombTest()');
 }
 
 export default integrationTests;

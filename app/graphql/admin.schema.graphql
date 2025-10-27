@@ -130,4 +130,46 @@ type Mutation {
   metaobjectCreate(metaobject: MetaobjectCreateInput!): MetaobjectCreatePayload
   metaobjectUpdate(id: ID!, metaobject: MetaobjectUpdateInput!): MetaobjectUpdatePayload
   metaobjectDelete(id: ID!): MetaobjectDeletePayload
+  metaobjectUpsert(handle: MetaobjectHandleInput!, metaobject: MetaobjectUpsertInput!): MetaobjectUpsertPayload
+}
+
+"Input describing a metaobject handle and type."
+input MetaobjectHandleInput {
+  handle: String!
+  type: String!
+}
+
+"Input for upserting a metaobject."
+input MetaobjectUpsertInput {
+  handle: String
+  fields: [MetaobjectFieldInput!]
+  capabilities: MetaobjectCapabilityDataInput
+}
+
+"Container for metaobject capability data."
+input MetaobjectCapabilityDataInput {
+  onlineStore: MetaobjectCapabilityDataOnlineStoreInput
+  publishable: MetaobjectCapabilityDataPublishableInput
+}
+
+"Online Store capability configuration."
+input MetaobjectCapabilityDataOnlineStoreInput {
+  templateSuffix: String
+}
+
+"Publishable capability configuration."
+input MetaobjectCapabilityDataPublishableInput {
+  status: MetaobjectStatus!
+}
+
+"Enumeration describing publishable metaobject status."
+enum MetaobjectStatus {
+  ACTIVE
+  DRAFT
+}
+
+"Payload for metaobjectUpsert mutation."
+type MetaobjectUpsertPayload {
+  metaobject: Metaobject
+  userErrors: [MetaobjectUserError!]!
 }

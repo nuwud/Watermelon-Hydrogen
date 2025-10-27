@@ -42,6 +42,7 @@
 - **[CAROUSEL_3D_DOCUMENTATION.md](./docs/CAROUSEL_3D_DOCUMENTATION.md)** - 3D carousel system
 - **[CART_DRAWERS_ARCHITECTURAL_AUDIT.md](./docs/improvements/CART_DRAWERS_ARCHITECTURAL_AUDIT.md)** - Cart system architecture
 - **[PANELS_UI_COMPONENTS_ARCHITECTURAL_AUDIT.md](./docs/improvements/PANELS_UI_COMPONENTS_ARCHITECTURAL_AUDIT.md)** - UI component analysis
+- **[BACKGROUND_PRESETS_GUIDE.md](./docs/BACKGROUND_PRESETS_GUIDE.md)** - Background preset APIs, admin workflows, and reduced-motion handling
 
 ### Advanced Features
 - **[SHOPIFY_SECTIONS_3D_INTEGRATION_PLAN.md](./docs/SHOPIFY_SECTIONS_3D_INTEGRATION_PLAN.md)** - Future sections integration

@@ -71,8 +71,8 @@ query BackgroundPresetById($id: ID!) {
 }
 
 # Create a new background preset metaobject
-mutation CreateBackgroundPreset($metaobject: MetaobjectCreateInput!) {
-  metaobjectCreate(metaobject: $metaobject) {
+mutation CreateBackgroundPreset($handle: String!, $fields: [MetaobjectFieldInput!]!) {
+  metaobjectCreate(metaobject: {type: "background_preset", handle: $handle, fields: $fields}) {
     metaobject {
       id
       handle
@@ -85,10 +85,9 @@ mutation CreateBackgroundPreset($metaobject: MetaobjectCreateInput!) {
     }
   }
 }
-
-# Update an existing background preset metaobject
-mutation UpdateBackgroundPreset($id: ID!, $metaobject: MetaobjectUpdateInput!) {
-  metaobjectUpdate(id: $id, metaobject: $metaobject) {
+# Update an existing background preset metaobject using its ID
+mutation UpdateBackgroundPreset($id: ID!, $fields: [MetaobjectField!]!) {
+  metaobjectUpdate(id: $id, metaobject: {fields: $fields}) {
     metaobject {
       id
       handle

@@ -2,7 +2,7 @@ import sanitizeHtml from 'sanitize-html';
 import type {ServerEnv} from './env.server';
 import {getEnvPublic} from './env.public';
 
-type MotionProfile = 'full' | 'subtle' | 'static';
+export type MotionProfile = 'full' | 'subtle' | 'static';
 
 type GraphQLFieldReference = {
   __typename: string;
@@ -62,7 +62,14 @@ type MetaobjectMutationPayload = {
   };
 };
 
-type BackgroundPresetInput = {
+export const DEFAULT_CALM_RADIUS = 320;
+export const MIN_CALM_RADIUS = 120;
+export const MAX_CALM_RADIUS = 960;
+export const DEFAULT_CALM_INTENSITY = 0.55;
+export const MIN_CALM_INTENSITY = 0;
+export const MAX_CALM_INTENSITY = 1;
+
+export type BackgroundPresetInput = {
   title: string;
   slug: string;
   htmlMarkup: string;
@@ -72,9 +79,11 @@ type BackgroundPresetInput = {
   supportsReducedMotion: boolean;
   thumbnailUrl?: string;
   isActive?: boolean;
+  calmRadius?: number;
+  calmIntensity?: number;
 };
 
-type BackgroundPresetRecord = {
+export type BackgroundPresetRecord = {
   id: string;
   handle: string;
   title: string;
@@ -87,6 +96,8 @@ type BackgroundPresetRecord = {
   thumbnailUrl?: string;
   isActive: boolean;
   updatedAt: string;
+  calmRadius: number;
+  calmIntensity: number;
 };
 
 type BackgroundTelemetryState = 'ok' | 'fallback' | 'error';
@@ -109,6 +120,8 @@ type ActivePresetPayload = {
   versionHash: string;
   updatedAt: string;
   status: BackgroundTelemetry;
+  calmRadius: number;
+  calmIntensity: number;
 };
 
 type BackgroundPresetRuntime = {
@@ -266,6 +279,8 @@ const FALLBACK_PRESET: ActivePresetPayload = {
   versionHash: 'fallback',
   updatedAt: new Date(0).toISOString(),
   status: lastTelemetry,
+  calmRadius: DEFAULT_CALM_RADIUS,
+  calmIntensity: DEFAULT_CALM_INTENSITY,
 };
 
 function updateTelemetry(state: BackgroundTelemetryState, reason?: string, presetId?: string) {
@@ -305,6 +320,25 @@ async function computeVersionHash(parts: string[]): Promise<string> {
 
 function toBoolean(value: string | null | undefined): boolean {
   return value === 'true' || value === '1';
+}
+
+function clampNumber(value: number, min: number, max: number) {
+  if (Number.isNaN(value)) return min;
+  if (value < min) return min;
+  if (value > max) return max;
+  return value;
+}
+
+function parseNumericField(
+  raw: string | null | undefined,
+  fallback: number,
+  min: number,
+  max: number,
+): number {
+  if (raw === undefined || raw === null) return fallback;
+  const parsed = Number(raw);
+  if (!Number.isFinite(parsed)) return fallback;
+  return clampNumber(parsed, min, max);
 }
 
 function limitSize(value: string, limit: number, label: string) {
@@ -373,6 +407,18 @@ function mapMetaobjectToRecord(node: MetaobjectNode): BackgroundPresetRecord {
   const supportsReducedMotion = toBoolean(fields.supports_reduced_motion?.value ?? 'true');
   const thumbnailUrl = resolveThumbnailUrl(fields.thumbnail);
   const isActive = toBoolean(fields.is_active?.value ?? 'false');
+  const calmRadius = parseNumericField(
+    fields.calm_radius?.value,
+    DEFAULT_CALM_RADIUS,
+    MIN_CALM_RADIUS,
+    MAX_CALM_RADIUS,
+  );
+  const calmIntensity = parseNumericField(
+    fields.calm_intensity?.value,
+    DEFAULT_CALM_INTENSITY,
+    MIN_CALM_INTENSITY,
+    MAX_CALM_INTENSITY,
+  );
 
   return {
     id: node.id,
@@ -387,6 +433,8 @@ function mapMetaobjectToRecord(node: MetaobjectNode): BackgroundPresetRecord {
     thumbnailUrl,
     isActive,
     updatedAt: node.updatedAt,
+    calmRadius,
+    calmIntensity,
   };
 }
 
@@ -470,10 +518,14 @@ function sanitizeRecord(record: BackgroundPresetRecord): BackgroundPresetRecord 
   limitSize(record.htmlMarkup, MAX_HTML_LENGTH, 'HTML markup');
   limitSize(record.cssStyles, MAX_CSS_LENGTH, 'CSS styles');
   limitSize(record.jsSnippet, MAX_JS_LENGTH, 'JS snippet');
+  const calmRadius = clampNumber(record.calmRadius, MIN_CALM_RADIUS, MAX_CALM_RADIUS);
+  const calmIntensity = clampNumber(record.calmIntensity, MIN_CALM_INTENSITY, MAX_CALM_INTENSITY);
 
   return {
     ...record,
     htmlMarkup: sanitizeMarkup(record.htmlMarkup),
+    calmRadius,
+    calmIntensity,
   };
 }
 
@@ -485,6 +537,8 @@ async function toActivePayload(record: BackgroundPresetRecord): Promise<ActivePr
     sanitized.cssStyles,
     sanitized.jsSnippet,
     sanitized.updatedAt,
+    String(sanitized.calmRadius),
+    String(sanitized.calmIntensity),
   ]);
 
   const status = updateTelemetry('ok', undefined, sanitized.id);
@@ -499,6 +553,8 @@ async function toActivePayload(record: BackgroundPresetRecord): Promise<ActivePr
     versionHash,
     updatedAt: sanitized.updatedAt,
     status,
+    calmRadius: sanitized.calmRadius,
+    calmIntensity: sanitized.calmIntensity,
   };
 }
 
@@ -524,7 +580,10 @@ export async function getBackgroundPreset(runtime: BackgroundPresetRuntime, id: 
   return mapMetaobjectToRecord(data.metaobject);
 }
 
-export async function createBackgroundPreset(runtime: BackgroundPresetRuntime, input: BackgroundPresetInput) {
+export async function createBackgroundPreset(
+  runtime: BackgroundPresetRuntime,
+  input: BackgroundPresetInput,
+): Promise<BackgroundPresetRecord> {
   const fields = buildMetaobjectFieldsFromInput(input);
   const data = await adminFetch<MetaobjectMutationPayload>(runtime, MUTATION_CREATE, {
     metaobject: {
@@ -539,10 +598,26 @@ export async function createBackgroundPreset(runtime: BackgroundPresetRuntime, i
     throw new Error(`Failed to create background preset: ${message}`);
   }
 
+  const createdId = payload.metaobject?.id;
   await bustActivePresetCache(runtime);
+
+  if (!createdId) {
+    throw new Error('Background preset created but missing identifier');
+  }
+
+  const record = await getBackgroundPreset(runtime, createdId);
+  if (!record) {
+    throw new Error('Failed to load created background preset');
+  }
+
+  return record;
 }
 
-export async function updateBackgroundPreset(runtime: BackgroundPresetRuntime, id: string, input: BackgroundPresetInput) {
+export async function updateBackgroundPreset(
+  runtime: BackgroundPresetRuntime,
+  id: string,
+  input: BackgroundPresetInput,
+): Promise<BackgroundPresetRecord> {
   const fields = buildMetaobjectFieldsFromInput(input);
   const data = await adminFetch<MetaobjectMutationPayload>(runtime, MUTATION_UPDATE, {
     id,
@@ -558,6 +633,13 @@ export async function updateBackgroundPreset(runtime: BackgroundPresetRuntime, i
   }
 
   await bustActivePresetCache(runtime);
+
+  const record = await getBackgroundPreset(runtime, id);
+  if (!record) {
+    throw new Error('Failed to load updated background preset');
+  }
+
+  return record;
 }
 
 export async function deleteBackgroundPreset(runtime: BackgroundPresetRuntime, id: string) {
@@ -654,6 +736,26 @@ function buildMetaobjectFieldsFromInput(input: BackgroundPresetInput) {
     {key: 'motion_profile', value: input.motionProfile},
     {key: 'supports_reduced_motion', value: input.supportsReducedMotion ? 'true' : 'false'},
     {key: 'is_active', value: input.isActive ? 'true' : 'false'},
+    {
+      key: 'calm_radius',
+      value: String(
+        clampNumber(
+          input.calmRadius ?? DEFAULT_CALM_RADIUS,
+          MIN_CALM_RADIUS,
+          MAX_CALM_RADIUS,
+        ),
+      ),
+    },
+    {
+      key: 'calm_intensity',
+      value: String(
+        clampNumber(
+          input.calmIntensity ?? DEFAULT_CALM_INTENSITY,
+          MIN_CALM_INTENSITY,
+          MAX_CALM_INTENSITY,
+        ),
+      ),
+    },
   ];
 
   if (input.thumbnailUrl) {
@@ -663,11 +765,4 @@ function buildMetaobjectFieldsFromInput(input: BackgroundPresetInput) {
   return fields;
 }
 
-export type {
-  BackgroundPresetInput,
-  BackgroundPresetRecord,
-  BackgroundTelemetry,
-  ActivePresetPayload,
-  MotionProfile,
-  BackgroundPresetRuntime,
-};
+export type {BackgroundTelemetry, ActivePresetPayload, BackgroundPresetRuntime};

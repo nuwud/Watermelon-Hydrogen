@@ -1,15 +1,15 @@
-// app/components/Carousel3DMenu.jsx
 import {useEffect, useRef} from 'react';
 import * as THREE from 'three';
 import {gsap} from 'gsap';
 import {OrbitControls} from 'three/examples/jsm/controls/OrbitControls.js';
 import ClientOnly from './ClientOnly';
 import Carousel3DProWrapper from './Carousel3DPro/Carousel3DProWrapper';
+import {BackgroundStage} from './backgrounds/BackgroundStage';
 import * as menuTransformUtils from '../utils/menuTransform';
-import '../utils/menuTestUtils'; // Import test utilities
-import '../utils/integrationTests'; // Import integration tests
+import '../utils/menuTestUtils';
+import '../utils/integrationTests';
 
-export function Carousel3DMenu({ menuData }) {
+export function Carousel3DMenu({menuData}) {
   const containerRef = useRef(null);
   const carouselInstanceRef = useRef(null);
 
@@ -18,29 +18,24 @@ export function Carousel3DMenu({ menuData }) {
 
     const loadCarousel = async () => {
       try {
-        // Set up global references for backward compatibility
         window.THREE = THREE;
         window.gsap = gsap;
         window.OrbitControls = OrbitControls;
 
-        // Dynamic import only the main carousel runtime factory
         const {mountCarousel3D} = await import('./Carousel3DPro/main.js');
 
         if (containerRef.current && !carouselInstanceRef.current) {
-          // Pass menuData to the runtime factory
           carouselInstanceRef.current = mountCarousel3D(containerRef.current, menuData);
           window.debugCarousel = carouselInstanceRef.current;
-          
-          // Expose menu transform utilities for testing
           window.menuTransformUtils = menuTransformUtils;
-          
-          console.warn('[🍉 Menu] Carousel initialized with menu data:', {
+
+          console.warn('[Menu] Carousel initialized with menu data:', {
             hasMenuData: !!menuData,
-            itemCount: menuData?.items?.length || 0
+            itemCount: menuData?.items?.length || 0,
           });
         }
       } catch (err) {
-        console.error('🚨 Error loading carousel:', err);
+        console.error('[Error] Error loading carousel:', err);
       }
     };
 
@@ -52,13 +47,12 @@ export function Carousel3DMenu({ menuData }) {
         carouselInstanceRef.current = null;
       }
     };
-  }, [menuData]); // Add menuData to dependency array
+  }, [menuData]);
 
-  // Use dynamic menu items if available, otherwise fallback
   const items = menuData?.items || ['Item 1', 'Item 2', 'Item 3'];
-  
+
   return (
-    <ClientOnly fallback={<div style={{ color: 'orange' }}>🌀 Hydrating Client View…</div>}>
+    <ClientOnly fallback={<div style={{color: 'orange'}}>Hydrating Client View...</div>}>
       {() => (
         <div
           id="carousel-container"
@@ -75,11 +69,10 @@ export function Carousel3DMenu({ menuData }) {
             position: 'relative',
           }}
         >
-          
+          <BackgroundStage />
           <Carousel3DProWrapper items={items} />
         </div>
       )}
     </ClientOnly>
   );
-  
 }

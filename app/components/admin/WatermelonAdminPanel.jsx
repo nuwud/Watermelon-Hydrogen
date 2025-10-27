@@ -1,5 +1,6 @@
-import { useState, useEffect } from 'react';
-import { ClientOnly } from '../ClientOnly';
+import {useState, useEffect} from 'react';
+import {ClientOnly} from '../ClientOnly';
+import {BackgroundPresetManager} from './BackgroundPresetManager';
 
 /**
  * Visual Admin Panel for Watermelon Hydrogen 3D Menu System
@@ -115,7 +116,7 @@ export function WatermelonAdminPanel() {
         position: 'fixed',
         top: '10px',
         right: '10px',
-        width: '320px',
+  width: '420px',
         maxHeight: '80vh',
         overflowY: 'auto',
         zIndex: 10000,
@@ -266,6 +267,12 @@ export function WatermelonAdminPanel() {
               Repair State
             </button>
           </div>
+        </div>
+
+        {/* Background Presets */}
+        <div style={{ marginBottom: '16px', pointerEvents: 'auto' }}>
+          <h3 style={{ margin: '0 0 8px 0', color: '#00ffcc' }}>Background Presets</h3>
+          <BackgroundPresetManager />
         </div>
 
         {/* Help */}

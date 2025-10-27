@@ -1,0 +1,247 @@
+openapi: 3.1.0
+info:
+  title: Watermelon Background Preset API
+  version: 0.1.0
+  description: REST endpoints for managing honeycomb background presets and retrieving the active preset for the storefront.
+servers:
+  - url: https://{storeDomain}/
+    description: Shopify Oxygen deployment
+    variables:
+      storeDomain:
+        default: example.myshopify.com
+paths:
+  /api/backgrounds/active:
+    get:
+      summary: Fetch the active background preset for the storefront.
+      description: Returns the sanitized payload required by the background renderer. Public endpoint consumed by client bundles.
+      tags: [Public]
+      responses:
+        '200':
+          description: Active preset returned.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ActivePresetResponse'
+        '204':
+          description: No active preset configured; client should fall back to static gradient.
+  /api/backgrounds:
+    get:
+      summary: List presets for admin dashboard.
+      security:
+        - AdminTokenAuth: []
+      tags: [Admin]
+      responses:
+        '200':
+          description: Array of presets.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  presets:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/BackgroundPreset'
+    post:
+      summary: Create a new background preset.
+      security:
+        - AdminTokenAuth: []
+      tags: [Admin]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BackgroundPresetInput'
+      responses:
+        '201':
+          description: Preset created successfully.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BackgroundPreset'
+  /api/backgrounds/{id}:
+    patch:
+      summary: Update an existing preset.
+      security:
+        - AdminTokenAuth: []
+      tags: [Admin]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BackgroundPresetInput'
+      responses:
+        '200':
+          description: Preset updated.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BackgroundPreset'
+    delete:
+      summary: Delete a preset.
+      security:
+        - AdminTokenAuth: []
+      tags: [Admin]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '204':
+          description: Preset deleted.
+  /api/backgrounds/{id}/activate:
+    post:
+      summary: Activate the specified preset.
+      security:
+        - AdminTokenAuth: []
+      tags: [Admin]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Activation acknowledged.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ActivePresetResponse'
+  /api/backgrounds/token:
+    post:
+      summary: Issue an admin token after verifying the background admin key.
+      tags: [Admin]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                key:
+                  type: string
+                  description: One-time secret derived from BACKGROUND_ADMIN_KEY.
+              required: [key]
+      responses:
+        '200':
+          description: Signed admin token issued.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  token:
+                    type: string
+                  expiresAt:
+                    type: string
+                    format: date-time
+        '401':
+          description: Invalid key provided.
+
+components:
+  securitySchemes:
+    AdminTokenAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: HMAC-signed token generated using BACKGROUND_ADMIN_KEY and SESSION_SECRET.
+  schemas:
+    BackgroundPreset:
+      type: object
+      properties:
+        id:
+          type: string
+        title:
+          type: string
+        slug:
+          type: string
+        htmlMarkup:
+          type: string
+        cssStyles:
+          type: string
+        jsSnippet:
+          type: string
+        motionProfile:
+          type: string
+          enum: [full, subtle, static]
+        supportsReducedMotion:
+          type: boolean
+        thumbnail:
+          type: string
+          format: uri
+        isActive:
+          type: boolean
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+        updatedBy:
+          type: string
+      required:
+        - id
+        - title
+        - slug
+        - htmlMarkup
+        - cssStyles
+        - motionProfile
+        - supportsReducedMotion
+    BackgroundPresetInput:
+      type: object
+      properties:
+        title:
+          type: string
+        slug:
+          type: string
+        htmlMarkup:
+          type: string
+        cssStyles:
+          type: string
+        jsSnippet:
+          type: string
+        motionProfile:
+          type: string
+          enum: [full, subtle, static]
+        supportsReducedMotion:
+          type: boolean
+        thumbnail:
+          type: string
+          format: uri
+      required:
+        - title
+        - slug
+        - htmlMarkup
+        - cssStyles
+        - motionProfile
+        - supportsReducedMotion
+    ActivePresetResponse:
+      type: object
+      properties:
+        id:
+          type: string
+        html:
+          type: string
+          description: Sanitized HTML string ready for iframe srcdoc usage.
+        css:
+          type: string
+        js:
+          type: string
+        motionProfile:
+          type: string
+          enum: [full, subtle, static]
+        supportsReducedMotion:
+          type: boolean
+        versionHash:
+          type: string
