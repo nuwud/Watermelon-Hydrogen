@@ -62,6 +62,7 @@ type MetaobjectMutationPayload = {
   };
 };
 
+// Calm mode configuration defaults and bounds
 export const DEFAULT_CALM_RADIUS = 320;
 export const MIN_CALM_RADIUS = 120;
 export const MAX_CALM_RADIUS = 960;
@@ -262,6 +263,7 @@ const MUTATION_DELETE = `
   }
 `;
 
+// Telemetry state - lazily initialized to avoid global scope Date() calls
 let lastTelemetry: BackgroundTelemetry | null = null;
 
 function getInitialTelemetry(): BackgroundTelemetry {
@@ -392,12 +394,12 @@ function extractFieldMap(node: MetaobjectNode): Record<string, MetaobjectField> 
 function resolveThumbnailUrl(field?: MetaobjectField): string | undefined {
   const references = field?.references?.nodes ?? [];
   if (!references.length) return field?.value ?? undefined;
-  for (const node of references) {
-    if (node.__typename === 'MediaImage' && node.image?.url) {
-      return node.image.url;
+  for (const ref of references) {
+    if (ref.__typename === 'MediaImage' && ref.image?.url) {
+      return ref.image.url;
     }
-    if (node.__typename === 'GenericFile' && node.url) {
-      return node.url;
+    if (ref.__typename === 'GenericFile' && ref.url) {
+      return ref.url;
     }
   }
   return field?.value ?? undefined;
@@ -570,7 +572,7 @@ export async function listBackgroundPresets(runtime: BackgroundPresetRuntime): P
   let after: string | undefined;
 
   do {
-  const data = await adminFetch<MetaobjectEdgeList>(runtime, QUERY_LIST, {first: 50, after});
+    const data = await adminFetch<MetaobjectEdgeList>(runtime, QUERY_LIST, {first: 50, after});
     const edges = data.metaobjects.edges ?? [];
     for (const edge of edges) {
       results.push(mapMetaobjectToRecord(edge.node));
