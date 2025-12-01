@@ -262,26 +262,33 @@ const MUTATION_DELETE = `
   }
 `;
 
-let lastTelemetry: BackgroundTelemetry = {
-  state: 'fallback',
-  reason: DEFAULT_REASON_INIT,
-  timestamp: new Date().toISOString(),
-};
+let lastTelemetry: BackgroundTelemetry | null = null;
 
-const FALLBACK_PRESET: ActivePresetPayload = {
-  id: 'background:fallback',
-  handle: 'fallback',
-  html: '',
-  css: '',
-  js: '',
-  motionProfile: 'static',
-  supportsReducedMotion: true,
-  versionHash: 'fallback',
-  updatedAt: new Date(0).toISOString(),
-  status: lastTelemetry,
-  calmRadius: DEFAULT_CALM_RADIUS,
-  calmIntensity: DEFAULT_CALM_INTENSITY,
-};
+function getInitialTelemetry(): BackgroundTelemetry {
+  return {
+    state: 'fallback',
+    reason: DEFAULT_REASON_INIT,
+    timestamp: new Date().toISOString(),
+  };
+}
+
+function getFallbackPreset(): ActivePresetPayload {
+  const telemetry = lastTelemetry ?? getInitialTelemetry();
+  return {
+    id: 'background:fallback',
+    handle: 'fallback',
+    html: '',
+    css: '',
+    js: '',
+    motionProfile: 'static',
+    supportsReducedMotion: true,
+    versionHash: 'fallback',
+    updatedAt: new Date(0).toISOString(),
+    status: telemetry,
+    calmRadius: DEFAULT_CALM_RADIUS,
+    calmIntensity: DEFAULT_CALM_INTENSITY,
+  };
+}
 
 function updateTelemetry(state: BackgroundTelemetryState, reason?: string, presetId?: string) {
   lastTelemetry = {
@@ -294,7 +301,7 @@ function updateTelemetry(state: BackgroundTelemetryState, reason?: string, prese
 }
 
 export function getBackgroundTelemetry(): BackgroundTelemetry {
-  return lastTelemetry;
+  return lastTelemetry ?? getInitialTelemetry();
 }
 
 function resolveStoreDomain(rawEnv?: Record<string, string | undefined>): string {
@@ -700,7 +707,7 @@ export async function getActiveBackgroundPreset(
     if (!active) {
       const status = updateTelemetry('fallback', 'no-active-preset');
       const payload: ActivePresetPayload = {
-        ...FALLBACK_PRESET,
+        ...getFallbackPreset(),
         status,
       };
       await writeActivePresetCache(runtime, storeDomain, payload);
@@ -714,7 +721,7 @@ export async function getActiveBackgroundPreset(
     console.error('[backgroundPresets] Failed to resolve active preset', error);
     const status = updateTelemetry('error', error instanceof Error ? error.message : 'Unknown error');
     const payload: ActivePresetPayload = {
-      ...FALLBACK_PRESET,
+      ...getFallbackPreset(),
       status,
     };
     await writeActivePresetCache(runtime, storeDomain, payload);
