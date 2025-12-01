@@ -22,7 +22,7 @@ export default async function handleRequest(
   void context;
   const {getEnvPublic} = await import('~/utils/env.public');
   const envPublic = getEnvPublic();
-  const {BUILD_SHA, ENV_NAME, STORE_DOMAIN} = await import('~/utils/buildInfo.server');
+  const {getBuildSha, getEnvName, getStoreDomain} = await import('~/utils/buildInfo.server');
 
   // Canonical host redirect (optional)
   const canonical = envPublic.PUBLIC_CANONICAL_HOST;
@@ -67,9 +67,9 @@ export default async function handleRequest(
   responseHeaders.set('Content-Type', 'text/html');
   responseHeaders.set('Content-Security-Policy', header);
   // Observability headers (no secrets)
-  responseHeaders.set('X-WM-Env', ENV_NAME);
-  responseHeaders.set('X-WM-Store', STORE_DOMAIN);
-  responseHeaders.set('X-WM-Build', BUILD_SHA || 'local');
+  responseHeaders.set('X-WM-Env', getEnvName());
+  responseHeaders.set('X-WM-Store', getStoreDomain());
+  responseHeaders.set('X-WM-Build', getBuildSha() || 'local');
 
   return new Response(body, {
     headers: responseHeaders,
