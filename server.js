@@ -58,8 +58,16 @@ export default {
 
       return response;
     } catch (error) {
-      console.error(error);
-      return new Response('An unexpected error occurred', {status: 500});
+      console.error('Server error:', error);
+      // Return more details in development, generic message in production
+      const isDev = env?.NODE_ENV !== 'production';
+      const errorMessage = isDev 
+        ? `Server Error: ${error.message}\n\nStack: ${error.stack}`
+        : 'An unexpected error occurred';
+      return new Response(errorMessage, {
+        status: 500,
+        headers: {'Content-Type': 'text/plain'},
+      });
     }
   },
 };
