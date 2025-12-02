@@ -31,10 +31,10 @@ export function Carousel3DMenu({menuData}) {
         // Import menu utilities dynamically (browser-only)
         const menuTransformUtils = await import('../utils/menuTransform');
         
-        // Load test utilities only in development
+        // Load test utilities only in development (browser-only via .client suffix)
         if (typeof window !== 'undefined') {
-          import('../utils/menuTestUtils').catch(() => {});
-          import('../utils/integrationTests').catch(() => {});
+          import('../utils/menuTestUtils.client').catch(() => {});
+          import('../utils/integrationTests.client').catch(() => {});
         }
         
         window.THREE = THREE;
