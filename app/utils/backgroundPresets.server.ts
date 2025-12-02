@@ -1,34 +1,7 @@
+// Workers-compatible background presets server module
+// Note: sanitize-html library was removed as it causes global scope issues in Cloudflare Workers
 import type {ServerEnv} from './env.server';
 import {getEnvPublic} from './env.public';
-
-// Simple HTML sanitizer that's Workers-compatible (no global scope operations)
-// This is a lightweight alternative to sanitize-html that works in Cloudflare Workers
-const ALLOWED_TAGS = new Set([
-  'a', 'abbr', 'address', 'article', 'aside', 'b', 'bdi', 'bdo', 'blockquote',
-  'br', 'caption', 'cite', 'code', 'col', 'colgroup', 'data', 'dd', 'del',
-  'details', 'dfn', 'div', 'dl', 'dt', 'em', 'figcaption', 'figure', 'footer',
-  'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'header', 'hgroup', 'hr', 'i', 'img',
-  'ins', 'kbd', 'li', 'main', 'mark', 'nav', 'ol', 'p', 'pre', 'q', 'rp', 'rt',
-  'ruby', 's', 'samp', 'section', 'small', 'span', 'strong', 'sub', 'summary',
-  'sup', 'table', 'tbody', 'td', 'tfoot', 'th', 'thead', 'time', 'tr', 'u',
-  'ul', 'var', 'wbr',
-  // SVG tags for background effects
-  'svg', 'path', 'g', 'defs', 'linearGradient', 'stop', 'filter',
-  'feGaussianBlur', 'feOffset', 'feMerge', 'feMergeNode', 'circle', 'rect',
-  'line', 'polygon', 'polyline', 'ellipse', 'text', 'tspan', 'use', 'symbol',
-]);
-
-const ALLOWED_ATTR_PREFIXES = ['data-', 'aria-'];
-
-const ALLOWED_ATTRS = new Set([
-  'href', 'src', 'alt', 'title', 'class', 'id', 'style', 'width', 'height', 'role',
-  // SVG attributes
-  'viewBox', 'fill', 'stroke', 'stroke-width', 'd', 'cx', 'cy', 'r', 'rx', 'ry',
-  'x', 'y', 'x1', 'y1', 'x2', 'y2', 'points', 'transform', 'opacity',
-  'filter', 'offset', 'stop-color', 'stop-opacity', 'stdDeviation', 'dx', 'dy',
-  'result', 'in', 'in2', 'mode', 'gradientUnits', 'gradientTransform',
-  'spreadMethod', 'xlink:href', 'xmlns', 'xmlns:xlink', 'preserveAspectRatio',
-]);
 
 export type MotionProfile = 'full' | 'subtle' | 'static';
 
@@ -90,7 +63,6 @@ type MetaobjectMutationPayload = {
   };
 };
 
-// Calm mode configuration defaults and bounds
 export const DEFAULT_CALM_RADIUS = 320;
 export const MIN_CALM_RADIUS = 120;
 export const MAX_CALM_RADIUS = 960;
@@ -178,6 +150,33 @@ const ADMIN_METAOBJECT_TYPE = 'background_preset';
 const DEFAULT_REASON_INIT = 'not-initialized';
 const CACHE_NAMESPACE = 'https://cache.watermelon-hydrogen/background-presets';
 const GRAPHQL_API_VERSION = '2024-10';
+
+// Workers-compatible HTML sanitizer configuration
+// These are the allowed tags for background preset HTML
+const ALLOWED_TAGS = new Set([
+  'div', 'span', 'p', 'a', 'br', 'hr',
+  'h1', 'h2', 'h3', 'h4', 'h5', 'h6',
+  'ul', 'ol', 'li', 'dl', 'dt', 'dd',
+  'table', 'thead', 'tbody', 'tfoot', 'tr', 'th', 'td',
+  'strong', 'em', 'b', 'i', 'u', 's', 'sub', 'sup',
+  'blockquote', 'pre', 'code',
+  'img', 'figure', 'figcaption',
+  'svg', 'path', 'g', 'defs', 'linearGradient', 'radialGradient',
+  'stop', 'filter', 'feGaussianBlur', 'feOffset', 'feMerge', 'feMergeNode',
+  'circle', 'rect', 'line', 'polyline', 'polygon', 'ellipse', 'text', 'use',
+]);
+
+// Allowed attributes for sanitization
+const ALLOWED_ATTRS = new Set([
+  'style', 'class', 'id', 'href', 'src', 'alt', 'title', 'width', 'height',
+  'viewBox', 'fill', 'stroke', 'stroke-width', 'filter', 'transform',
+  'd', 'x', 'y', 'x1', 'y1', 'x2', 'y2', 'cx', 'cy', 'r', 'rx', 'ry',
+  'points', 'offset', 'stop-color', 'stop-opacity', 'gradientUnits',
+  'preserveAspectRatio', 'xmlns', 'role', 'aria-label', 'aria-hidden',
+]);
+
+// Allowed attribute prefixes (for data-* attributes)
+const ALLOWED_ATTR_PREFIXES = ['data-', 'aria-'];
 
 const QUERY_LIST = `
   query BackgroundPresetList($first: Int!, $after: String) {

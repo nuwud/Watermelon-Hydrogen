@@ -62,6 +62,7 @@ export function HoneycombField({calmRadius, calmIntensity, isReducedMotion}) {
     let cleanedUp = false;
     let renderer = null;
     let resizeObserver = null;
+    let cleanupFn = null;
 
     const initScene = async () => {
       // Dynamic import to avoid global scope issues in Cloudflare Workers
@@ -159,8 +160,8 @@ export function HoneycombField({calmRadius, calmIntensity, isReducedMotion}) {
 
       animationRef.current = window.requestAnimationFrame(animate);
 
-      // Store cleanup references
-      containerRef.current._cleanup = () => {
+      // Store cleanup function for later use
+      cleanupFn = () => {
         cleanedUp = true;
         if (animationRef.current) {
           window.cancelAnimationFrame(animationRef.current);
@@ -187,8 +188,8 @@ export function HoneycombField({calmRadius, calmIntensity, isReducedMotion}) {
 
     return () => {
       cleanedUp = true;
-      if (containerRef.current?._cleanup) {
-        containerRef.current._cleanup();
+      if (cleanupFn) {
+        cleanupFn();
       }
     };
   }, []);
