@@ -2,7 +2,9 @@
 import { useEffect, useRef, useState } from 'react';
 import {getEnvPublic} from '~/utils/env.public';
 import { ClientOnly } from '../ClientOnly';
-import { setupCarousel } from './main';
+
+// Dynamic import to avoid SSR bundling - main.client.js contains THREE.js
+const loadSetupCarousel = () => import('./main.client').then(m => m.setupCarousel);
 
 /**
  * 3D Interactive Carousel Menu component for navigation
@@ -18,6 +20,7 @@ function Carousel3DMenu() {
     
     try {
       console.log('Setting up 3D Carousel...');
+      const setupCarousel = await loadSetupCarousel();
       const controls = setupCarousel(containerRef.current);
       setCarouselControls(controls);
       console.log('3D Carousel initialized successfully');

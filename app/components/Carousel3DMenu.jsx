@@ -5,8 +5,8 @@ import * as menuTransformUtils from '../utils/menuTransform';
 import '../utils/menuTestUtils';
 import '../utils/integrationTests';
 
-// Lazy load Carousel3DProWrapper to avoid SSR bundling of THREE.js
-const Carousel3DProWrapper = lazy(() => import('./Carousel3DPro/Carousel3DProWrapper'));
+// Lazy load Carousel3DProWrapper - the .client suffix ensures SSR exclusion
+const Carousel3DProWrapper = lazy(() => import('./Carousel3DPro/Carousel3DProWrapper.client'));
 
 export function Carousel3DMenu({menuData}) {
   const containerRef = useRef(null);
@@ -32,7 +32,7 @@ export function Carousel3DMenu({menuData}) {
         window.gsap = gsap;
         window.OrbitControls = OrbitControls;
 
-        const {mountCarousel3D} = await import('./Carousel3DPro/main.js');
+        const {mountCarousel3D} = await import('./Carousel3DPro/main.client.js');
 
         if (containerRef.current && !carouselInstanceRef.current) {
           carouselInstanceRef.current = mountCarousel3D(containerRef.current, menuData);
