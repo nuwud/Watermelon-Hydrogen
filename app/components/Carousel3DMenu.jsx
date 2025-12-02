@@ -1,9 +1,9 @@
 import {useEffect, useRef, useState, lazy, Suspense} from 'react';
 import ClientOnly from './ClientOnly';
 import {BackgroundStage} from './backgrounds/BackgroundStage';
-import * as menuTransformUtils from '../utils/menuTransform';
-import '../utils/menuTestUtils';
-import '../utils/integrationTests';
+
+// Dynamic imports for browser-only test utilities - don't import at module level
+// These are loaded conditionally inside useEffect to avoid SSR issues
 
 // Lazy load Carousel3DProWrapper - the .client suffix ensures SSR exclusion
 const Carousel3DProWrapper = lazy(() => import('./Carousel3DPro/Carousel3DProWrapper.client'));
@@ -27,6 +27,15 @@ export function Carousel3DMenu({menuData}) {
         const THREE = await import('three');
         const {gsap} = await import('gsap');
         const {OrbitControls} = await import('three/examples/jsm/controls/OrbitControls.js');
+        
+        // Import menu utilities dynamically (browser-only)
+        const menuTransformUtils = await import('../utils/menuTransform');
+        
+        // Load test utilities only in development
+        if (typeof window !== 'undefined') {
+          import('../utils/menuTestUtils').catch(() => {});
+          import('../utils/integrationTests').catch(() => {});
+        }
         
         window.THREE = THREE;
         window.gsap = gsap;
