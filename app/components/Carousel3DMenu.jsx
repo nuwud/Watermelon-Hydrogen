@@ -1,14 +1,22 @@
-import {useEffect, useRef} from 'react';
+import {useEffect, useRef, useState, lazy, Suspense} from 'react';
 import ClientOnly from './ClientOnly';
-import Carousel3DProWrapper from './Carousel3DPro/Carousel3DProWrapper';
 import {BackgroundStage} from './backgrounds/BackgroundStage';
 import * as menuTransformUtils from '../utils/menuTransform';
 import '../utils/menuTestUtils';
 import '../utils/integrationTests';
 
+// Lazy load Carousel3DProWrapper to avoid SSR bundling of THREE.js
+const Carousel3DProWrapper = lazy(() => import('./Carousel3DPro/Carousel3DProWrapper'));
+
 export function Carousel3DMenu({menuData}) {
   const containerRef = useRef(null);
   const carouselInstanceRef = useRef(null);
+  const [isClientReady, setIsClientReady] = useState(false);
+
+  // Mark as ready on client-side only
+  useEffect(() => {
+    setIsClientReady(true);
+  }, []);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -72,7 +80,11 @@ export function Carousel3DMenu({menuData}) {
           }}
         >
           <BackgroundStage />
-          <Carousel3DProWrapper items={items} />
+          {isClientReady && (
+            <Suspense fallback={<div style={{color: 'cyan'}}>Loading 3D...</div>}>
+              <Carousel3DProWrapper items={items} />
+            </Suspense>
+          )}
         </div>
       )}
     </ClientOnly>
