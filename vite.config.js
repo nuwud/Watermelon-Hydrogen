@@ -28,6 +28,9 @@ export default defineConfig({
     chunkSizeWarningLimit: 1000, // Increase warning limit for Three.js
   },
   ssr: {
+    // Exclude three.js and gsap from SSR bundle - they cause global scope issues in Workers
+    // These libraries should only run on the client via dynamic imports
+    external: ['three', 'gsap'],
     optimizeDeps: {
       /**
        * Include dependencies here if they throw CJS<>ESM errors.
@@ -39,7 +42,7 @@ export default defineConfig({
        * Include 'example-dep' in the array below.
        * @see https://vitejs.dev/config/dep-optimization-options
        */
-      include: ['three', 'gsap'],
+      include: [],
     },
   },
 });

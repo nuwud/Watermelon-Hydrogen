@@ -1,5 +1,4 @@
 import {useEffect, useRef} from 'react';
-import * as THREE from 'three';
 
 const OUTER_RADIUS = 1200;
 const HEX_RADIUS = 60;
@@ -8,7 +7,7 @@ const BASE_OPACITY_FAR = 0.38;
 const VERTICAL_DAMPING = 0.6;
 const ANIMATION_SPEED = 0.35;
 
-function createHexPositions(outerRadius) {
+function createHexPositions(outerRadius, THREE) {
   const positions = [];
   const hexWidth = Math.sqrt(3) * HEX_RADIUS;
   const hexHeight = HEX_RADIUS * 2;
@@ -22,11 +21,14 @@ function createHexPositions(outerRadius) {
       const z = stepZ * r;
       const distance = Math.sqrt(x * x + z * z);
       if (distance > outerRadius) continue;
+      const baseColor = new THREE.Color();
+      baseColor.setHSL(0.12, 0.75, 0.45 + (distance / OUTER_RADIUS) * 0.15);
       positions.push({
         x,
         z,
         distance,
         offset: Math.random() * Math.PI * 2,
+        baseColor,
       });
     }
   }
@@ -57,114 +59,136 @@ export function HoneycombField({calmRadius, calmIntensity, isReducedMotion}) {
     if (typeof window === 'undefined') return undefined;
     if (!containerRef.current) return undefined;
 
-    const container = containerRef.current;
-    const scene = new THREE.Scene();
-    const camera = new THREE.PerspectiveCamera(45, 1, 1, 4000);
-    camera.position.set(0, 380, 620);
-    camera.lookAt(new THREE.Vector3(0, 0, 0));
+    let cleanedUp = false;
+    let renderer = null;
+    let resizeObserver = null;
 
-    const renderer = new THREE.WebGLRenderer({antialias: true, alpha: true});
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-    renderer.setClearColor(0x000000, 0);
-    container.appendChild(renderer.domElement);
+    const initScene = async () => {
+      // Dynamic import to avoid global scope issues in Cloudflare Workers
+      const THREE = await import('three');
+      
+      if (cleanedUp || !containerRef.current) return;
 
-    const positions = createHexPositions(OUTER_RADIUS).map((position) => {
-      const baseColor = new THREE.Color();
-      baseColor.setHSL(0.12, 0.75, 0.45 + (position.distance / OUTER_RADIUS) * 0.15);
-      return {...position, baseColor};
-    });
-    const geometry = new THREE.CircleGeometry(HEX_RADIUS, 6);
-    geometry.rotateX(-Math.PI / 2);
-    const material = new THREE.MeshBasicMaterial({color: 0xffe066, transparent: true, opacity: BASE_OPACITY_NEAR});
-    const mesh = new THREE.InstancedMesh(geometry, material, positions.length);
-    mesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+      const container = containerRef.current;
+      const scene = new THREE.Scene();
+      const camera = new THREE.PerspectiveCamera(45, 1, 1, 4000);
+      camera.position.set(0, 380, 620);
+      camera.lookAt(new THREE.Vector3(0, 0, 0));
 
-    const colors = new Float32Array(positions.length * 3);
-    for (let i = 0; i < positions.length; i += 1) {
-      positions[i].baseColor.toArray(colors, i * 3);
-    }
-    mesh.instanceColor = new THREE.InstancedBufferAttribute(colors, 3);
-    mesh.instanceColor.setUsage(THREE.DynamicDrawUsage);
-    mesh.instanceColor.needsUpdate = true;
+      renderer = new THREE.WebGLRenderer({antialias: true, alpha: true});
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+      renderer.setClearColor(0x000000, 0);
+      container.appendChild(renderer.domElement);
 
-    scene.add(mesh);
+      const positions = createHexPositions(OUTER_RADIUS, THREE);
+      const geometry = new THREE.CircleGeometry(HEX_RADIUS, 6);
+      geometry.rotateX(-Math.PI / 2);
+      const material = new THREE.MeshBasicMaterial({color: 0xffe066, transparent: true, opacity: BASE_OPACITY_NEAR});
+      const mesh = new THREE.InstancedMesh(geometry, material, positions.length);
+      mesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
 
-    const dummy = new THREE.Object3D();
-    const workingColor = new THREE.Color();
+      const colors = new Float32Array(positions.length * 3);
+      for (let i = 0; i < positions.length; i += 1) {
+        positions[i].baseColor.toArray(colors, i * 3);
+      }
+      mesh.instanceColor = new THREE.InstancedBufferAttribute(colors, 3);
+      mesh.instanceColor.setUsage(THREE.DynamicDrawUsage);
+      mesh.instanceColor.needsUpdate = true;
 
-    const resize = () => {
-      const width = container.clientWidth || window.innerWidth;
-      const height = container.clientHeight || window.innerHeight;
-      renderer.setSize(width, height);
-      camera.aspect = width / height;
-      camera.updateProjectionMatrix();
-    };
+      scene.add(mesh);
 
-    resize();
+      const dummy = new THREE.Object3D();
+      const workingColor = new THREE.Color();
 
-    let resizeObserver;
-    if (typeof ResizeObserver !== 'undefined') {
-      resizeObserver = new ResizeObserver(resize);
-      resizeObserver.observe(container);
-    } else {
-      window.addEventListener('resize', resize);
-    }
+      const resize = () => {
+        if (!container || !renderer) return;
+        const width = container.clientWidth || window.innerWidth;
+        const height = container.clientHeight || window.innerHeight;
+        renderer.setSize(width, height);
+        camera.aspect = width / height;
+        camera.updateProjectionMatrix();
+      };
 
-    const animate = (time) => {
-      const motionIntensity = reducedRef.current ? 0 : calmIntensityRef.current;
-      const motionProgress = time * 0.001 * ANIMATION_SPEED;
-      material.opacity = reducedRef.current ? BASE_OPACITY_NEAR : BASE_OPACITY_FAR;
-      const calmRadiusCurrent = Math.min(calmRadiusRef.current, OUTER_RADIUS - 1);
-      const outerRange = Math.max(1, OUTER_RADIUS - calmRadiusCurrent);
+      resize();
 
-      for (let index = 0; index < positions.length; index += 1) {
-        const position = positions[index];
-        const {x, z, distance, offset, baseColor: positionColor} = position;
-        const calmZone = distance <= calmRadiusCurrent;
-        const influence = calmZone
-          ? 0
-          : Math.min(1, (distance - calmRadiusCurrent) / outerRange);
-        const amplitude = motionIntensity * influence * 60;
-        const verticalOffset = amplitude * Math.sin(motionProgress + offset);
-
-        dummy.position.set(x, verticalOffset * VERTICAL_DAMPING, z);
-        const scale = 1 + motionIntensity * 0.15 * influence;
-        dummy.scale.setScalar(scale);
-        dummy.rotation.y = (motionProgress + offset) * 0.02;
-        dummy.updateMatrix();
-        mesh.setMatrixAt(index, dummy.matrix);
-
-        const brightness = calmZone ? 0.78 : 0.9 + influence * 0.35 * motionIntensity;
-        workingColor.copy(positionColor).multiplyScalar(brightness);
-        workingColor.toArray(colors, index * 3);
+      if (typeof ResizeObserver !== 'undefined') {
+        resizeObserver = new ResizeObserver(resize);
+        resizeObserver.observe(container);
+      } else {
+        window.addEventListener('resize', resize);
       }
 
-      mesh.instanceMatrix.needsUpdate = true;
-      if (mesh.instanceColor) {
-        mesh.instanceColor.needsUpdate = true;
-      }
-      renderer.render(scene, camera);
+      const animate = (time) => {
+        if (cleanedUp) return;
+        
+        const motionIntensity = reducedRef.current ? 0 : calmIntensityRef.current;
+        const motionProgress = time * 0.001 * ANIMATION_SPEED;
+        material.opacity = reducedRef.current ? BASE_OPACITY_NEAR : BASE_OPACITY_FAR;
+        const calmRadiusCurrent = Math.min(calmRadiusRef.current, OUTER_RADIUS - 1);
+        const outerRange = Math.max(1, OUTER_RADIUS - calmRadiusCurrent);
+
+        for (let index = 0; index < positions.length; index += 1) {
+          const position = positions[index];
+          const {x, z, distance, offset, baseColor: positionColor} = position;
+          const calmZone = distance <= calmRadiusCurrent;
+          const influence = calmZone
+            ? 0
+            : Math.min(1, (distance - calmRadiusCurrent) / outerRange);
+          const amplitude = motionIntensity * influence * 60;
+          const verticalOffset = amplitude * Math.sin(motionProgress + offset);
+
+          dummy.position.set(x, verticalOffset * VERTICAL_DAMPING, z);
+          const scale = 1 + motionIntensity * 0.15 * influence;
+          dummy.scale.setScalar(scale);
+          dummy.rotation.y = (motionProgress + offset) * 0.02;
+          dummy.updateMatrix();
+          mesh.setMatrixAt(index, dummy.matrix);
+
+          const brightness = calmZone ? 0.78 : 0.9 + influence * 0.35 * motionIntensity;
+          workingColor.copy(positionColor).multiplyScalar(brightness);
+          workingColor.toArray(colors, index * 3);
+        }
+
+        mesh.instanceMatrix.needsUpdate = true;
+        if (mesh.instanceColor) {
+          mesh.instanceColor.needsUpdate = true;
+        }
+        renderer.render(scene, camera);
+        animationRef.current = window.requestAnimationFrame(animate);
+      };
+
       animationRef.current = window.requestAnimationFrame(animate);
+
+      // Store cleanup references
+      containerRef.current._cleanup = () => {
+        cleanedUp = true;
+        if (animationRef.current) {
+          window.cancelAnimationFrame(animationRef.current);
+          animationRef.current = null;
+        }
+        if (resizeObserver) {
+          resizeObserver.disconnect();
+        } else {
+          window.removeEventListener('resize', resize);
+        }
+        geometry.dispose();
+        material.dispose();
+        if (renderer) {
+          renderer.dispose();
+          if (renderer.domElement.parentNode === container) {
+            container.removeChild(renderer.domElement);
+          }
+        }
+        scene.remove(mesh);
+      };
     };
 
-    animationRef.current = window.requestAnimationFrame(animate);
+    initScene();
 
     return () => {
-      if (animationRef.current) {
-        window.cancelAnimationFrame(animationRef.current);
-        animationRef.current = null;
-      }
-      if (resizeObserver) {
-        resizeObserver.disconnect();
-      } else {
-        window.removeEventListener('resize', resize);
-      }
-      geometry.dispose();
-      material.dispose();
-      renderer.dispose();
-      scene.remove(mesh);
-      if (renderer.domElement.parentNode === container) {
-        container.removeChild(renderer.domElement);
+      cleanedUp = true;
+      if (containerRef.current?._cleanup) {
+        containerRef.current._cleanup();
       }
     };
   }, []);

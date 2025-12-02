@@ -1,7 +1,4 @@
 import {useEffect, useRef} from 'react';
-import * as THREE from 'three';
-import {gsap} from 'gsap';
-import {OrbitControls} from 'three/examples/jsm/controls/OrbitControls.js';
 import ClientOnly from './ClientOnly';
 import Carousel3DProWrapper from './Carousel3DPro/Carousel3DProWrapper';
 import {BackgroundStage} from './backgrounds/BackgroundStage';
@@ -18,6 +15,11 @@ export function Carousel3DMenu({menuData}) {
 
     const loadCarousel = async () => {
       try {
+        // Dynamic imports to avoid global scope issues in Cloudflare Workers
+        const THREE = await import('three');
+        const {gsap} = await import('gsap');
+        const {OrbitControls} = await import('three/examples/jsm/controls/OrbitControls.js');
+        
         window.THREE = THREE;
         window.gsap = gsap;
         window.OrbitControls = OrbitControls;
