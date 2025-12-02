@@ -32,3 +32,4 @@ dev-workspace/chat-archives/**/*.gz
 .specify/memory/*.md
 specs/**/research.md
 specs/**/quickstart.md
+.qodo
