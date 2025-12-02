@@ -1,92 +1,67 @@
-import {useEffect, useRef, useState, lazy, Suspense} from 'react';
-import ClientOnly from './ClientOnly';
-import {BackgroundStage} from './backgrounds/BackgroundStage';
-import * as menuTransformUtils from '../utils/menuTransform';
-import '../utils/menuTestUtils';
-import '../utils/integrationTests';
+import { useEffect, useRef } from 'react';
 
-// Lazy load Carousel3DProWrapper - the .client suffix ensures SSR exclusion
-const Carousel3DProWrapper = lazy(() => import('./Carousel3DPro/Carousel3DProWrapper.client'));
+// IMPORTANT: No static imports of THREE.js or Carousel3DPro here!
+// All 3D imports must be dynamic to prevent SSR bundling for Cloudflare Workers
 
-export function Carousel3DMenu({menuData}) {
+const Carousel3DProWrapper = ({ items = [], config = {} }) => {
   const containerRef = useRef(null);
-  const carouselInstanceRef = useRef(null);
-  const [isClientReady, setIsClientReady] = useState(false);
-
-  // Mark as ready on client-side only
-  useEffect(() => {
-    setIsClientReady(true);
-  }, []);
+  const carouselRef = useRef(null);
+  const rendererRef = useRef(null);
 
   useEffect(() => {
-    if (typeof window === 'undefined') return;
+    if (!containerRef.current || typeof window === 'undefined') return;
 
-    const loadCarousel = async () => {
+    let cleanup = null;
+
+    const initCarousel = async () => {
       try {
-        // Dynamic imports to avoid global scope issues in Cloudflare Workers
-        const THREE = await import('three');
-        const {gsap} = await import('gsap');
-        const {OrbitControls} = await import('three/examples/jsm/controls/OrbitControls.js');
-        
-        window.THREE = THREE;
-        window.gsap = gsap;
-        window.OrbitControls = OrbitControls;
+        // Dynamic imports - only loaded on client
+        const [THREE, { Carousel3DPro }] = await Promise.all([
+          import('three'),
+          import('./Carousel3DPro'),
+        ]);
 
-        const {mountCarousel3D} = await import('./Carousel3DPro/main.client.js');
+        if (!containerRef.current) return; // Guard against unmount during async
 
-        if (containerRef.current && !carouselInstanceRef.current) {
-          carouselInstanceRef.current = mountCarousel3D(containerRef.current, menuData);
-          window.debugCarousel = carouselInstanceRef.current;
-          window.menuTransformUtils = menuTransformUtils;
+        carouselRef.current = new Carousel3DPro(items, config);
 
-          console.warn('[Menu] Carousel initialized with menu data:', {
-            hasMenuData: !!menuData,
-            itemCount: menuData?.items?.length || 0,
-          });
+        // ✅ DOM safety check before appending
+        if (carouselRef.current?.domElement instanceof HTMLElement) {
+          rendererRef.current = new THREE.WebGLRenderer({ antialias: true });
+          containerRef.current.appendChild(rendererRef.current.domElement);
         }
+
+        const handleResize = () => {
+          if (carouselRef.current?.resize && containerRef.current) {
+            carouselRef.current.resize(
+              containerRef.current.clientWidth,
+              containerRef.current.clientHeight
+            );
+          }
+        };
+
+        window.addEventListener('resize', handleResize);
+        handleResize();
+
+        cleanup = () => {
+          window.removeEventListener('resize', handleResize);
+          if (carouselRef.current?.dispose) {
+            carouselRef.current.dispose();
+          }
+        };
       } catch (err) {
-        console.error('[Error] Error loading carousel:', err);
+        console.error('[Carousel3DProWrapper] Failed to initialize:', err);
       }
     };
 
-    loadCarousel();
+    initCarousel();
 
     return () => {
-      if (carouselInstanceRef.current?.dispose) {
-        carouselInstanceRef.current.dispose();
-        carouselInstanceRef.current = null;
-      }
+      if (cleanup) cleanup();
     };
-  }, [menuData]);
+  }, [items, config]);
 
-  const items = menuData?.items || ['Item 1', 'Item 2', 'Item 3'];
+  return <div ref={containerRef} style={{ width: '100%', height: '100%' }} />;
+};
 
-  return (
-    <ClientOnly fallback={<div style={{color: 'orange'}}>Hydrating Client View...</div>}>
-      {() => (
-        <div
-          id="carousel-container"
-          ref={containerRef}
-          style={{
-            width: '100vw',
-            height: '100vh',
-            backgroundColor: 'black',
-            color: 'lime',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            overflow: 'hidden',
-            position: 'relative',
-          }}
-        >
-          <BackgroundStage />
-          {isClientReady && (
-            <Suspense fallback={<div style={{color: 'cyan'}}>Loading 3D...</div>}>
-              <Carousel3DProWrapper items={items} />
-            </Suspense>
-          )}
-        </div>
-      )}
-    </ClientOnly>
-  );
-}
+export default Carousel3DProWrapper;
