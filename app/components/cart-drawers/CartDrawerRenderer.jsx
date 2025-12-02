@@ -9,7 +9,9 @@ import { createCartDrawerOverlay } from './CartDrawer3D.scene'; // Import scene 
 import { createCartHUDIcon } from './CartHUDIcon3D'; // Import HUD icon function
 import ClientOnly from '../ClientOnly';
 import { CartHUDDebugPanel } from './CartHUDDebugPanel'; // Import Debug Panel
-import {getEnvPublic} from '~/utils/env.public'; // Import env getter
+
+// Client-safe dev mode check (window.__HYDROGEN_DEV__ is set by Hydrogen in dev)
+const IS_DEV = typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.__HYDROGEN_DEV__);
 
 
 // Define the CartDrawer3D component
@@ -237,7 +239,7 @@ function CartDrawer3D() {
   return (
     <>
       {/* Render debug panel only in development */}
-      {getEnvPublic().IS_DEV && <CartHUDDebugPanel hudRef={hudCartRef} />}
+      {IS_DEV && <CartHUDDebugPanel hudRef={hudCartRef} />}
     </>
   );
 }

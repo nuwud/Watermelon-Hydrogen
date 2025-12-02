@@ -1,7 +1,9 @@
 //import React from 'react';
 import { useEffect, useRef, useState } from 'react';
-import {getEnvPublic} from '~/utils/env.public';
 import { ClientOnly } from '../ClientOnly';
+
+// Client-safe dev mode check
+const IS_DEV = typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.__HYDROGEN_DEV__);
 
 // Dynamic import to avoid SSR bundling - main.client.js contains THREE.js
 const loadSetupCarousel = () => import('./main.client').then(m => m.setupCarousel);
@@ -108,7 +110,7 @@ function Carousel3DMenu() {
         <div ref={containerRef} style={{ width: '100%', height: '100%' }} />
 
         {/* Optional debug controls */}
-        {getEnvPublic().IS_DEV && (
+        {IS_DEV && (
           <div className="carousel-debug" style={{ position: 'absolute', top: 0, right: 0, zIndex: 100 }}>
             <button 
               onClick={() => window.fixCarousel()} 

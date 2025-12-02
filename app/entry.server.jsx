@@ -18,11 +18,13 @@ export default async function handleRequest(
   remixContext,
   context,
 ) {
-  // Avoid unused var warning in JS while keeping Remix signature
-  void context;
+  // Use context.rawEnv to access runtime environment in Workers
   const {getEnvPublic} = await import('~/utils/env.public');
-  const envPublic = getEnvPublic();
-  const {getBuildSha, getEnvName, getStoreDomain} = await import('~/utils/buildInfo.server');
+  const envPublic = getEnvPublic(context.rawEnv);
+  const {getBuildSha, getEnvName, getStoreDomain, setRuntimeEnv} = await import('~/utils/buildInfo.server');
+  
+  // Initialize runtime env for buildInfo helpers
+  setRuntimeEnv(context.rawEnv);
 
   // Canonical host redirect (optional)
   const canonical = envPublic.PUBLIC_CANONICAL_HOST;

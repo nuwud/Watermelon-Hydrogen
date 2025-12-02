@@ -23,9 +23,9 @@ export async function createAppLoadContext(request, env, executionContext) {
     AppSession.init(request, [serverEnv.SESSION_SECRET]),
   ]);
 
-  // Defer reading public env until runtime to avoid MiniOxygen pre-injection errors
+  // Pass runtime env to getEnvPublic for Workers compatibility
   const {getEnvPublic} = await import('~/utils/env.public');
-  const envPublic = getEnvPublic();
+  const envPublic = getEnvPublic(env);
 
   const hydrogenContext = createHydrogenContext({
     env,

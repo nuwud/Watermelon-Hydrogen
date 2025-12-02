@@ -23,37 +23,58 @@ function requirePublic(name: keyof PublicEnv, value: string | undefined): string
 
 let cachedEnv: PublicEnv | null = null;
 
-export function getEnvPublic(): PublicEnv {
+/**
+ * Get public environment variables.
+ * In Cloudflare Workers (Oxygen), env vars are passed via the runtime env object.
+ * @param runtimeEnv - The runtime environment object from the request context
+ */
+export function getEnvPublic(
+  runtimeEnv?: Record<string, string | undefined>,
+): PublicEnv {
   if (cachedEnv) return cachedEnv;
+
+  // Helper to resolve value from runtime env (Workers) or process.env (Node)
+  const resolve = (key: string): string | undefined => {
+    // First try runtime env (Cloudflare Workers / Oxygen)
+    if (runtimeEnv?.[key] && runtimeEnv[key]!.trim() !== '') {
+      return runtimeEnv[key];
+    }
+    // Fallback to process.env (Node.js / local dev)
+    if (typeof process !== 'undefined' && process.env?.[key]) {
+      return process.env[key];
+    }
+    return undefined;
+  };
+
   cachedEnv = {
     PUBLIC_CUSTOMER_ACCOUNT_API_CLIENT_ID: requirePublic(
       'PUBLIC_CUSTOMER_ACCOUNT_API_CLIENT_ID',
-      process.env.PUBLIC_CUSTOMER_ACCOUNT_API_CLIENT_ID,
+      resolve('PUBLIC_CUSTOMER_ACCOUNT_API_CLIENT_ID'),
     ),
     PUBLIC_CUSTOMER_ACCOUNT_API_URL: requirePublic(
       'PUBLIC_CUSTOMER_ACCOUNT_API_URL',
-      process.env.PUBLIC_CUSTOMER_ACCOUNT_API_URL,
+      resolve('PUBLIC_CUSTOMER_ACCOUNT_API_URL'),
     ),
     PUBLIC_STORE_DOMAIN: requirePublic(
       'PUBLIC_STORE_DOMAIN',
-      process.env.PUBLIC_STORE_DOMAIN,
+      resolve('PUBLIC_STORE_DOMAIN'),
     ),
     PUBLIC_STOREFRONT_API_TOKEN: requirePublic(
       'PUBLIC_STOREFRONT_API_TOKEN',
-      process.env.PUBLIC_STOREFRONT_API_TOKEN,
+      resolve('PUBLIC_STOREFRONT_API_TOKEN'),
     ),
     PUBLIC_STOREFRONT_ID: requirePublic(
       'PUBLIC_STOREFRONT_ID',
-      process.env.PUBLIC_STOREFRONT_ID,
+      resolve('PUBLIC_STOREFRONT_ID'),
     ),
     PUBLIC_STOREFRONT_API_VERSION: requirePublic(
       'PUBLIC_STOREFRONT_API_VERSION',
-      process.env.PUBLIC_STOREFRONT_API_VERSION,
+      resolve('PUBLIC_STOREFRONT_API_VERSION'),
     ),
-    PUBLIC_CHECKOUT_DOMAIN: process.env.PUBLIC_CHECKOUT_DOMAIN,
-    PUBLIC_CANONICAL_HOST: process.env.PUBLIC_CANONICAL_HOST,
-    NODE_ENV: process.env.NODE_ENV,
-    IS_DEV: process.env.NODE_ENV !== 'production',
+    PUBLIC_CHECKOUT_DOMAIN: resolve('PUBLIC_CHECKOUT_DOMAIN'),
+    PUBLIC_CANONICAL_HOST: resolve('PUBLIC_CANONICAL_HOST'),
+    NODE_ENV: resolve('NODE_ENV'),
+    IS_DEV: resolve('NODE_ENV') !== 'production',
   };
   return cachedEnv;
 }

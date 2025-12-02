@@ -334,11 +334,13 @@ export function getBackgroundTelemetry(): BackgroundTelemetry {
 }
 
 function resolveStoreDomain(rawEnv?: Record<string, string | undefined>): string {
-  return rawEnv?.PUBLIC_STORE_DOMAIN ?? getEnvPublic().PUBLIC_STORE_DOMAIN;
+  if (rawEnv?.PUBLIC_STORE_DOMAIN) return rawEnv.PUBLIC_STORE_DOMAIN;
+  return getEnvPublic(rawEnv).PUBLIC_STORE_DOMAIN;
 }
 
 function getAdminApiVersion(rawEnv?: Record<string, string | undefined>): string {
-  return rawEnv?.PUBLIC_STOREFRONT_API_VERSION ?? getEnvPublic().PUBLIC_STOREFRONT_API_VERSION ?? GRAPHQL_API_VERSION;
+  if (rawEnv?.PUBLIC_STOREFRONT_API_VERSION) return rawEnv.PUBLIC_STOREFRONT_API_VERSION;
+  return getEnvPublic(rawEnv).PUBLIC_STOREFRONT_API_VERSION ?? GRAPHQL_API_VERSION;
 }
 
 function buildCacheRequest(storeDomain: string): Request {

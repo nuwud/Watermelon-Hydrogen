@@ -60,9 +60,9 @@ export async function loader(args) {
   // Await the critical data required to render initial state of the page
   const criticalData = await loadCriticalData(args);
 
-  const {storefront} = args.context;
+  const {storefront, rawEnv} = args.context;
   const {getEnvPublic} = await import('~/utils/env.public');
-  const envPublic = getEnvPublic();
+  const envPublic = getEnvPublic(rawEnv);
 
   return {
     ...deferredData,
