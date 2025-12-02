@@ -1,6 +1,34 @@
-import sanitizeHtml from 'sanitize-html';
 import type {ServerEnv} from './env.server';
 import {getEnvPublic} from './env.public';
+
+// Simple HTML sanitizer that's Workers-compatible (no global scope operations)
+// This is a lightweight alternative to sanitize-html that works in Cloudflare Workers
+const ALLOWED_TAGS = new Set([
+  'a', 'abbr', 'address', 'article', 'aside', 'b', 'bdi', 'bdo', 'blockquote',
+  'br', 'caption', 'cite', 'code', 'col', 'colgroup', 'data', 'dd', 'del',
+  'details', 'dfn', 'div', 'dl', 'dt', 'em', 'figcaption', 'figure', 'footer',
+  'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'header', 'hgroup', 'hr', 'i', 'img',
+  'ins', 'kbd', 'li', 'main', 'mark', 'nav', 'ol', 'p', 'pre', 'q', 'rp', 'rt',
+  'ruby', 's', 'samp', 'section', 'small', 'span', 'strong', 'sub', 'summary',
+  'sup', 'table', 'tbody', 'td', 'tfoot', 'th', 'thead', 'time', 'tr', 'u',
+  'ul', 'var', 'wbr',
+  // SVG tags for background effects
+  'svg', 'path', 'g', 'defs', 'linearGradient', 'stop', 'filter',
+  'feGaussianBlur', 'feOffset', 'feMerge', 'feMergeNode', 'circle', 'rect',
+  'line', 'polygon', 'polyline', 'ellipse', 'text', 'tspan', 'use', 'symbol',
+]);
+
+const ALLOWED_ATTR_PREFIXES = ['data-', 'aria-'];
+
+const ALLOWED_ATTRS = new Set([
+  'href', 'src', 'alt', 'title', 'class', 'id', 'style', 'width', 'height', 'role',
+  // SVG attributes
+  'viewBox', 'fill', 'stroke', 'stroke-width', 'd', 'cx', 'cy', 'r', 'rx', 'ry',
+  'x', 'y', 'x1', 'y1', 'x2', 'y2', 'points', 'transform', 'opacity',
+  'filter', 'offset', 'stop-color', 'stop-opacity', 'stdDeviation', 'dx', 'dy',
+  'result', 'in', 'in2', 'mode', 'gradientUnits', 'gradientTransform',
+  'spreadMethod', 'xlink:href', 'xmlns', 'xmlns:xlink', 'preserveAspectRatio',
+]);
 
 export type MotionProfile = 'full' | 'subtle' | 'static';
 
@@ -356,32 +384,87 @@ function limitSize(value: string, limit: number, label: string) {
   }
 }
 
+// Workers-compatible HTML sanitizer using regex-based approach
+// This avoids the global scope issues of sanitize-html library
 function sanitizeMarkup(html: string): string {
-  // Access sanitizeHtml.defaults lazily inside the function to avoid global scope issues
-  const baseAllowedAttributes = sanitizeHtml.defaults.allowedAttributes as Record<string, string[]>;
-  return sanitizeHtml(html, {
-    ...sanitizeHtml.defaults,
-    allowedTags: [
-      ...sanitizeHtml.defaults.allowedTags,
-      'svg',
-      'path',
-      'g',
-      'defs',
-      'linearGradient',
-      'stop',
-      'filter',
-      'feGaussianBlur',
-      'feOffset',
-      'feMerge',
-      'feMergeNode',
-    ],
-    allowedAttributes: {
-      ...baseAllowedAttributes,
-      '*': [...(baseAllowedAttributes['*'] ?? []), 'style', 'class', 'data-*', 'id', 'viewBox', 'fill', 'stroke', 'stroke-width', 'filter'],
-      svg: ['viewBox', 'width', 'height'],
-      path: ['d', 'fill', 'stroke', 'stroke-width', 'filter'],
-    },
+  if (!html || typeof html !== 'string') return '';
+
+  // Helper to check if an attribute is allowed
+  function isAttrAllowed(attr: string): boolean {
+    const lowerAttr = attr.toLowerCase();
+    if (ALLOWED_ATTRS.has(lowerAttr)) return true;
+    for (const prefix of ALLOWED_ATTR_PREFIXES) {
+      if (lowerAttr.startsWith(prefix)) return true;
+    }
+    return false;
+  }
+
+  // Remove script tags and their content
+  let sanitized = html.replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '');
+
+  // Remove style tags (we allow inline styles but not style blocks with potential JS)
+  sanitized = sanitized.replace(/<style\b[^<]*(?:(?!<\/style>)<[^<]*)*<\/style>/gi, '');
+
+  // Remove event handlers (onclick, onerror, etc.)
+  sanitized = sanitized.replace(/\s+on\w+\s*=\s*["'][^"']*["']/gi, '');
+  sanitized = sanitized.replace(/\s+on\w+\s*=\s*[^\s>]+/gi, '');
+
+  // Remove javascript: URLs
+  sanitized = sanitized.replace(/javascript\s*:/gi, '');
+
+  // Remove data: URLs except for safe image types
+  sanitized = sanitized.replace(/data\s*:\s*(?!image\/(png|jpeg|jpg|gif|svg\+xml|webp))[^"'\s>]*/gi, '');
+
+  // Process tags - keep only allowed tags
+  sanitized = sanitized.replace(/<\/?([a-z][a-z0-9]*)\b[^>]*>/gi, (match, tagName) => {
+    const lowerTag = tagName.toLowerCase();
+    if (!ALLOWED_TAGS.has(lowerTag)) {
+      return ''; // Remove disallowed tags
+    }
+
+    // For closing tags, just return them
+    if (match.startsWith('</')) {
+      return `</${lowerTag}>`;
+    }
+
+    // For opening tags, filter attributes
+    const attrMatch = match.match(/<[a-z][a-z0-9]*\s+([^>]*?)\/?>/i);
+    if (!attrMatch || !attrMatch[1]) {
+      const selfClose = match.endsWith('/>') ? ' /' : '';
+      return `<${lowerTag}${selfClose}>`;
+    }
+
+    const attrString = attrMatch[1];
+    const allowedAttrs: string[] = [];
+
+    // Parse attributes (handles both quoted and unquoted)
+    const attrRegex = /([a-z][a-z0-9\-:]*)\s*(?:=\s*(?:"([^"]*)"|'([^']*)'|([^\s>]+)))?/gi;
+    let attrExec;
+    while ((attrExec = attrRegex.exec(attrString)) !== null) {
+      const attrName = attrExec[1];
+      const attrValue = attrExec[2] ?? attrExec[3] ?? attrExec[4] ?? '';
+
+      if (isAttrAllowed(attrName)) {
+        // Sanitize the value (remove potential XSS vectors)
+        const safeValue = attrValue
+          .replace(/javascript\s*:/gi, '')
+          .replace(/expression\s*\(/gi, '')
+          .replace(/url\s*\(\s*["']?\s*javascript/gi, 'url(');
+
+        if (attrValue) {
+          allowedAttrs.push(`${attrName}="${safeValue}"`);
+        } else {
+          allowedAttrs.push(attrName);
+        }
+      }
+    }
+
+    const selfClose = match.endsWith('/>') ? ' /' : '';
+    const attrPart = allowedAttrs.length > 0 ? ' ' + allowedAttrs.join(' ') : '';
+    return `<${lowerTag}${attrPart}${selfClose}>`;
   });
+
+  return sanitized;
 }
 
 function extractFieldMap(node: MetaobjectNode): Record<string, MetaobjectField> {
