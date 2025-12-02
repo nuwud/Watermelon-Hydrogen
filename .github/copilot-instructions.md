@@ -1,9 +1,9 @@
-# 🍉 Watermelon Hydrogen — Copilot Instructions (Project‑Specific Guardrails, v3)
+# 🍉 Watermelon Hydrogen — Copilot Instructions (Project‑Specific Guardrails, v4)
 
 **Repo:** Watermelon Hydrogen V1
 **Stack:** Shopify Hydrogen (Remix) • Three.js • GSAP • Tailwind • Vite • Oxygen
 **This file is for Copilot (Chat, Edit, Coding Agent) when working in this repo.**
-*Last updated: 2025‑10‑13*
+*Last updated: 2025‑12‑02*
 
 ---
 
@@ -424,6 +424,124 @@ All three must pass. Additionally:
 
 ---
 
+## 13.5) Oxygen Deployment & Domain Configuration
+
+**⚠️ CRITICAL: Deployment Issues & Solutions**
+
+This section documents hard-won lessons from production deployment issues. Read this before any Oxygen deployment work.
+
+### SSR Bundle Requirements (Cloudflare Workers)
+
+Oxygen runs on Cloudflare Workers which have strict constraints:
+
+* **No THREE.js in SSR bundle** — Workers cannot execute global-scope async I/O
+* **SSR bundle must be < 1MB** — Ideally ~600KB or less
+* **No `process.env`** — Use runtime `context.env` or `context.rawEnv` instead
+
+**How to exclude THREE.js from SSR:**
+
+1. Use `.client.js` or `.client.jsx` suffix for files that import THREE.js
+2. Use dynamic imports: `const THREE = await import('three')`
+3. Use `React.lazy()` for component-level code splitting
+4. Wrap browser-only components in `<ClientOnly>`
+
+**Check SSR bundle contents:**
+```bash
+npm run build
+# Look for three.core.js or three.module.js in SSR bundle output
+# If present, find and fix the import chain
+```
+
+### Oxygen Environment Variables
+
+**Where env vars live:**
+* **Shopify Admin** → Sales Channels → Hydrogen → Environments and variables
+* **Local development** → `.env` file (gitignored)
+
+**Required Production Variables:**
+| Key | Source | Notes |
+|-----|--------|-------|
+| `PUBLIC_STORE_DOMAIN` | Shopify (read-only) | `nx40dr-bu.myshopify.com` |
+| `PUBLIC_STOREFRONT_API_TOKEN` | Shopify (read-only) | Public access token |
+| `PUBLIC_STOREFRONT_API_VERSION` | Set manually | e.g., `2025-04` |
+| `PUBLIC_CUSTOMER_ACCOUNT_API_*` | Shopify (read-only) | Customer auth |
+| `SESSION_SECRET` | Set manually | Random string for sessions |
+| `PRIVATE_STOREFRONT_API_TOKEN` | Shopify (read-only) | Server-side token |
+
+**Optional Variables (use with caution):**
+| Key | Purpose | ⚠️ Warning |
+|-----|---------|-----------|
+| `PUBLIC_CANONICAL_HOST` | Redirect to custom domain | **Can cause redirect loops!** |
+| `PUBLIC_CHECKOUT_DOMAIN` | Custom checkout domain | Must match Shopify config |
+
+### 🚨 PUBLIC_CANONICAL_HOST Pitfall
+
+**DO NOT SET `PUBLIC_CANONICAL_HOST` unless domain routing is fully configured!**
+
+**What it does:** If set, `entry.server.jsx` performs a 301 redirect to that host.
+
+**The redirect loop problem:**
+```
+1. User visits Oxygen URL → Hydrogen redirects to PUBLIC_CANONICAL_HOST
+2. Custom domain → Routes back to Oxygen → Hydrogen redirects again
+3. ERR_TOO_MANY_REDIRECTS
+```
+
+**Safe configuration order:**
+1. Deploy Hydrogen WITHOUT `PUBLIC_CANONICAL_HOST`
+2. Verify Hydrogen works at `*.o2.myshopify.dev` URL
+3. Configure custom domain in Shopify Admin → Settings → Domains
+4. Point domain to Hydrogen (not Dawn/Online Store)
+5. ONLY THEN set `PUBLIC_CANONICAL_HOST` if needed
+
+**If you get redirect loops:**
+1. Delete `PUBLIC_CANONICAL_HOST` from Oxygen env vars (Shopify Admin)
+2. Redeploy: `npx shopify hydrogen deploy --env production`
+3. Clear browser cookies for the domain
+4. Verify direct Oxygen URL works before re-adding canonical host
+
+### Deploy Commands
+
+```bash
+# Standard deploy to production
+npx shopify hydrogen deploy --env production
+
+# Force deploy (skip confirmations)
+npx shopify hydrogen deploy --env production --force --no-verify
+
+# Check current environments
+npx shopify hydrogen env list
+
+# Pull env vars from Oxygen to local
+npx shopify hydrogen env pull --env production
+
+# Push local env vars to Oxygen
+npx shopify hydrogen env push --env production
+```
+
+### Domain Configuration (Shopify Admin)
+
+**Production URLs:**
+* **Oxygen URL:** `https://watermelon-hydrogen-v1-f8c761aca3a3f342b54f.o2.myshopify.dev`
+* **Custom Domain:** `www.nuwudorder.com` (when properly configured)
+
+**To route custom domain to Hydrogen:**
+1. Shopify Admin → Settings → Domains
+2. Find your custom domain
+3. Change target from "Online Store" (Dawn) to "Hydrogen"
+4. Wait for DNS propagation (~5 min)
+
+**Verify deployment:**
+```bash
+# Should return HTTP 200 (not 301/302)
+curl -sI "https://watermelon-hydrogen-v1-f8c761aca3a3f342b54f.o2.myshopify.dev" | head -5
+
+# Check for redirect loops
+curl -sI "https://www.nuwudorder.com" | grep -i "location"
+```
+
+---
+
 ## 14) Common Debugging Workflows
 
 **Issue: 3D Scene Not Rendering**
@@ -460,6 +578,35 @@ All three must pass. Additionally:
 2. Verify GSAP cleanup: `GSAP.killTweensOf(targets)` in teardown
 3. Confirm event listeners removed: `removeEventListener` in useEffect cleanup
 4. Monitor: `window.debugCarousel.debug.getPerformanceStats()`
+
+**Issue: Oxygen Deploy Fails with "Disallowed operation in global scope"**
+
+This means THREE.js or another library is in the SSR bundle:
+
+1. Check build output for `three.core.js` or `three.module.js` in server bundle
+2. Find the import chain: Which file imports THREE.js without `.client` suffix?
+3. Rename offending files to `.client.js` or `.client.jsx`
+4. Use dynamic imports: `const {Scene} = await import('three')`
+5. Rebuild and check SSR bundle is < 700KB
+
+**Issue: ERR_TOO_MANY_REDIRECTS on Production**
+
+1. Check if `PUBLIC_CANONICAL_HOST` is set in Oxygen (Shopify Admin → Hydrogen → Env vars)
+2. If set, DELETE IT immediately
+3. Redeploy: `npx shopify hydrogen deploy --env production`
+4. Clear browser cookies
+5. Verify Oxygen URL returns HTTP 200: `curl -sI "https://...o2.myshopify.dev"`
+6. Only re-add `PUBLIC_CANONICAL_HOST` after domain routing is confirmed working
+
+**Issue: Wrong Theme Showing (Dawn instead of Hydrogen)**
+
+1. This is a Shopify domain routing issue, not code
+2. Go to Shopify Admin → Settings → Domains
+3. Check which sales channel the domain points to
+4. Change from "Online Store" to "Hydrogen"
+5. Verify with: `curl -sI "https://your-domain.com" | grep -i "powered-by"`
+   * Should show: `powered-by: Shopify, Oxygen, Hydrogen`
+   * NOT: `x-storefront-renderer-rendered: 1` (that's Dawn)
 
 ---
 
