@@ -356,9 +356,9 @@ function limitSize(value: string, limit: number, label: string) {
   }
 }
 
-const baseAllowedAttributes = sanitizeHtml.defaults.allowedAttributes as Record<string, string[]>;
-
 function sanitizeMarkup(html: string): string {
+  // Access sanitizeHtml.defaults lazily inside the function to avoid global scope issues
+  const baseAllowedAttributes = sanitizeHtml.defaults.allowedAttributes as Record<string, string[]>;
   return sanitizeHtml(html, {
     ...sanitizeHtml.defaults,
     allowedTags: [
