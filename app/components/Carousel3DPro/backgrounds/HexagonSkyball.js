@@ -15,31 +15,31 @@ export const CEREBRO_MODES = {
         mode: 'dome',
         mouseInfluence: 0.15,
         panelTiltMax: 0,
-        description: 'Whole dome rotates toward mouse'
+        description: 'Whole dome rotates toward mouse (Cerebro style)'
     },
     panels: {
         mode: 'panels',
-        mouseInfluence: 0.02,      // Subtle dome movement
-        panelTiltMax: 0.4,         // Each panel tilts toward mouse
-        description: 'Each panel individually tilts toward mouse'
+        mouseInfluence: 0.02,
+        panelTiltMax: 0.08,        // Very subtle per-panel tilt
+        description: 'Each panel has subtle independent tilt'
     }
 };
 
 const DEFAULT_CONFIG = {
     sphereRadius: 55,           // Sphere size
     subdivisions: 3,            // Icosahedron subdivisions (2-4, higher = more panels)
-    panelDepth: 0.8,            // Extrusion depth for 3D panels
-    panelGap: 0.05,             // Gap between panels (5% shrink)
+    panelDepth: 1.2,            // Extrusion depth for 3D panels (increased for visibility)
+    panelGap: 0.08,             // Gap between panels (8% shrink = ~2-3px visible gap)
     lightIntensity: 60,
     lightDistance: 200,
     ambientIntensity: 0.5,
     roughness: 0.4,
     metalness: 0.5,
     emissiveBase: 0.3,
-    mode: 'panels',             // 'dome' or 'panels' - controls mouse behavior
-    mouseInfluence: 0.02,       // How much whole dome tilts toward mouse
-    panelTiltMax: 0.4,          // Max radians each panel can tilt (panels mode)
-    panelTiltSpeed: 0.08,       // How fast panels tilt toward target
+    mode: 'dome',               // 'dome' mode - whole sphere rotates subtly (Cerebro style)
+    mouseInfluence: 0.15,       // How much whole dome tilts toward mouse
+    panelTiltMax: 0,            // No per-panel tilting in dome mode
+    panelTiltSpeed: 0.04,       // Slow, smooth if any tilting
     pauseWhenMenuActive: true,
     idleTimeout: 2000,
     panelColors: [0x2a3d5a, 0x253652, 0x354868, 0x2f4560], // Dark blue panels for contrast
