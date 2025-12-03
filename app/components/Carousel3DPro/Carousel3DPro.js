@@ -480,7 +480,9 @@ updateHoverVisuals() {
   
   const submenuOpen = this.submenuState?.open || false;
   const dimConfig = this.config.submenuOpenDim || { enabled: true, mainMenuDimAmount: 0.5, selectedItemDimAmount: 0.6 };
-  const distanceConfig = this.config.distanceDimming || { enabled: true, nearDistance: 3, farDistance: 8, minBrightness: 0.5 };
+  // Distance dimming: camera at z=10, carousel radius=5
+  // Front item at z=5 (distance ~5), back item at z=-5 (distance ~15)
+  const distanceConfig = this.config.distanceDimming || { enabled: true, nearDistance: 5, farDistance: 15, minBrightness: 0.4 };
   // Camera can be in this.userData.camera OR this.parent.userData.camera
   const camera = this.userData?.camera || this.parent?.userData?.camera;
   
@@ -488,16 +490,17 @@ updateHoverVisuals() {
     const isSelected = mesh.userData.isSelected;
     const isHovered = index === this.hoveredIndex;
     
-    // Calculate distance-based dimming
+    // Calculate distance-based dimming - use Z position for more reliable depth perception
     let distanceFactor = 1.0;
     if (distanceConfig.enabled && camera) {
       const meshWorldPos = new THREE.Vector3();
       mesh.getWorldPosition(meshWorldPos);
+      // Use actual distance from camera
       const distance = camera.position.distanceTo(meshWorldPos);
       
-      const near = distanceConfig.nearDistance || 3;
-      const far = distanceConfig.farDistance || 8;
-      const minBrightness = distanceConfig.minBrightness || 0.5;
+      const near = distanceConfig.nearDistance || 5;
+      const far = distanceConfig.farDistance || 15;
+      const minBrightness = distanceConfig.minBrightness || 0.4;
       
       // Clamp and interpolate
       const t = Math.max(0, Math.min(1, (distance - near) / (far - near)));
@@ -523,21 +526,21 @@ updateHoverVisuals() {
     }
     
     if (isHovered && !submenuOpen) {
-      // Apply brilliant hover effect - PURE WHITE with VERY strong glow
+      // Subtle hover effect - slight brightness boost and glow
       mesh.material.color.setHex(0xffffff);
-      mesh.material.emissive = new THREE.Color(0x88ccff);
-      mesh.material.emissiveIntensity = 1.8 * brightnessFactor;
+      mesh.material.emissive = new THREE.Color(0x6699cc);
+      mesh.material.emissiveIntensity = 1.0 * brightnessFactor; // Toned down from 1.8
       mesh.material.opacity = 1.0;
       
-      // Scale up on hover - more noticeable
-      const hoverScale = mesh.userData.originalScale.clone().multiplyScalar(this.config.hoverScale || 1.15);
+      // Subtle scale up on hover
+      const hoverScale = mesh.userData.originalScale.clone().multiplyScalar(this.config.hoverScale || 1.08);
       gsap.to(mesh.scale, { x: hoverScale.x, y: hoverScale.y, z: hoverScale.z, duration: 0.15 });
     } else {
-      // Normal non-selected appearance - good emissive glow
+      // Normal non-selected appearance with distance dimming
       mesh.material.color.setHex(0xffffff);
-      mesh.material.emissive = new THREE.Color(0x6699ff);
-      mesh.material.emissiveIntensity = 0.7 * brightnessFactor;
-      mesh.material.opacity = submenuOpen ? Math.max(0.5, brightnessFactor) : 1.0;
+      mesh.material.emissive = new THREE.Color(0x4477aa);
+      mesh.material.emissiveIntensity = 0.5 * brightnessFactor; // Reduced base glow for better distance contrast
+      mesh.material.opacity = submenuOpen ? Math.max(0.5, brightnessFactor) : Math.max(0.6, brightnessFactor);
       
       // Restore original scale
       gsap.to(mesh.scale, {

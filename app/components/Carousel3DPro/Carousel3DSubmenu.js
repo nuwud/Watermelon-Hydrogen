@@ -730,15 +730,15 @@ export class Carousel3DSubmenu extends THREE.Group {
       }
       
       if (isHovered) {
-        // Hover effect - STRONG glow and scale up
+        // Subtle hover effect - slight brightness boost and glow
         mesh.material.color.setHex(0xffffff); // Pure white on hover
-        mesh.material.emissive.setHex(0x66aaff); // Bright blue glow
-        mesh.material.emissiveIntensity = 1.2; // Very strong hover glow
+        mesh.material.emissive.setHex(0x5599cc); // Subtle blue glow
+        mesh.material.emissiveIntensity = 0.8; // Moderate hover glow (toned down from 1.2)
         
-        // Subtle scale up
+        // Very subtle scale up
         const targetScale = mesh.userData.originalScale ? 
-          mesh.userData.originalScale.clone().multiplyScalar(1.1) :
-          new THREE.Vector3(1.1, 1.1, 1.1);
+          mesh.userData.originalScale.clone().multiplyScalar(1.06) :
+          new THREE.Vector3(1.06, 1.06, 1.06);
         gsap.to(mesh.scale, { 
           x: targetScale.x, 
           y: targetScale.y, 
@@ -747,9 +747,9 @@ export class Carousel3DSubmenu extends THREE.Group {
           ease: 'power2.out'
         });
         
-        // Scale icon on hover too
+        // Subtle scale icon on hover too
         if (iconMesh && iconMesh.userData.originalScale) {
-          const iconTarget = iconMesh.userData.originalScale.clone().multiplyScalar(1.1);
+          const iconTarget = iconMesh.userData.originalScale.clone().multiplyScalar(1.06);
           gsap.to(iconMesh.scale, {
             x: iconTarget.x,
             y: iconTarget.y,
@@ -765,8 +765,8 @@ export class Carousel3DSubmenu extends THREE.Group {
         } else {
           mesh.material.color.setHex(0xffffff);
         }
-        mesh.material.emissive.setHex(0x4488ff); // Good blue emissive for readability
-        mesh.material.emissiveIntensity = 0.6; // Strong base glow
+        mesh.material.emissive.setHex(0x3366aa); // Slightly dimmer blue emissive
+        mesh.material.emissiveIntensity = 0.5; // Moderate base glow
         
         // Restore original scale
         if (mesh.userData.originalScale) {
