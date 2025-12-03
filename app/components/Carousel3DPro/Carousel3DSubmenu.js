@@ -409,15 +409,15 @@ export class Carousel3DSubmenu extends THREE.Group {
       geometry.center();
       const textWidth = geometry.boundingBox.max.x - geometry.boundingBox.min.x;
       const textHeight = geometry.boundingBox.max.y - geometry.boundingBox.min.y;
-      // Enhanced text material with better glow for dark blue background
+      // Enhanced text material with STRONG glow for dark blue background
       const material = new THREE.MeshStandardMaterial({ 
         color: this.config.textColor || 0xffffff, 
         transparent: true, 
         opacity: 1.0, 
-        emissive: this.config.textEmissive || 0x3366aa, // Brighter blue emissive
-        emissiveIntensity: 0.5, // Stronger glow
-        metalness: 0.1,
-        roughness: 0.6
+        emissive: new THREE.Color(0x4488ff), // Strong blue emissive glow
+        emissiveIntensity: 0.8, // Very strong glow
+        metalness: 0.2,
+        roughness: 0.4
       });
       const mesh = new THREE.Mesh(geometry, material);
 
@@ -730,10 +730,10 @@ export class Carousel3DSubmenu extends THREE.Group {
       }
       
       if (isHovered) {
-        // Hover effect - subtle glow and scale up
+        // Hover effect - STRONG glow and scale up
         mesh.material.color.setHex(0xffffff); // Pure white on hover
-        mesh.material.emissive.setHex(0x4488cc); // Blue glow
-        mesh.material.emissiveIntensity = 0.6;
+        mesh.material.emissive.setHex(0x66aaff); // Bright blue glow
+        mesh.material.emissiveIntensity = 1.2; // Very strong hover glow
         
         // Subtle scale up
         const targetScale = mesh.userData.originalScale ? 
@@ -759,14 +759,14 @@ export class Carousel3DSubmenu extends THREE.Group {
           });
         }
       } else {
-        // Not hovered, not selected - reset to normal
+        // Not hovered, not selected - reset to normal with good glow
         if (mesh.userData.originalColor) {
           mesh.material.color.copy(mesh.userData.originalColor);
         } else {
           mesh.material.color.setHex(0xffffff);
         }
-        mesh.material.emissive.setHex(0x222266); // Subtle blue emissive for readability
-        mesh.material.emissiveIntensity = 0.3;
+        mesh.material.emissive.setHex(0x4488ff); // Good blue emissive for readability
+        mesh.material.emissiveIntensity = 0.6; // Strong base glow
         
         // Restore original scale
         if (mesh.userData.originalScale) {

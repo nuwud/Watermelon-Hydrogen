@@ -286,14 +286,14 @@ export class Carousel3DPro extends Group {
         ? getMenuItemColor(p.originalLabel) 
         : { glow: this.config.glowColor, text: this.config.textColor };
       
-      // Use MeshStandardMaterial with EMISSIVE for bright glowing text
+      // Use MeshStandardMaterial with STRONG EMISSIVE for bright glowing text
       const material = new THREE.MeshStandardMaterial({
         color: 0xffffff,           // Pure white base
-        emissive: 0xaaccff,        // Blue-white glow
-        emissiveIntensity: 0.6,    // Strong emission for visibility
+        emissive: 0x6699ff,        // Strong blue-white glow
+        emissiveIntensity: 0.8,    // VERY strong emission for visibility
         transparent: true,
         opacity: 1.0,
-        metalness: 0.1,
+        metalness: 0.15,
         roughness: 0.3
       });
 
@@ -424,12 +424,14 @@ setupEventListeners() {
 
   // Handle mouse move for hover/rollover effects
   const handleMouseMove = (event) => {
-    if (!this.parent?.userData?.camera) return;
+    // Camera can be in this.userData.camera OR this.parent.userData.camera
+    const camera = this.userData?.camera || this.parent?.userData?.camera;
+    if (!camera) return;
     const mouse = new THREE.Vector2(
       (event.clientX / window.innerWidth) * 2 - 1,
       -(event.clientY / window.innerHeight) * 2 + 1
     );
-    this.raycaster.setFromCamera(mouse, this.parent.userData.camera);
+    this.raycaster.setFromCamera(mouse, camera);
     const intersects = this.raycaster.intersectObjects(this.clickableObjects, false);
 
     let newHoveredIndex = -1;
@@ -477,9 +479,10 @@ updateHoverVisuals() {
   if (!this.itemMeshes) return;
   
   const submenuOpen = this.submenuState?.open || false;
-  const dimConfig = this.config.submenuOpenDim || { enabled: false };
-  const distanceConfig = this.config.distanceDimming || { enabled: false };
-  const camera = this.parent?.userData?.camera;
+  const dimConfig = this.config.submenuOpenDim || { enabled: true, mainMenuDimAmount: 0.5, selectedItemDimAmount: 0.6 };
+  const distanceConfig = this.config.distanceDimming || { enabled: true, nearDistance: 3, farDistance: 8, minBrightness: 0.5 };
+  // Camera can be in this.userData.camera OR this.parent.userData.camera
+  const camera = this.userData?.camera || this.parent?.userData?.camera;
   
   this.itemMeshes.forEach((mesh, index) => {
     const isSelected = mesh.userData.isSelected;
@@ -520,21 +523,21 @@ updateHoverVisuals() {
     }
     
     if (isHovered && !submenuOpen) {
-      // Apply brilliant hover effect - PURE WHITE with strong glow
+      // Apply brilliant hover effect - PURE WHITE with VERY strong glow
       mesh.material.color.setHex(0xffffff);
-      mesh.material.emissive = new THREE.Color(0xccddff);
-      mesh.material.emissiveIntensity = 1.5 * brightnessFactor;
+      mesh.material.emissive = new THREE.Color(0x88ccff);
+      mesh.material.emissiveIntensity = 1.8 * brightnessFactor;
       mesh.material.opacity = 1.0;
       
-      // Scale up on hover
-      const hoverScale = mesh.userData.originalScale.clone().multiplyScalar(this.config.hoverScale || 1.1);
+      // Scale up on hover - more noticeable
+      const hoverScale = mesh.userData.originalScale.clone().multiplyScalar(this.config.hoverScale || 1.15);
       gsap.to(mesh.scale, { x: hoverScale.x, y: hoverScale.y, z: hoverScale.z, duration: 0.15 });
     } else {
-      // Normal non-selected appearance - BRIGHT WHITE with good emissive
+      // Normal non-selected appearance - good emissive glow
       mesh.material.color.setHex(0xffffff);
-      mesh.material.emissive = new THREE.Color(0x8899bb);
-      mesh.material.emissiveIntensity = 0.5 * brightnessFactor;
-      mesh.material.opacity = Math.max(0.85, brightnessFactor);
+      mesh.material.emissive = new THREE.Color(0x6699ff);
+      mesh.material.emissiveIntensity = 0.7 * brightnessFactor;
+      mesh.material.opacity = submenuOpen ? Math.max(0.5, brightnessFactor) : 1.0;
       
       // Restore original scale
       gsap.to(mesh.scale, {
