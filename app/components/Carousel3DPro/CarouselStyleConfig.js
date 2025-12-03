@@ -12,11 +12,11 @@ export const defaultCarouselStyle = {
   fontSize: 0.5,
   fontHeight: 0.1,
   
-  // Colors - Brighter text for visibility
-  glowColor: 0x66ccff,
-  textColor: 0xeeeeee,           // Brighter base text
-  selectedTextColor: 0xffffff,   // Pure white selected
-  backgroundColor: 0x2a2a4a,     // Dark blue-purple (removed green)
+  // Colors - WHITE selected, light gray others
+  glowColor: 0xffffff,           // White glow for selected
+  textColor: 0xaabbcc,           // Light blue-gray for non-selected
+  selectedTextColor: 0xffffff,   // Pure white for selected item
+  backgroundColor: 0x1a1a2e,     // Dark blue background
   
   // Transparency
   opacity: 0.8,

@@ -5,12 +5,12 @@
  */
 
 const DEFAULT_CONFIG = {
-    sphereRadius: 80,           // Large sphere to encompass everything
-    hexSize: 2.5,               // Size of each hexagon
-    lightIntensity: 30,         // Bright lights
-    lightDistance: 200,
-    roughness: 0.5,
-    metalness: 0.2,
+    sphereRadius: 100,          // Large sphere to encompass everything
+    hexSize: 3.5,               // Size of each hexagon (bigger for visibility)
+    lightIntensity: 50,         // Brighter lights
+    lightDistance: 250,
+    roughness: 0.4,
+    metalness: 0.3,
     pauseWhenMenuActive: true,
     idleTimeout: 2000,
 };
@@ -64,18 +64,18 @@ function createHexagonSphere() {
     // Create base hexagon geometry
     const hexGeo = createHexagonGeometry(6, 0, 0, hexSize, 0);
     
-    // Material - white with emissive for visibility
+    // Material - white with emissive for visibility, DoubleSide for inside viewing
     const mat = new THREE.MeshStandardMaterial({
         color: 0xffffff,
         roughness: config.roughness,
         metalness: config.metalness,
-        emissive: 0x111122,
-        emissiveIntensity: 0.2,
-        side: THREE.BackSide,  // Render inside of sphere
+        emissive: 0x222244,
+        emissiveIntensity: 0.3,
+        side: THREE.DoubleSide,  // Visible from both sides
     });
     
     // Use fibonacci sphere distribution for even hexagon placement
-    const numHexagons = 400;  // Adjust for density
+    const numHexagons = 300;  // Good density without performance hit
     const goldenRatio = (1 + Math.sqrt(5)) / 2;
     
     hexMeshes = [];

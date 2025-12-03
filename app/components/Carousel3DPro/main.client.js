@@ -109,7 +109,7 @@ export function mountCarousel3D(container, menuData) {
             BackgroundDome = domeModule.BackgroundDome;
 
             backgroundManager = new BackgroundManager(scene, camera, renderer, {
-                defaultBackground: 'hexagons',
+                defaultBackground: 'skyball',
                 persistSelection: true,
             });
 
@@ -119,13 +119,13 @@ export function mountCarousel3D(container, menuData) {
             backgroundManager.register('polygons', InteractivePolygonsWall, { label: 'Polygons Wall' });
             backgroundManager.register('dome', BackgroundDome, { label: 'Iridescent Dome' });
 
-            // Try to restore last selected background, default to hexagons if none stored
+            // Try to restore last selected background, default to skyball if none stored
             const stored = localStorage.getItem('wm_background_mode');
             if (stored && backgroundManager.backgrounds.has(stored)) {
                 backgroundManager.setActive(stored);
             } else {
-                // Set hexagons as the default
-                backgroundManager.setActive('hexagons');
+                // Set skyball as the default (360° immersive hexagons)
+                backgroundManager.setActive('skyball');
             }
 
             console.log('[🍉 Carousel] BackgroundManager initialized with', backgroundManager.getBackgrounds().length, 'backgrounds');
