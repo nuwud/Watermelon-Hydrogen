@@ -1144,16 +1144,26 @@ export function mountCarousel3D(container, menuData) {
             console.warn(`[🍉 Click] Found ${hits.length} intersections with active submenu`);
             
             if (hits.length > 0) {
-                // ...existing code to handle submenu clicks...
-                const obj = hits[0].object; // Check the first hit object
-                // Check if the clicked object or its parent is a submenu item
-                let submenuItemData = null; // Initialize submenuItemData to null
-                if (obj.userData?.isSubmenuItem) { // Check if the clicked object is a submenu item
-                    submenuItemData = obj.userData; // Assign the userData of the clicked object to submenuItemData
-                } else if (obj.parent?.userData?.isSubmenuItem) { // Check if the parent of the clicked object is a submenu item
-                    submenuItemData = obj.parent.userData; // Assign the userData of the parent object to submenuItemData
+                // Walk hierarchy to find submenu item data
+                const obj = hits[0].object;
+                let submenuItemData = null;
+                
+                // Direct hit on object with isSubmenuItem
+                if (obj.userData?.isSubmenuItem) {
+                    submenuItemData = obj.userData;
+                } else {
+                    // Walk up the hierarchy to find container with isSubmenuItem
+                    let current = obj.parent;
+                    while (current && current !== activeSubmenu) {
+                        if (current.userData?.isSubmenuItem) {
+                            submenuItemData = current.userData;
+                            break;
+                        }
+                        current = current.parent;
+                    }
                 }
-                if (submenuItemData && typeof submenuItemData.index === 'number') { // Check if submenuItemData is valid and has a numeric index
+                
+                if (submenuItemData && typeof submenuItemData.index === 'number') {
                     const index = submenuItemData.index; // Get the index of the clicked submenu item
                     console.log(`🖱️ [main.js] Clicked submenu index=${index}, name=${submenuItemData.name || "Unknown"}`);
                     console.log(`🖱️ [main.js] About to call activeSubmenu.selectItem(${index})`);

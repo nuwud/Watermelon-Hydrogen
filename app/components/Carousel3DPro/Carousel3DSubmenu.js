@@ -432,6 +432,13 @@ export class Carousel3DSubmenu extends THREE.Group {
         new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.01, depthWrite: false })
       );
       hitArea.position.z = -0.1;
+      // IMPORTANT: Set userData on hitArea for click detection
+      hitArea.userData = {
+        isSubmenuItem: true,
+        isHitArea: true,
+        index: index,
+        item: item
+      };
       container.add(hitArea);
 
       let iconMesh = null;
