@@ -82,7 +82,7 @@ export function mountCarousel3D(container, menuData) {
     }
     const scene = new THREE.Scene(); // Create a new Three.js scene
     let currentTheme = defaultCarouselStyle; // Initialize with default theme
-    scene.background = new THREE.Color(currentTheme.backgroundColor); // Set initial background color
+    scene.background = new THREE.Color(0x0a0a1a); // Dark blue-black background
     const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000); // Set up camera
     camera.position.set(0, 2, 10); // Position the camera
     const renderer = new THREE.WebGLRenderer({ antialias: true }); // Create WebGL renderer
@@ -1297,18 +1297,22 @@ export function mountCarousel3D(container, menuData) {
                     console.warn('[Watermelon] Active submenu exists but update method is missing or not a function');
                 }
                 
-                // Update background manager (integrated polygon wall, etc.)
+                // Update background manager (renders its own scene first)
                 if (backgroundManager) {
                     backgroundManager.update(0.016);
                 }
                 
-                controls.update(); 
+                controls.update();
+                // Main scene renders ON TOP with autoClear=false (background already cleared)
                 renderer.render(scene, camera); 
             } catch (error) {
                 console.error('Error in animation loop:', error);
             }
         } else {
-            // During transitions, only render without heavy updates
+            // During transitions, still need to render background first
+            if (backgroundManager) {
+                backgroundManager.update(0.016);
+            }
             renderer.render(scene, camera);
         }
     };

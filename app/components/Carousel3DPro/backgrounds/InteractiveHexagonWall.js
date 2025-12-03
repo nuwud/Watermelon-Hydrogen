@@ -1,21 +1,22 @@
 /**
- * InteractiveHexagonWall - 3D hexagon grid with lookAt behavior and colored lights
+ * InteractiveHexagonWall - 3D hexagon grid with lookAt and bright colored lights
  * Based on: https://codepen.io/Patrick-Wood-the-sasster/pen/gbOjxMj
- * SSR-safe: Uses dynamic THREE import and window guards.
+ * Adds hexagons to the MAIN scene behind the carousel
  */
 
 const DEFAULT_CONFIG = {
     objectRadius: 2.5,
-    objectDepth: 1,
+    objectDepth: 0.8,
     lookAtZ: 40,
-    lightIntensity: 0.2,
-    lightDistance: 300,
-    lightRadius: 100,
-    roughness: 0.4,
-    metalness: 0.9,
-    hexColor: 0xffffff,
+    // MUCH brighter lights for Three.js physically-based rendering
+    lightIntensity: 50,         // Very high for PBR
+    lightDistance: 150,         // Tighter distance for better falloff
+    lightRadius: 60,            // Orbit radius for lights
+    roughness: 0.6,             // Higher roughness = more diffuse color visible
+    metalness: 0.1,             // Low metalness = shows light color better
     pauseWhenMenuActive: true,
     idleTimeout: 2000,
+    zPosition: -40,             // Closer to camera
 };
 
 let THREE = null;
@@ -24,18 +25,16 @@ let scene = null;
 let camera = null;
 let config = { ...DEFAULT_CONFIG };
 
+let hexGroup = null;
 let meshes = [];
-let light1, light2, light3, light4;
+let light1, light2, light3, light4, ambientLight;
 let animationActive = false;
 let isInteractive = true;
 let menuIdleTimer = null;
-let lastMenuActivity = 0;
 
-let mouseOver = false;
+let mouseOver = true;
 const mouse = { x: 0, y: 0 };
-let mousePlane = null;
-let mousePosition = null;
-let raycaster = null;
+let mouseTarget = { x: 0, y: 0 };
 
 export async function init(sceneRef, cameraRef, rendererRef, options) {
     if (typeof window === 'undefined') return;
@@ -52,10 +51,11 @@ export async function init(sceneRef, cameraRef, rendererRef, options) {
     camera = cameraRef;
     config = { ...DEFAULT_CONFIG, ...options };
     
-    mousePosition = new THREE.Vector3();
-    raycaster = new THREE.Raycaster();
-    mousePlane = new THREE.Plane(new THREE.Vector3(0, 0, 1), 0);
-    mousePlane.translate(new THREE.Vector3(0, 0, -config.lookAtZ));
+    // Create a group to hold hexagons
+    hexGroup = new THREE.Group();
+    hexGroup.name = 'InteractiveHexagonWall_group';
+    hexGroup.position.z = config.zPosition;
+    scene.add(hexGroup);
     
     createHexagonGrid();
     createLights();
@@ -63,41 +63,46 @@ export async function init(sceneRef, cameraRef, rendererRef, options) {
     setupMenuActivityListeners();
     
     animationActive = true;
-    console.log('[InteractiveHexagonWall] Initialized with', meshes.length, 'hexagons');
+    console.log('[InteractiveHexagonWall] Initialized with', meshes.length, 'hexagons, lights at z =', config.zPosition);
 }
 
 function createHexagonGrid() {
-    if (!THREE || !scene) return;
+    if (!THREE || !hexGroup) return;
     
     const width = typeof window !== 'undefined' ? window.innerWidth : 1920;
     const height = typeof window !== 'undefined' ? window.innerHeight : 1080;
     
-    const nx = Math.round(width / 20);
-    const ny = Math.round(height / 15);
+    // Fewer, larger hexagons for better visibility
+    const nx = Math.round(width / 40);
+    const ny = Math.round(height / 35);
     
+    // Use MeshPhongMaterial for better light response without PBR complexity
+    // Or MeshStandardMaterial with LOW metalness for diffuse color
     const mat = new THREE.MeshStandardMaterial({
-        color: config.hexColor,
+        color: 0xffffff,
         roughness: config.roughness,
         metalness: config.metalness,
+        emissive: 0x111111,         // Slight self-glow so they're not completely black
+        emissiveIntensity: 0.3,
     });
     
     const geo = createHexagonGeometry(6, 0, 0, config.objectRadius, 0);
-    const dx = Math.cos(Math.PI / 6) * config.objectRadius * 2;
-    const dy = config.objectRadius * 1.5;
+    const dx = Math.cos(Math.PI / 6) * config.objectRadius * 2.2;
+    const dy = config.objectRadius * 1.7;
     
     meshes = [];
     
     for (let j = 0; j < ny; j++) {
         for (let i = 0; i < nx; i++) {
-            const mesh = new THREE.Mesh(geo, mat);
-            mesh.name = 'InteractiveHexagonWall_hex_' + i + '_' + j;
+            const mesh = new THREE.Mesh(geo, mat.clone());
+            mesh.name = 'hex_' + i + '_' + j;
             
-            const targetX = (-nx / 2 + i) * dx + (j % 2 / 2 * dx);
+            const targetX = (-nx / 2 + i) * dx + (j % 2) * (dx / 2);
             const targetY = (-ny / 2 + j) * dy;
             
             mesh.position.x = targetX;
             mesh.position.y = targetY;
-            mesh.position.z = -200 - Math.random() * 50;
+            mesh.position.z = -100 - Math.random() * 30;  // Start behind for fly-in
             
             mesh.rotation.x = (Math.random() - 0.5) * Math.PI * 2;
             mesh.rotation.y = (Math.random() - 0.5) * Math.PI * 2;
@@ -105,18 +110,18 @@ function createHexagonGrid() {
             
             mesh.userData.introComplete = false;
             
-            const dur = 1 + Math.random() * 2;
+            const dur = 0.8 + Math.random() * 1.5;
             if (gsap) {
                 gsap.to(mesh.position, {
                     z: 0,
                     duration: dur,
-                    ease: 'power1.out',
+                    ease: 'power2.out',
                     onComplete() { mesh.userData.introComplete = true; }
                 });
                 gsap.to(mesh.rotation, {
                     x: 0, y: 0, z: 0,
-                    duration: dur + 1.5,
-                    ease: 'power1.out'
+                    duration: dur + 0.3,
+                    ease: 'power2.out'
                 });
             } else {
                 mesh.position.z = 0;
@@ -125,7 +130,7 @@ function createHexagonGrid() {
             }
             
             meshes.push(mesh);
-            scene.add(mesh);
+            hexGroup.add(mesh);
         }
     }
 }
@@ -164,55 +169,46 @@ function createLights() {
     const intensity = config.lightIntensity;
     const distance = config.lightDistance;
     
-    const ambient = new THREE.AmbientLight(0xffffff, 0.3);
-    ambient.name = 'InteractiveHexagonWall_ambient';
-    scene.add(ambient);
+    // Ambient light so hexagons aren't completely black
+    ambientLight = new THREE.AmbientLight(0x222233, 0.5);
+    ambientLight.name = 'hex_ambient';
+    scene.add(ambientLight);
     
-    light1 = new THREE.PointLight(randomColor(), intensity, distance);
-    light1.position.set(0, r, r);
-    light1.name = 'InteractiveHexagonWall_light1';
+    // Position lights AT the hexagon z-plane (not in front)
+    // They orbit around the hexagon grid
+    const lightZ = config.zPosition;  // Same z as hexagons
+    
+    // BRIGHT vibrant colored point lights
+    light1 = new THREE.PointLight(0xff00aa, intensity, distance);  // Hot pink/magenta
+    light1.position.set(0, r, lightZ);
+    light1.name = 'hex_light1';
     scene.add(light1);
     
-    light2 = new THREE.PointLight(randomColor(), intensity, distance);
-    light2.position.set(0, -r, r);
-    light2.name = 'InteractiveHexagonWall_light2';
+    light2 = new THREE.PointLight(0x00ff88, intensity, distance);  // Bright green/cyan
+    light2.position.set(0, -r, lightZ);
+    light2.name = 'hex_light2';
     scene.add(light2);
     
-    light3 = new THREE.PointLight(randomColor(), intensity, distance);
-    light3.position.set(r, 0, r);
-    light3.name = 'InteractiveHexagonWall_light3';
+    light3 = new THREE.PointLight(0x4488ff, intensity, distance);  // Blue
+    light3.position.set(r, 0, lightZ);
+    light3.name = 'hex_light3';
     scene.add(light3);
     
-    light4 = new THREE.PointLight(randomColor(), intensity, distance);
-    light4.position.set(-r, 0, r);
-    light4.name = 'InteractiveHexagonWall_light4';
+    light4 = new THREE.PointLight(0xff6600, intensity, distance);  // Orange
+    light4.position.set(-r, 0, lightZ);
+    light4.name = 'hex_light4';
     scene.add(light4);
-}
-
-function randomColor() {
-    const colors = [0xff6b6b, 0x4ecdc4, 0x45b7d1, 0x96ceb4, 0xffeaa7, 0xdfe6e9, 0xa29bfe, 0xfd79a8];
-    return colors[Math.floor(Math.random() * colors.length)];
+    
+    console.log('[InteractiveHexagonWall] Lights created at z =', lightZ, 'intensity =', intensity);
 }
 
 function setupMouseListeners() {
     if (typeof window === 'undefined') return;
     
     function onMove(e) {
-        if (!isInteractive) return;
         mouseOver = true;
-        mouse.x = (e.clientX / window.innerWidth) * 2 - 1;
-        mouse.y = -(e.clientY / window.innerHeight) * 2 + 1;
-        
-        if (camera && mousePlane) {
-            const v = new THREE.Vector3();
-            camera.getWorldDirection(v);
-            mousePlane.normal.copy(v.normalize());
-        }
-        
-        if (raycaster && camera && mousePlane && mousePosition) {
-            raycaster.setFromCamera(new THREE.Vector2(mouse.x, mouse.y), camera);
-            raycaster.ray.intersectPlane(mousePlane, mousePosition);
-        }
+        mouseTarget.x = (e.clientX / window.innerWidth) * 2 - 1;
+        mouseTarget.y = -(e.clientY / window.innerHeight) * 2 + 1;
     }
     
     function onLeave() { mouseOver = false; }
@@ -231,7 +227,6 @@ function setupMenuActivityListeners() {
     if (typeof window === 'undefined') return;
     
     function onMenuActivity() {
-        lastMenuActivity = Date.now();
         isInteractive = false;
         if (menuIdleTimer) clearTimeout(menuIdleTimer);
         menuIdleTimer = setTimeout(() => { isInteractive = true; }, config.idleTimeout);
@@ -240,18 +235,8 @@ function setupMenuActivityListeners() {
     const events = ['carousel-item-hover', 'carousel-item-click', 'carousel-submenu-open', 'carousel-submenu-close', 'carousel-rotation-start'];
     events.forEach(ev => window.addEventListener(ev, onMenuActivity, { passive: true }));
     
-    function onPointerDown(e) { if (e.target && e.target.tagName === 'CANVAS') onMenuActivity(); }
-    function onPointerMove(e) { if (Date.now() - lastMenuActivity >= 100 && e.target && e.target.tagName === 'CANVAS') onMenuActivity(); }
-    
-    document.addEventListener('pointerdown', onPointerDown, { passive: true });
-    document.addEventListener('pointermove', onPointerMove, { passive: true });
-    
     window._wmHexWallCleanup = window._wmHexWallCleanup || [];
     events.forEach(ev => window._wmHexWallCleanup.push(() => window.removeEventListener(ev, onMenuActivity)));
-    window._wmHexWallCleanup.push(
-        () => document.removeEventListener('pointerdown', onPointerDown),
-        () => document.removeEventListener('pointermove', onPointerMove)
-    );
 }
 
 export function update() {
@@ -259,18 +244,53 @@ export function update() {
     
     const time = Date.now() * 0.001;
     const d = config.lightRadius;
+    const lightZ = config.zPosition + 5;  // Slightly in front of hexagons for better illumination
     
-    if (light1) { light1.position.x = Math.sin(time * 0.1) * d; light1.position.y = Math.cos(time * 0.2) * d; }
-    if (light2) { light2.position.x = Math.cos(time * 0.3) * d; light2.position.y = Math.sin(time * 0.4) * d; }
-    if (light3) { light3.position.x = Math.sin(time * 0.5) * d; light3.position.y = Math.sin(time * 0.6) * d; }
-    if (light4) { light4.position.x = Math.sin(time * 0.7) * d; light4.position.y = Math.cos(time * 0.8) * d; }
+    // Animate lights in orbits
+    if (light1) { 
+        light1.position.x = Math.sin(time * 0.4) * d; 
+        light1.position.y = Math.cos(time * 0.5) * d;
+        light1.position.z = lightZ;
+    }
+    if (light2) { 
+        light2.position.x = Math.cos(time * 0.6) * d; 
+        light2.position.y = Math.sin(time * 0.7) * d;
+        light2.position.z = lightZ;
+    }
+    if (light3) { 
+        light3.position.x = Math.sin(time * 0.8) * d; 
+        light3.position.y = Math.sin(time * 0.45) * d;
+        light3.position.z = lightZ;
+    }
+    if (light4) { 
+        light4.position.x = Math.sin(time * 0.35) * d; 
+        light4.position.y = Math.cos(time * 0.55) * d;
+        light4.position.z = lightZ;
+    }
     
-    const lookAt = (mouseOver && isInteractive && mousePosition)
-        ? new THREE.Vector3(mousePosition.x, mousePosition.y, config.lookAtZ)
-        : new THREE.Vector3(0, 0, 10000);
+    // Smooth mouse following
+    mouse.x += (mouseTarget.x - mouse.x) * 0.08;
+    mouse.y += (mouseTarget.y - mouse.y) * 0.08;
+    
+    // LookAt target
+    let lookAtX, lookAtY, lookAtZ;
+    
+    if (isInteractive && mouseOver) {
+        lookAtX = mouse.x * 80;
+        lookAtY = mouse.y * 60;
+        lookAtZ = config.lookAtZ;
+    } else {
+        lookAtX = Math.sin(time * 0.2) * 15;
+        lookAtY = Math.cos(time * 0.15) * 10;
+        lookAtZ = config.lookAtZ + 20;
+    }
+    
+    const lookAt = new THREE.Vector3(lookAtX, lookAtY, lookAtZ);
     
     for (let i = 0; i < meshes.length; i++) {
-        if (meshes[i].userData.introComplete) meshes[i].lookAt(lookAt);
+        if (meshes[i].userData.introComplete) {
+            meshes[i].lookAt(lookAt);
+        }
     }
 }
 
@@ -283,22 +303,30 @@ export function dispose() {
     if (menuIdleTimer) { clearTimeout(menuIdleTimer); menuIdleTimer = null; }
     
     if (typeof window !== 'undefined' && window._wmHexWallCleanup) {
-        window._wmHexWallCleanup.forEach(fn => { try { fn(); } catch (e) { /* ignore */ } });
+        window._wmHexWallCleanup.forEach(fn => { try { fn(); } catch (e) {} });
         delete window._wmHexWallCleanup;
     }
     
-    if (gsap) { meshes.forEach(m => { gsap.killTweensOf(m.position); gsap.killTweensOf(m.rotation); }); }
+    if (gsap) { 
+        meshes.forEach(m => { gsap.killTweensOf(m.position); gsap.killTweensOf(m.rotation); }); 
+    }
+    
+    if (hexGroup && scene) {
+        scene.remove(hexGroup);
+        meshes.forEach(m => { 
+            if (m.geometry) m.geometry.dispose(); 
+            if (m.material) m.material.dispose(); 
+        });
+    }
     
     if (scene) {
-        meshes.forEach(m => { scene.remove(m); if (m.geometry) m.geometry.dispose(); if (m.material) m.material.dispose(); });
-        [light1, light2, light3, light4].forEach(l => { if (l) { scene.remove(l); if (l.dispose) l.dispose(); } });
-        const ambient = scene.getObjectByName('InteractiveHexagonWall_ambient');
-        if (ambient) scene.remove(ambient);
+        [light1, light2, light3, light4, ambientLight].forEach(l => { if (l) scene.remove(l); });
     }
     
     meshes = [];
-    light1 = light2 = light3 = light4 = null;
-    scene = camera = mousePlane = mousePosition = raycaster = THREE = gsap = null;
+    hexGroup = null;
+    light1 = light2 = light3 = light4 = ambientLight = null;
+    scene = camera = THREE = gsap = null;
 }
 
 export default { init, update, dispose, setInteractive };
