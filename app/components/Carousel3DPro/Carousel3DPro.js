@@ -403,12 +403,16 @@ setupEventListeners() {
   this.hoveredIndex = -1;
 
   const handleClick = (event) => {
-    if (!this.parent?.userData?.camera) return;
+    // Guard: Don't process until carousel is fully initialized
+    if (!this.clickableObjects || this.clickableObjects.length === 0) return;
+    
+    const camera = this.userData?.camera || this.parent?.userData?.camera;
+    if (!camera) return;
     const mouse = new THREE.Vector2(
       (event.clientX / window.innerWidth) * 2 - 1,
       -(event.clientY / window.innerHeight) * 2 + 1
     );
-    this.raycaster.setFromCamera(mouse, this.parent.userData.camera);
+    this.raycaster.setFromCamera(mouse, camera);
     const intersects = this.raycaster.intersectObjects(this.clickableObjects, false);
 
     if (intersects.length > 0) {
@@ -424,6 +428,9 @@ setupEventListeners() {
 
   // Handle mouse move for hover/rollover effects
   const handleMouseMove = (event) => {
+    // Guard: Don't process until carousel is fully initialized
+    if (!this.clickableObjects || this.clickableObjects.length === 0) return;
+    
     // Camera can be in this.userData.camera OR this.parent.userData.camera
     const camera = this.userData?.camera || this.parent?.userData?.camera;
     if (!camera) return;
