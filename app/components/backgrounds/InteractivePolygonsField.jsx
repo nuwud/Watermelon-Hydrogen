@@ -623,14 +623,14 @@ const POLYGON_STYLES = ['threejs', 'canvas2d'];
 const POLYGON_STYLE_KEY = 'wm_polygon_style';
 
 function getStoredPolygonStyle() {
-  if (typeof window === 'undefined') return 'threejs';
+  if (typeof window === 'undefined') return 'canvas2d';
   try {
     const stored = localStorage.getItem(POLYGON_STYLE_KEY);
     if (stored && POLYGON_STYLES.includes(stored)) return stored;
   } catch {
     // Ignore localStorage errors
   }
-  return 'threejs';
+  return 'canvas2d';
 }
 
 function persistPolygonStyle(style) {
@@ -681,7 +681,7 @@ export function InteractivePolygonsField({isReducedMotion = false}) {
         left: 0,
         width: '100%',
         height: '100%',
-        pointerEvents: 'auto',
+        pointerEvents: 'none',
         overflow: 'hidden',
       }}
       aria-hidden="true"

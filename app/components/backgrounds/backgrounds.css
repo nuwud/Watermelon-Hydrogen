@@ -2,7 +2,7 @@
   position: absolute;
   inset: 0;
   pointer-events: none;
-  z-index: 0;
+  z-index: -1;
   overflow: hidden;
 }
 
@@ -24,9 +24,9 @@
 
 .wm-background-stage__polygons {
   position: absolute;
-  inset: -10%;
+  inset: 0;
   z-index: 1;
-  pointer-events: auto;
+  pointer-events: none;
 }
 
 .wm-background-stage__canvas {
