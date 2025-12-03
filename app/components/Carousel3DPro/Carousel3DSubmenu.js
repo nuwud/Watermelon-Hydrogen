@@ -662,7 +662,7 @@ export class Carousel3DSubmenu extends THREE.Group {
       // SELECTED: Pronounced GLOW instead of solid turquoise
       mesh.material.color.setHex(0xffffff); // White base
       mesh.material.emissive.setHex(0x00ccff); // Bright cyan glow
-      mesh.material.emissiveIntensity = 1.5; // Strong glow to make it obvious
+      mesh.material.emissiveIntensity = 0.9; // Moderate glow - leaves room for hover boost
       gsap.to(mesh.scale, { x: mesh.userData.originalScale.x * 1.3, y: mesh.userData.originalScale.y * 1.3, z: mesh.userData.originalScale.z * 1.3, duration: 0.3 });
     }
     if (iconMesh) {
@@ -737,22 +737,22 @@ export class Carousel3DSubmenu extends THREE.Group {
       if (isSelected) {
         // Selected item ALSO gets hover boost when hovered
         if (isHovered) {
-          // Boost the glow even more on hover
+          // Boost the glow on hover - noticeable increase from 0.9 base
           mesh.material.emissive.setHex(0x00ffff); // Brighter cyan
-          mesh.material.emissiveIntensity = 2.0; // Maximum glow
+          mesh.material.emissiveIntensity = 1.4; // Boosted glow on hover
         } else {
-          // Normal selected state - pronounced glow
+          // Normal selected state - moderate glow
           mesh.material.emissive.setHex(0x00ccff);
-          mesh.material.emissiveIntensity = 1.5;
+          mesh.material.emissiveIntensity = 0.9;
         }
         return;
       }
       
       if (isHovered) {
-        // Noticeable hover effect - brightness boost and glow
-        mesh.material.color.setHex(0xccffff); // Cyan tint on hover
-        mesh.material.emissive.setHex(0x66ccff); // Bright cyan glow
-        mesh.material.emissiveIntensity = 1.2; // Strong hover glow
+        // Subtle hover effect - brightness boost and glow
+        mesh.material.color.setHex(0xeeffff); // Slight cyan tint on hover
+        mesh.material.emissive.setHex(0x55aadd); // Brighter blue glow
+        mesh.material.emissiveIntensity = 0.9; // Noticeable but not overwhelming
         
         // Scale up on hover
         const targetScale = mesh.userData.originalScale ? 
@@ -849,7 +849,7 @@ export class Carousel3DSubmenu extends THREE.Group {
         // SELECTED: Pronounced GLOW instead of solid turquoise
         mesh.material.color.setHex(0xffffff); // White base
         mesh.material.emissive.setHex(0x00ccff); // Bright cyan glow
-        mesh.material.emissiveIntensity = 1.5; // Strong glow
+        mesh.material.emissiveIntensity = 0.9; // Moderate glow - leaves room for hover
         gsap.to(mesh.scale, { x: mesh.userData.originalScale.x * 1.3, y: mesh.userData.originalScale.y * 1.3, z: mesh.userData.originalScale.z * 1.3, duration: 0.3 });
       }
       if (icon) {
