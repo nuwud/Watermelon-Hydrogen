@@ -286,10 +286,15 @@ export class Carousel3DPro extends Group {
         ? getMenuItemColor(p.originalLabel) 
         : { glow: this.config.glowColor, text: this.config.textColor };
       
+      // Use MeshStandardMaterial with EMISSIVE for bright glowing text
       const material = new THREE.MeshStandardMaterial({
-        color: statusColor.text,
+        color: 0xffffff,           // Pure white base
+        emissive: 0xaaccff,        // Blue-white glow
+        emissiveIntensity: 0.6,    // Strong emission for visibility
         transparent: true,
-        opacity: this.config.opacity
+        opacity: 1.0,
+        metalness: 0.1,
+        roughness: 0.3
       });
 
       const mesh = new THREE.Mesh(p.geometry, material);
@@ -515,24 +520,21 @@ updateHoverVisuals() {
     }
     
     if (isHovered && !submenuOpen) {
-      // Apply brilliant hover effect - pure white with strong glow
+      // Apply brilliant hover effect - PURE WHITE with strong glow
       mesh.material.color.setHex(0xffffff);
-      mesh.material.emissive = new THREE.Color(0x88ccff);
-      mesh.material.emissiveIntensity = 1.2 * brightnessFactor;
+      mesh.material.emissive = new THREE.Color(0xccddff);
+      mesh.material.emissiveIntensity = 1.5 * brightnessFactor;
       mesh.material.opacity = 1.0;
       
       // Scale up on hover
       const hoverScale = mesh.userData.originalScale.clone().multiplyScalar(this.config.hoverScale || 1.1);
       gsap.to(mesh.scale, { x: hoverScale.x, y: hoverScale.y, z: hoverScale.z, duration: 0.15 });
     } else {
-      // Normal non-selected appearance - MUCH brighter white with blue tint
-      const baseColor = new THREE.Color(0xf8faff);
-      baseColor.multiplyScalar(brightnessFactor);
-      mesh.material.color.copy(baseColor);
-      
-      mesh.material.emissive = new THREE.Color(0x445566);
-      mesh.material.emissiveIntensity = 0.35 * brightnessFactor;
-      mesh.material.opacity = Math.max(0.7, this.config.opacity * brightnessFactor);
+      // Normal non-selected appearance - BRIGHT WHITE with good emissive
+      mesh.material.color.setHex(0xffffff);
+      mesh.material.emissive = new THREE.Color(0x8899bb);
+      mesh.material.emissiveIntensity = 0.5 * brightnessFactor;
+      mesh.material.opacity = Math.max(0.85, brightnessFactor);
       
       // Restore original scale
       gsap.to(mesh.scale, {
