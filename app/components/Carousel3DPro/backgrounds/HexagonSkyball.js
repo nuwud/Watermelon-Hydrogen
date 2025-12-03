@@ -1,24 +1,26 @@
 /**
  * CerebroSkyball - Geodesic dome/sphere background (X-Men Cerebro style)
- * Uses true 3D icosahedral tessellation - NO gaps, perfect sphere coverage
- * Triangular panels create the classic sci-fi mental interface aesthetic
- * Includes mouse reactivity when not engaged with menu
+ * Uses true 3D icosahedral tessellation with EXTRUDED panels for 3D depth
+ * Triangular panels follow the mouse with lookAt behavior
+ * Visible gaps between panels show the depth and movement
  */
 
 const DEFAULT_CONFIG = {
     sphereRadius: 55,           // Sphere size
     subdivisions: 3,            // Icosahedron subdivisions (2-4, higher = more panels)
-    panelGap: 0.015,            // Gap between panels (0.01-0.03 for subtle lines)
-    lightIntensity: 50,
-    lightDistance: 180,
-    ambientIntensity: 0.4,
-    roughness: 0.3,
-    metalness: 0.6,             // More metallic for Cerebro look
-    emissiveBase: 0.25,
-    lookAtStrength: 12,         // Mouse reactivity strength
+    panelDepth: 1.2,            // Extrusion depth for 3D panels
+    panelGap: 0.06,             // Gap between panels (larger for visible edges)
+    lightIntensity: 60,
+    lightDistance: 200,
+    ambientIntensity: 0.5,
+    roughness: 0.4,
+    metalness: 0.5,
+    emissiveBase: 0.3,
+    lookAtStrength: 40,         // How strongly panels follow mouse
+    lookAtZ: 30,                // Z position of lookAt target
     pauseWhenMenuActive: true,
     idleTimeout: 2000,
-    panelColors: [0x334466, 0x2a3d5c, 0x3d4f6a, 0x445577], // Subtle blue-gray variations
+    panelColors: [0x3a4d6a, 0x2f4562, 0x445877, 0x3d506b], // Blue-gray panels
 };
 
 let THREE = null;
@@ -64,7 +66,7 @@ export async function init(sceneRef, cameraRef, rendererRef, options) {
     setupMenuActivityListeners();
     
     animationActive = true;
-    console.log('[CerebroSkyball] Initialized with', panelMeshes.length, 'geodesic panels');
+    console.log('[CerebroSkyball] Initialized with', panelMeshes.length, 'geodesic 3D panels');
 }
 
 function createGeodesicSphere() {
@@ -73,8 +75,7 @@ function createGeodesicSphere() {
     const radius = config.sphereRadius;
     const detail = config.subdivisions;
     
-    // Create icosahedron geometry - this gives us a perfect geodesic sphere
-    // Each face is a triangle, no gaps possible
+    // Create icosahedron geometry for perfect geodesic sphere
     const icoGeo = new THREE.IcosahedronGeometry(radius, detail);
     
     // Extract individual triangular faces
@@ -91,33 +92,55 @@ function createGeodesicSphere() {
         const v2 = new THREE.Vector3(positions[i+3], positions[i+4], positions[i+5]);
         const v3 = new THREE.Vector3(positions[i+6], positions[i+7], positions[i+8]);
         
-        // Calculate center of triangle
+        // Calculate center of triangle (on sphere surface)
         const center = new THREE.Vector3().addVectors(v1, v2).add(v3).divideScalar(3);
+        const centerNormalized = center.clone().normalize();
         
-        // Create slightly smaller triangle for the gap effect
+        // Shrink triangle for gaps
         const shrinkFactor = 1 - config.panelGap;
         const sv1 = v1.clone().sub(center).multiplyScalar(shrinkFactor).add(center);
         const sv2 = v2.clone().sub(center).multiplyScalar(shrinkFactor).add(center);
         const sv3 = v3.clone().sub(center).multiplyScalar(shrinkFactor).add(center);
         
-        // Create triangle geometry
-        const triGeo = new THREE.BufferGeometry();
-        const vertices = new Float32Array([
-            sv1.x, sv1.y, sv1.z,
-            sv2.x, sv2.y, sv2.z,
-            sv3.x, sv3.y, sv3.z
-        ]);
-        triGeo.setAttribute('position', new THREE.BufferAttribute(vertices, 3));
-        triGeo.computeVertexNormals();
+        // Create 2D triangle shape for extrusion
+        // Project to local 2D space for the Shape
+        const normal = centerNormalized.clone();
+        const up = new THREE.Vector3(0, 1, 0);
+        if (Math.abs(normal.dot(up)) > 0.99) up.set(1, 0, 0);
         
-        // Flip normals to face inward
-        const normals = triGeo.attributes.normal.array;
-        for (let n = 0; n < normals.length; n++) {
-            normals[n] *= -1;
-        }
-        triGeo.attributes.normal.needsUpdate = true;
+        const tangent = new THREE.Vector3().crossVectors(up, normal).normalize();
+        const bitangent = new THREE.Vector3().crossVectors(normal, tangent);
         
-        // Subtle color variation for depth
+        // Project vertices to 2D local space
+        const toLocal = (v) => {
+            const rel = v.clone().sub(center);
+            return new THREE.Vector2(rel.dot(tangent), rel.dot(bitangent));
+        };
+        
+        const p1 = toLocal(sv1);
+        const p2 = toLocal(sv2);
+        const p3 = toLocal(sv3);
+        
+        // Create shape
+        const shape = new THREE.Shape();
+        shape.moveTo(p1.x, p1.y);
+        shape.lineTo(p2.x, p2.y);
+        shape.lineTo(p3.x, p3.y);
+        shape.lineTo(p1.x, p1.y);
+        
+        // Extrude for 3D depth
+        const extrudeSettings = {
+            steps: 1,
+            depth: config.panelDepth,
+            bevelEnabled: true,
+            bevelThickness: 0.15,
+            bevelSize: 0.1,
+            bevelSegments: 2
+        };
+        
+        const triGeo = new THREE.ExtrudeGeometry(shape, extrudeSettings);
+        
+        // Subtle color variation
         const colorIndex = f % config.panelColors.length;
         const baseColor = config.panelColors[colorIndex];
         
@@ -125,19 +148,29 @@ function createGeodesicSphere() {
             color: baseColor,
             roughness: config.roughness,
             metalness: config.metalness,
-            emissive: 0x112233,
+            emissive: 0x1a2a3a,
             emissiveIntensity: config.emissiveBase,
             side: THREE.DoubleSide,
         });
         
         const mesh = new THREE.Mesh(triGeo, mat);
         
+        // Position at center and orient facing inward
+        mesh.position.copy(center);
+        
+        // Create rotation matrix to align with sphere surface
+        const quaternion = new THREE.Quaternion();
+        quaternion.setFromUnitVectors(new THREE.Vector3(0, 0, 1), normal.clone().negate());
+        mesh.quaternion.copy(quaternion);
+        
         // Store data for animations
         mesh.userData.originalPos = center.clone();
         mesh.userData.center = center.clone();
+        mesh.userData.normal = centerNormalized.clone();
+        mesh.userData.originalQuaternion = mesh.quaternion.clone();
         mesh.userData.index = f;
         mesh.userData.baseEmissive = config.emissiveBase;
-        mesh.userData.introComplete = false;
+        mesh.userData.introComplete = true;
         
         panelMeshes.push(mesh);
         skyballGroup.add(mesh);
@@ -228,10 +261,10 @@ export function update() {
     const orbitRadius = config.sphereRadius * 0.4;
     
     // Smooth mouse tracking
-    mouse.x += (mouseTarget.x - mouse.x) * 0.05;
-    mouse.y += (mouseTarget.y - mouse.y) * 0.05;
+    mouse.x += (mouseTarget.x - mouse.x) * 0.08;
+    mouse.y += (mouseTarget.y - mouse.y) * 0.08;
     
-    // Animate lights in 3D orbits - slower, more elegant
+    // Animate lights in 3D orbits
     if (light1) {
         light1.position.x = Math.sin(time * 0.15) * orbitRadius;
         light1.position.y = Math.cos(time * 0.2) * orbitRadius * 0.6;
@@ -253,42 +286,44 @@ export function update() {
         light4.position.z = Math.cos(time * 0.2 + Math.PI) * orbitRadius;
     }
     
-    // Mouse-reactive panel highlighting when interactive
-    if (isInteractive && mouseOver && panelMeshes.length > 0) {
-        // Create a ray from camera through mouse position
-        const mouseVec = new THREE.Vector3(mouse.x * config.lookAtStrength, mouse.y * config.lookAtStrength, 0);
+    // LookAt target for panels - follows mouse like the flat wall version
+    let lookAtX, lookAtY, lookAtZ;
+    
+    if (isInteractive && mouseOver) {
+        // Mouse-driven lookAt target
+        lookAtX = mouse.x * config.lookAtStrength;
+        lookAtY = mouse.y * config.lookAtStrength;
+        lookAtZ = config.lookAtZ;
+    } else {
+        // Gentle idle movement
+        lookAtX = Math.sin(time * 0.2) * 15;
+        lookAtY = Math.cos(time * 0.15) * 10;
+        lookAtZ = config.lookAtZ + 20;
+    }
+    
+    const lookAtTarget = new THREE.Vector3(lookAtX, lookAtY, lookAtZ);
+    
+    // Make each panel look at the mouse target
+    for (let i = 0; i < panelMeshes.length; i++) {
+        const mesh = panelMeshes[i];
+        if (mesh.userData.introComplete) {
+            // Each panel rotates to face the lookAt target
+            mesh.lookAt(lookAtTarget);
+        }
         
-        // Panels near the mouse direction get brighter
-        for (let i = 0; i < panelMeshes.length; i++) {
-            const mesh = panelMeshes[i];
-            const center = mesh.userData.center;
-            
-            // Calculate how aligned this panel is with mouse direction
+        // Subtle pulse effect based on position
+        const center = mesh.userData.center;
+        const waveOffset = (center.x + center.y + center.z) * 0.02;
+        const pulse = Math.sin(time * 0.4 + waveOffset) * 0.1;
+        mesh.material.emissiveIntensity = mesh.userData.baseEmissive + pulse;
+        
+        // Panels closer to lookAt direction get extra glow
+        if (isInteractive && mouseOver) {
             const panelDir = center.clone().normalize();
             const mouseDir = new THREE.Vector3(mouse.x, mouse.y, -0.5).normalize();
             const dot = panelDir.dot(mouseDir);
-            
-            // Panels more aligned with mouse get extra glow
-            const mouseInfluence = Math.max(0, dot) * 0.4;
-            mesh.material.emissiveIntensity = mesh.userData.baseEmissive + mouseInfluence;
-        }
-    }
-    
-    // Gentle wave/pulse effect across panels
-    const pulsePhase = time * 0.4;
-    for (let i = 0; i < panelMeshes.length; i++) {
-        const mesh = panelMeshes[i];
-        const center = mesh.userData.center;
-        
-        // Wave based on panel position
-        const waveOffset = (center.x + center.y + center.z) * 0.02;
-        const pulse = Math.sin(pulsePhase + waveOffset) * 0.08;
-        
-        // Add pulse to existing emissive (don't override mouse effect)
-        if (!isInteractive || !mouseOver) {
-            mesh.material.emissiveIntensity = mesh.userData.baseEmissive + pulse;
-        } else {
-            mesh.material.emissiveIntensity += pulse * 0.5;
+            const mouseInfluence = Math.max(0, dot) * 0.3;
+            mesh.material.emissiveIntensity += mouseInfluence;
         }
     }
 }

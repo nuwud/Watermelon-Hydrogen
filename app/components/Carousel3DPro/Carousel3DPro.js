@@ -159,6 +159,10 @@ export class Carousel3DPro extends Group {
     };
     this.submenuState = merged;
     this.userData.submenuState = { ...merged };
+    
+    // Update main menu dimming when submenu opens/closes
+    this.updateHoverVisuals();
+    
     if (typeof window !== 'undefined') {
       window.dispatchEvent(
         new CustomEvent('carousel-submenu-state', { detail: { ...merged } })
@@ -462,34 +466,74 @@ setupEventListeners() {
 /**
  * Updates visual hover effects on menu items.
  * Non-selected items get a bright glow when hovered.
+ * Respects submenu state and distance dimming.
  */
 updateHoverVisuals() {
   if (!this.itemMeshes) return;
+  
+  const submenuOpen = this.submenuState?.open || false;
+  const dimConfig = this.config.submenuOpenDim || { enabled: false };
+  const distanceConfig = this.config.distanceDimming || { enabled: false };
+  const camera = this.parent?.userData?.camera;
   
   this.itemMeshes.forEach((mesh, index) => {
     const isSelected = mesh.userData.isSelected;
     const isHovered = index === this.hoveredIndex;
     
-    // Skip selected items - they already have full glow
-    if (isSelected) return;
+    // Calculate distance-based dimming
+    let distanceFactor = 1.0;
+    if (distanceConfig.enabled && camera) {
+      const meshWorldPos = new THREE.Vector3();
+      mesh.getWorldPosition(meshWorldPos);
+      const distance = camera.position.distanceTo(meshWorldPos);
+      
+      const near = distanceConfig.nearDistance || 3;
+      const far = distanceConfig.farDistance || 8;
+      const minBrightness = distanceConfig.minBrightness || 0.5;
+      
+      // Clamp and interpolate
+      const t = Math.max(0, Math.min(1, (distance - near) / (far - near)));
+      distanceFactor = 1.0 - t * (1.0 - minBrightness);
+    }
     
-    if (isHovered) {
-      // Apply bright hover effect - white with cyan tint
-      if (!(mesh.material instanceof THREE.ShaderMaterial)) {
-        mesh.material.color.setHex(0xaaeeff); // Bright cyan-white
-        mesh.material.emissive = new THREE.Color(0x446688);
-        mesh.material.emissiveIntensity = 0.6;
+    // Calculate submenu dimming for main menu
+    let submenuDimFactor = 1.0;
+    if (submenuOpen && dimConfig.enabled) {
+      submenuDimFactor = isSelected ? dimConfig.selectedItemDimAmount || 0.6 : dimConfig.mainMenuDimAmount || 0.5;
+    }
+    
+    // Combined brightness factor
+    const brightnessFactor = distanceFactor * submenuDimFactor;
+    
+    // Skip shader materials (selected items have glow shader)
+    if (mesh.material instanceof THREE.ShaderMaterial) {
+      // For selected items, adjust glow intensity based on dimming
+      if (mesh.material.uniforms?.intensity) {
+        mesh.material.uniforms.intensity.value = 2.0 * submenuDimFactor;
       }
-      // Scale up slightly on hover
-      const hoverScale = mesh.userData.originalScale.clone().multiplyScalar(1.08);
+      return;
+    }
+    
+    if (isHovered && !submenuOpen) {
+      // Apply bright hover effect - cyan-white
+      mesh.material.color.setHex(0xccffff);
+      mesh.material.emissive = new THREE.Color(0x66aacc);
+      mesh.material.emissiveIntensity = 0.8 * brightnessFactor;
+      mesh.material.opacity = 1.0;
+      
+      // Scale up on hover
+      const hoverScale = mesh.userData.originalScale.clone().multiplyScalar(this.config.hoverScale || 1.1);
       gsap.to(mesh.scale, { x: hoverScale.x, y: hoverScale.y, z: hoverScale.z, duration: 0.15 });
     } else {
-      // Restore normal non-selected appearance
-      if (!(mesh.material instanceof THREE.ShaderMaterial)) {
-        mesh.material.color.setHex(0xdddddd); // Bright gray-white
-        mesh.material.emissive = new THREE.Color(0x222233);
-        mesh.material.emissiveIntensity = 0.2;
-      }
+      // Normal non-selected appearance with distance/submenu dimming
+      const baseColor = new THREE.Color(0xe8eeff);
+      baseColor.multiplyScalar(brightnessFactor);
+      mesh.material.color.copy(baseColor);
+      
+      mesh.material.emissive = new THREE.Color(0x334455);
+      mesh.material.emissiveIntensity = 0.25 * brightnessFactor;
+      mesh.material.opacity = Math.max(0.6, this.config.opacity * brightnessFactor);
+      
       // Restore original scale
       gsap.to(mesh.scale, {
         x: mesh.userData.originalScale.x,
