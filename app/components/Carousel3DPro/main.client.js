@@ -98,11 +98,13 @@ export function mountCarousel3D(container, menuData) {
         try {
             const bgModule = await import('./backgrounds/BackgroundManager.js');
             const hexagonModule = await import('./backgrounds/InteractiveHexagonWall.js');
+            const hexagonSkyballModule = await import('./backgrounds/HexagonSkyball.js');
             const polygonsModule = await import('./backgrounds/InteractivePolygonsWall.js');
             const domeModule = await import('./BackgroundDome.js');
 
             BackgroundManager = bgModule.BackgroundManager;
             const InteractiveHexagonWall = hexagonModule.default;
+            const HexagonSkyball = hexagonSkyballModule.default;
             InteractivePolygonsWall = polygonsModule.default;
             BackgroundDome = domeModule.BackgroundDome;
 
@@ -112,8 +114,9 @@ export function mountCarousel3D(container, menuData) {
             });
 
             // Register available backgrounds
-            backgroundManager.register('hexagons', InteractiveHexagonWall, { label: 'Interactive Hexagon Wall' });
-            backgroundManager.register('polygons', InteractivePolygonsWall, { label: 'Interactive Polygons Wall' });
+            backgroundManager.register('hexagons', InteractiveHexagonWall, { label: 'Hexagon Wall' });
+            backgroundManager.register('skyball', HexagonSkyball, { label: 'Hexagon Skyball (360°)' });
+            backgroundManager.register('polygons', InteractivePolygonsWall, { label: 'Polygons Wall' });
             backgroundManager.register('dome', BackgroundDome, { label: 'Iridescent Dome' });
 
             // Try to restore last selected background, default to hexagons if none stored

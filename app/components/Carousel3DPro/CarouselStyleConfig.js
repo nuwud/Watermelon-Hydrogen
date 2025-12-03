@@ -12,11 +12,11 @@ export const defaultCarouselStyle = {
   fontSize: 0.5,
   fontHeight: 0.1,
   
-  // Colors
-  glowColor: 0xffffff,
-  textColor: 0xcccccc,
-  selectedTextColor: 0xffffff,
-  backgroundColor: 0x96bf48,
+  // Colors - Brighter text for visibility
+  glowColor: 0x66ccff,
+  textColor: 0xeeeeee,           // Brighter base text
+  selectedTextColor: 0xffffff,   // Pure white selected
+  backgroundColor: 0x2a2a4a,     // Dark blue-purple (removed green)
   
   // Transparency
   opacity: 0.8,
@@ -53,22 +53,22 @@ export const lightTheme = {
   opacity: 0.9
 };
 
-// Dark theme with neon glow
+// Dark theme with neon glow - brighter text
 export const darkTheme = {
   ...defaultCarouselStyle,
-  backgroundColor: 0x000000,
-  textColor: 0x888888,
+  backgroundColor: 0x0a0a1a,
+  textColor: 0xcccccc,           // Brighter gray
   selectedTextColor: 0xffffff,
-  glowColor: 0xff00ff,
-  opacity: 0.85
+  glowColor: 0xff66ff,           // Brighter magenta
+  opacity: 0.9
 };
 
-// Cyberpunk theme
+// Cyberpunk theme - brighter neon colors
 export const cyberpunkTheme = {
   ...defaultCarouselStyle,
   backgroundColor: 0x0a0a1a,
-  textColor: 0x00ccbb,
-  selectedTextColor: 0x00ffee,
+  textColor: 0x66ffee,           // Brighter cyan
+  selectedTextColor: 0x00ffff,   // Bright cyan
   glowColor: 0xffff00,
   opacity: 0.9,
   selectionScale: 1.3,
