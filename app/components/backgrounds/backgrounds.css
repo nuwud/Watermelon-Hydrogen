@@ -22,6 +22,13 @@
   pointer-events: none;
 }
 
+.wm-background-stage__polygons {
+  position: absolute;
+  inset: -10%;
+  z-index: 1;
+  pointer-events: auto;
+}
+
 .wm-background-stage__canvas {
   position: absolute;
   inset: 0;
@@ -50,6 +57,10 @@
   z-index: 3;
 }
 
+.wm-background-stage__overlay--dev {
+  /* Dev-only overlay styling */
+}
+
 .wm-background-stage__overlay > span {
   background: rgba(0, 0, 0, 0.45);
   color: #fafafa;
@@ -76,4 +87,29 @@
 .wm-background-stage__refresh:hover,
 .wm-background-stage__refresh:focus-visible {
   background: rgba(255, 255, 255, 0.95);
+}
+
+.wm-background-stage__mode-toggle {
+  pointer-events: auto;
+  align-self: flex-end;
+  border: 0;
+  border-radius: 9999px;
+  padding: 0.4rem 0.9rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #111;
+  background: rgba(255, 224, 102, 0.9);
+  cursor: pointer;
+  transition: background 160ms ease, transform 160ms ease;
+}
+
+.wm-background-stage__mode-toggle:hover,
+.wm-background-stage__mode-toggle:focus-visible {
+  background: rgba(255, 224, 102, 1);
+  transform: scale(1.05);
+}
+
+/* Solid mode - show a simple gradient background */
+.wm-background-stage[data-mode="solid"] .wm-background-stage__gradient {
+  background: radial-gradient(circle at 50% 35%, rgba(60, 50, 30, 0.8), rgba(20, 15, 10, 0.95) 70%);
 }

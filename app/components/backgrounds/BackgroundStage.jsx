@@ -1,8 +1,23 @@
-import {useCallback, useEffect, useMemo, useRef} from 'react';
+import {useCallback, useEffect, useMemo, useRef, useState} from 'react';
 import ClientOnly from '../ClientOnly';
-import {useBackgroundPreset} from './useBackgroundPreset';
 import {HoneycombField} from './HoneycombField';
+import {InteractivePolygonsField} from './InteractivePolygonsField';
 import './backgrounds.css';
+
+/**
+ * Unified Background System
+ * 
+ * Supports multiple background modes:
+ * - 'honeycomb': Original hex field (HoneycombField)
+ * - 'polygons': Interactive polygons wall (InteractivePolygonsField)  
+ * - 'solid': Simple solid color (no 3D rendering)
+ * 
+ * Mode is persisted in localStorage under 'wm_background_mode'
+ */
+
+const STORAGE_KEY = 'wm_background_mode';
+const DEFAULT_MODE = 'honeycomb';
+const VALID_MODES = ['honeycomb', 'polygons', 'solid'];
 
 const DEFAULT_CALM_RADIUS = 320;
 const MIN_CALM_RADIUS = 120;
@@ -13,150 +28,166 @@ function clamp(value, min, max) {
   return Math.min(max, Math.max(min, value));
 }
 
-async function sendTelemetry(event, payload) {
+// Get stored mode from localStorage
+function getStoredMode() {
+  if (typeof window === 'undefined') return DEFAULT_MODE;
   try {
-    await fetch('/api/backgrounds/telemetry', {
-      method: 'POST',
-      headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({
-        event,
-        presetId: payload.presetId,
-        versionHash: payload.versionHash,
-        details: payload.details,
-        userAgent: typeof navigator !== 'undefined' ? navigator.userAgent : undefined,
-        timestamp: Date.now(),
-      }),
-    });
-  } catch (error) {
-    console.warn('[BackgroundStage] Telemetry failed', error);
+    const stored = localStorage.getItem(STORAGE_KEY);
+    if (stored && VALID_MODES.includes(stored)) {
+      return stored;
+    }
+  } catch (e) {
+    console.warn('[BackgroundStage] Failed to read stored mode:', e);
   }
+  return DEFAULT_MODE;
+}
+
+// Persist mode to localStorage
+function persistMode(mode) {
+  if (typeof window === 'undefined') return;
+  try {
+    localStorage.setItem(STORAGE_KEY, mode);
+    // Dispatch event for debug panels
+    window.dispatchEvent(new CustomEvent('wm-background-changed', {
+      detail: {mode}
+    }));
+  } catch (e) {
+    console.warn('[BackgroundStage] Failed to persist mode:', e);
+  }
+}
+
+// Hook for background mode management
+function useBackgroundMode() {
+  const [mode, setModeState] = useState(getStoredMode);
+  
+  const setMode = useCallback((newMode) => {
+    if (!VALID_MODES.includes(newMode)) {
+      console.warn(`[BackgroundStage] Invalid mode: ${newMode}. Valid modes: ${VALID_MODES.join(', ')}`);
+      return;
+    }
+    setModeState(newMode);
+    persistMode(newMode);
+    console.log(`[BackgroundStage] Mode changed to: ${newMode}`);
+  }, []);
+  
+  const cycleMode = useCallback(() => {
+    const currentIndex = VALID_MODES.indexOf(mode);
+    const nextIndex = (currentIndex + 1) % VALID_MODES.length;
+    setMode(VALID_MODES[nextIndex]);
+    return VALID_MODES[nextIndex];
+  }, [mode, setMode]);
+  
+  return {mode, setMode, cycleMode, validModes: VALID_MODES};
+}
+
+// Hook for reduced motion preference
+function useReducedMotion() {
+  const [isReducedMotion, setIsReducedMotion] = useState(false);
+
+  useEffect(() => {
+    if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') {
+      return undefined;
+    }
+
+    const mediaQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
+    const handleChange = (event) => {
+      setIsReducedMotion(event.matches);
+    };
+
+    handleChange(mediaQuery);
+
+    if (typeof mediaQuery.addEventListener === 'function') {
+      mediaQuery.addEventListener('change', handleChange);
+      return () => mediaQuery.removeEventListener('change', handleChange);
+    }
+
+    if (typeof mediaQuery.addListener === 'function') {
+      mediaQuery.addListener(handleChange);
+      return () => mediaQuery.removeListener(handleChange);
+    }
+
+    return undefined;
+  }, []);
+
+  return isReducedMotion;
 }
 
 function BackgroundStageInner() {
   const containerRef = useRef(null);
-  const teardownRef = useRef(null);
-  const lastVersionRef = useRef(null);
-  const {preset, status, error, isFallback, refresh, isReducedMotion} = useBackgroundPreset();
+  const {mode, setMode, cycleMode, validModes} = useBackgroundMode();
+  const isReducedMotion = useReducedMotion();
 
-  const reduceMotion = Boolean(isReducedMotion || (preset ? !preset.supportsReducedMotion : false));
-
-  const calmRadius = useMemo(() => {
-    const raw = preset?.calmRadius ?? DEFAULT_CALM_RADIUS;
-    return clamp(raw, MIN_CALM_RADIUS, MAX_CALM_RADIUS);
-  }, [preset?.calmRadius]);
-
-  const calmIntensity = useMemo(() => {
-    const raw = preset?.calmIntensity ?? DEFAULT_CALM_INTENSITY;
-    return clamp(raw, 0, 1);
-  }, [preset?.calmIntensity]);
-
-  const versionKey = preset ? `${preset.versionHash}:${reduceMotion ? 'reduced' : 'normal'}` : null;
-
-  const mountPreset = useCallback(async () => {
+  // Expose API globally for debug/admin access
+  useEffect(() => {
     if (typeof window === 'undefined') return;
-    if (!containerRef.current || !preset || !versionKey) return;
-
-    if (lastVersionRef.current === versionKey) {
-      return;
-    }
-
-    if (teardownRef.current) {
-      teardownRef.current();
-      teardownRef.current = null;
-    }
-
-    lastVersionRef.current = versionKey;
-
-    try {
-      const module = await import('./backgroundRenderer.client');
-      const {mountBackgroundRenderer} = module;
-      if (typeof mountBackgroundRenderer !== 'function') {
-        throw new Error('Background renderer unavailable');
-      }
-
-      teardownRef.current = mountBackgroundRenderer(containerRef.current, preset, {
-        forceReducedMotion: reduceMotion,
-        onLoad: () => {
-          void sendTelemetry('load', {
-            presetId: preset.id,
-            versionHash: versionKey,
-            details: reduceMotion ? 'reduced-motion' : undefined,
-          });
-        },
-        onError: (mountError) => {
-          console.error('[BackgroundStage] Renderer error', mountError);
-          void sendTelemetry('error', {
-            presetId: preset.id,
-            versionHash: versionKey,
-            details: mountError instanceof Error ? mountError.message : String(mountError),
-          });
-        },
-      });
-    } catch (mountError) {
-      console.error('[BackgroundStage] Failed to mount background', mountError);
-      void sendTelemetry('error', {
-        presetId: preset.id,
-        versionHash: versionKey,
-        details: mountError instanceof Error ? mountError.message : String(mountError),
-      });
-    }
-  }, [preset, reduceMotion, versionKey]);
-
-  useEffect(() => {
-    if (!preset) {
-      if (teardownRef.current) {
-        teardownRef.current();
-        teardownRef.current = null;
-      }
-      lastVersionRef.current = null;
-      return;
-    }
-
-    void mountPreset();
-
-    return () => {
-      if (!preset && teardownRef.current) {
-        teardownRef.current();
-        teardownRef.current = null;
-        lastVersionRef.current = null;
-      }
+    
+    window.__wmBackground = {
+      getMode: () => mode,
+      setMode,
+      cycleMode,
+      getValidModes: () => validModes,
     };
-  }, [preset, mountPreset]);
-
-  useEffect(() => {
+    
+    console.log('[BackgroundStage] API exposed as window.__wmBackground');
+    console.log(`[BackgroundStage] Current mode: ${mode}`);
+    
     return () => {
-      if (teardownRef.current) {
-        teardownRef.current();
-        teardownRef.current = null;
-      }
-      lastVersionRef.current = null;
+      delete window.__wmBackground;
     };
+  }, [mode, setMode, cycleMode, validModes]);
+
+  // Calm zone settings (for honeycomb)
+  const calmRadius = useMemo(() => {
+    return clamp(DEFAULT_CALM_RADIUS, MIN_CALM_RADIUS, MAX_CALM_RADIUS);
   }, []);
 
+  const calmIntensity = useMemo(() => {
+    return clamp(DEFAULT_CALM_INTENSITY, 0, 1);
+  }, []);
+
+  // Render the active background component
+  const renderBackground = () => {
+    switch (mode) {
+      case 'honeycomb':
+        return (
+          <HoneycombField
+            calmRadius={calmRadius}
+            calmIntensity={isReducedMotion ? 0 : calmIntensity}
+            isReducedMotion={isReducedMotion}
+          />
+        );
+      case 'polygons':
+        return (
+          <InteractivePolygonsField
+            isReducedMotion={isReducedMotion}
+          />
+        );
+      case 'solid':
+        // Solid mode renders nothing - just uses CSS background
+        return null;
+      default:
+        return null;
+    }
+  };
+
   return (
-    <div className="wm-background-stage" aria-hidden="true">
+    <div className="wm-background-stage" aria-hidden="true" data-mode={mode}>
       <div className="wm-background-stage__gradient" />
-      <HoneycombField
-        calmRadius={calmRadius}
-        calmIntensity={reduceMotion ? 0 : calmIntensity}
-        isReducedMotion={reduceMotion}
-      />
+      {renderBackground()}
       <div ref={containerRef} className="wm-background-stage__canvas" />
-      <div className="wm-background-stage__overlay">
-        {status === 'loading' && <span>Loading background...</span>}
-        {status === 'error' && <span>Background error: {error}</span>}
-        {isFallback && status === 'ready' && <span>Fallback background active</span>}
-        {reduceMotion && status === 'ready' && (
-          <span>Reduced motion mode active</span>
-        )}
-        <button
-          type="button"
-          className="wm-background-stage__refresh"
-          onClick={() => void refresh()}
-        >
-          Refresh Preset
-        </button>
-      </div>
+      {/* Debug overlay - only in development */}
+      {process.env.NODE_ENV === 'development' && (
+        <div className="wm-background-stage__overlay wm-background-stage__overlay--dev">
+          <button
+            type="button"
+            className="wm-background-stage__mode-toggle"
+            onClick={cycleMode}
+            title={`Current: ${mode}. Click to cycle.`}
+          >
+            🎨 {mode}
+          </button>
+        </div>
+      )}
     </div>
   );
 }

@@ -1543,4 +1543,19 @@ export function mountCarousel3D(container, menuData) {
             getValidBackgroundModes: () => window.__wmBackground?.getValidModes?.() || [],
         }
     };
+}                   visible: c.visible,
+                    position: [c.position.x, c.position.y, c.position.z]
+                })));
+            },
+            repairState: repairBrokenState,
+            // Background management utilities
+            getBackgroundManager: () => backgroundManager,
+            listBackgrounds: () => backgroundManager?.getBackgrounds() || [],
+            setBackground: (id) => backgroundManager?.setActive(id),
+            cycleBackground: () => backgroundManager?.cycleNext(),
+        }
+    };
+}           cycleBackground: () => backgroundManager?.cycleNext(),
+        }
+    };
 }
