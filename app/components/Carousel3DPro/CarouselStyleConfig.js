@@ -3,7 +3,31 @@
  * This file defines theming and styling presets for Carousel3DPro.
  * It includes default glow, background opacity, font settings.
  * This file is pure JS config, can be extended at runtime.
+ * 
+ * STATUS-CODED MENU COLORS:
+ * Each menu item can have a unique color based on its function/category.
  */
+
+// Status-coded colors for menu items by label
+// These give each menu item a distinct identity glow
+export const menuItemColors = {
+  // Main menu items - each has unique glow color
+  'Home':             { glow: 0x00ffff, text: 0x88ffff },  // Cyan - navigation hub
+  'Services':         { glow: 0xffcc00, text: 0xffeeaa },  // Gold - business/services
+  'Digital Products': { glow: 0xff66ff, text: 0xffaaff },  // Magenta - digital creative
+  'Gallery':          { glow: 0xff6699, text: 0xffaacc },  // Rose - artistic/visual
+  'About':            { glow: 0x66ff66, text: 0xaaffaa },  // Green - growth/life
+  'Contact':          { glow: 0x6699ff, text: 0xaaccff },  // Blue - communication
+  'Cart / Account':   { glow: 0xff9933, text: 0xffcc99 },  // Orange - action/commerce
+  
+  // Default fallback for any unlisted items
+  'default':          { glow: 0xffffff, text: 0xdddddd },  // White
+};
+
+// Helper to get color for a menu item by label
+export function getMenuItemColor(label) {
+  return menuItemColors[label] || menuItemColors['default'];
+}
 
 // Default configuration for carousel
 export const defaultCarouselStyle = {
@@ -12,14 +36,17 @@ export const defaultCarouselStyle = {
   fontSize: 0.5,
   fontHeight: 0.1,
   
-  // Colors - WHITE selected, light gray others
-  glowColor: 0xffffff,           // White glow for selected
-  textColor: 0xaabbcc,           // Light blue-gray for non-selected
+  // Colors - WHITE selected, light gray others (fallback when not using status colors)
+  glowColor: 0xffffff,           // White glow for selected (default)
+  textColor: 0xccddee,           // Light blue-gray for non-selected (brighter)
   selectedTextColor: 0xffffff,   // Pure white for selected item
   backgroundColor: 0x1a1a2e,     // Dark blue background
   
+  // Enable status-coded colors per menu item
+  useStatusColors: true,         // When true, uses menuItemColors lookup
+  
   // Transparency
-  opacity: 0.8,
+  opacity: 0.85,
   selectedOpacity: 1.0,
   
   // Layout
@@ -32,8 +59,8 @@ export const defaultCarouselStyle = {
   animationDuration: 0.8,
   
   // Glow effect
-  glowIntensity: 1.5,
-  glowSize: 1.1,
+  glowIntensity: 2.0,            // Stronger glow
+  glowSize: 1.15,                // Larger glow
   pulseSpeed: 2.0,
   
   // Bevel settings for text

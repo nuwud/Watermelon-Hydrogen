@@ -5,12 +5,15 @@
  */
 
 const DEFAULT_CONFIG = {
-    sphereRadius: 100,          // Large sphere to encompass everything
-    hexSize: 3.5,               // Size of each hexagon (bigger for visibility)
-    lightIntensity: 50,         // Brighter lights
-    lightDistance: 250,
-    roughness: 0.4,
-    metalness: 0.3,
+    sphereRadius: 80,           // Sphere size
+    hexSize: 2.0,               // Smaller hexagons for tighter packing
+    numHexagons: 800,           // More hexagons to fill gaps
+    lightIntensity: 80,         // Brighter internal lights
+    lightDistance: 300,
+    ambientIntensity: 0.6,      // Stronger ambient for base visibility
+    roughness: 0.3,
+    metalness: 0.4,
+    emissiveBase: 0.4,          // Higher emissive for self-illumination
     pauseWhenMenuActive: true,
     idleTimeout: 2000,
 };
@@ -64,18 +67,18 @@ function createHexagonSphere() {
     // Create base hexagon geometry
     const hexGeo = createHexagonGeometry(6, 0, 0, hexSize, 0);
     
-    // Material - white with emissive for visibility, DoubleSide for inside viewing
+    // Material - brighter with stronger emissive for self-illumination
     const mat = new THREE.MeshStandardMaterial({
-        color: 0xffffff,
+        color: 0xeeeeff,
         roughness: config.roughness,
         metalness: config.metalness,
-        emissive: 0x222244,
-        emissiveIntensity: 0.3,
-        side: THREE.DoubleSide,  // Visible from both sides
+        emissive: 0x334466,
+        emissiveIntensity: config.emissiveBase,
+        side: THREE.DoubleSide,
     });
     
     // Use fibonacci sphere distribution for even hexagon placement
-    const numHexagons = 300;  // Good density without performance hit
+    const numHexagons = config.numHexagons;  // Configurable density
     const goldenRatio = (1 + Math.sqrt(5)) / 2;
     
     hexMeshes = [];
@@ -131,18 +134,26 @@ function createHexagonGeometry(n, x, y, s, r) {
     return geometry;
 }
 
+// Additional lights for better coverage
+let light5, light6, hemisphereLight;
+
 function createLights() {
     if (!THREE || !scene) return;
     
     const intensity = config.lightIntensity;
     const distance = config.lightDistance;
     
-    // Ambient light for base visibility
-    ambientLight = new THREE.AmbientLight(0x222244, 0.4);
+    // Stronger ambient for base visibility
+    ambientLight = new THREE.AmbientLight(0x445566, config.ambientIntensity);
     ambientLight.name = 'skyball_ambient';
     scene.add(ambientLight);
     
-    // Colored point lights that orbit inside the sphere
+    // Hemisphere light for natural sky/ground gradient
+    hemisphereLight = new THREE.HemisphereLight(0x6688cc, 0x443355, 0.5);
+    hemisphereLight.name = 'skyball_hemisphere';
+    scene.add(hemisphereLight);
+    
+    // 6 colored point lights for better coverage inside sphere
     light1 = new THREE.PointLight(0xff0088, intensity, distance);
     light1.name = 'skyball_light1';
     scene.add(light1);
@@ -158,6 +169,15 @@ function createLights() {
     light4 = new THREE.PointLight(0xff6600, intensity, distance);
     light4.name = 'skyball_light4';
     scene.add(light4);
+    
+    // Two more lights for fuller coverage
+    light5 = new THREE.PointLight(0xffff44, intensity * 0.7, distance);
+    light5.name = 'skyball_light5';
+    scene.add(light5);
+    
+    light6 = new THREE.PointLight(0xff44ff, intensity * 0.7, distance);
+    light6.name = 'skyball_light6';
+    scene.add(light6);
 }
 
 function setupMenuActivityListeners() {
@@ -180,9 +200,9 @@ export function update() {
     if (!animationActive || !THREE) return;
     
     const time = Date.now() * 0.001;
-    const orbitRadius = config.sphereRadius * 0.4;  // Lights orbit inside sphere
+    const orbitRadius = config.sphereRadius * 0.5;  // Lights orbit inside sphere
     
-    // Animate lights in 3D orbits
+    // Animate all 6 lights in 3D orbits for better coverage
     if (light1) {
         light1.position.x = Math.sin(time * 0.3) * orbitRadius;
         light1.position.y = Math.cos(time * 0.4) * orbitRadius * 0.8;
@@ -203,15 +223,25 @@ export function update() {
         light4.position.y = Math.sin(time * 0.55 + Math.PI) * orbitRadius * 0.8;
         light4.position.z = Math.cos(time * 0.4 + Math.PI) * orbitRadius;
     }
+    if (light5) {
+        light5.position.x = Math.sin(time * 0.28 + Math.PI/2) * orbitRadius;
+        light5.position.y = Math.cos(time * 0.38 + Math.PI/2) * orbitRadius * 0.8;
+        light5.position.z = Math.sin(time * 0.32 + Math.PI/2) * orbitRadius;
+    }
+    if (light6) {
+        light6.position.x = Math.cos(time * 0.33 - Math.PI/2) * orbitRadius;
+        light6.position.y = Math.sin(time * 0.43 - Math.PI/2) * orbitRadius * 0.8;
+        light6.position.z = Math.cos(time * 0.37 - Math.PI/2) * orbitRadius;
+    }
     
-    // Subtle pulse effect on hexagons when interactive
+    // Gentle wave pulse effect on hexagons when interactive
     if (isInteractive) {
-        const pulsePhase = time * 0.5;
+        const pulsePhase = time * 0.8;
         for (let i = 0; i < hexMeshes.length; i++) {
             const mesh = hexMeshes[i];
-            const phase = pulsePhase + i * 0.02;
-            const pulse = 0.02 * Math.sin(phase);
-            mesh.material.emissiveIntensity = 0.2 + pulse * 2;
+            const phase = pulsePhase + i * 0.015;
+            const pulse = Math.sin(phase) * 0.15;
+            mesh.material.emissiveIntensity = config.emissiveBase + pulse;
         }
     }
 }
@@ -238,12 +268,12 @@ export function dispose() {
     }
     
     if (scene) {
-        [light1, light2, light3, light4, ambientLight].forEach(l => { if (l) scene.remove(l); });
+        [light1, light2, light3, light4, light5, light6, ambientLight, hemisphereLight].forEach(l => { if (l) scene.remove(l); });
     }
     
     hexMeshes = [];
     skyballGroup = null;
-    light1 = light2 = light3 = light4 = ambientLight = null;
+    light1 = light2 = light3 = light4 = light5 = light6 = ambientLight = hemisphereLight = null;
     scene = camera = THREE = gsap = null;
 }
 

@@ -70,7 +70,7 @@ import { Group } from 'three';
 import { TextGeometry } from 'three/examples/jsm/geometries/TextGeometry.js';
 import { FontLoader } from 'three/examples/jsm/loaders/FontLoader.js';
 import { getGlowShaderMaterial } from './CarouselShaderFX.js';
-import { defaultCarouselStyle } from './CarouselStyleConfig.js';
+import { defaultCarouselStyle, getMenuItemColor } from './CarouselStyleConfig.js';
 import { SelectionGuard, withSelectionLock } from './modules/selectionGuards.js';
 
 
@@ -277,8 +277,13 @@ export class Carousel3DPro extends Group {
 
     // 2) Create meshes with normalized widths and place them evenly by angle
     prepared.forEach((p, index) => {
+      // Get status-coded color for this menu item
+      const statusColor = this.config.useStatusColors 
+        ? getMenuItemColor(p.originalLabel) 
+        : { glow: this.config.glowColor, text: this.config.textColor };
+      
       const material = new THREE.MeshStandardMaterial({
-        color: this.config.textColor,
+        color: statusColor.text,
         transparent: true,
         opacity: this.config.opacity
       });
@@ -287,6 +292,7 @@ export class Carousel3DPro extends Group {
       mesh.name = p.originalLabel;
       mesh.userData.originalLabel = p.originalLabel;
       mesh.userData.displayLabel = p.displayLabel;
+      mesh.userData.statusColor = statusColor; // Store for later use
 
       // Normalize width slightly for a more balanced ring, but clamp scale to avoid extremes
       const scaleFactor = THREE.MathUtils.clamp(targetWidth / Math.max(0.001, p.width), 0.75, 1.15);
@@ -467,18 +473,24 @@ selectItem(index, animate = true) {
       localStorage.setItem('carouselIndex', index.toString());
     }
 
-    // Highlight visuals logic remains the same
+    // Highlight visuals with status-coded colors
     this.itemMeshes.forEach((mesh, i) => {
       const isSelected = (i === index);
       mesh.userData.isSelected = isSelected;
+      
+      // Get status-coded color for this menu item
+      const itemLabel = mesh.userData.originalLabel || mesh.name;
+      const statusColor = this.config.useStatusColors 
+        ? getMenuItemColor(itemLabel) 
+        : { glow: this.config.glowColor, text: this.config.textColor };
 
       if (isSelected) {
         if (!(mesh.material instanceof THREE.ShaderMaterial)) {
           const glowMaterial = getGlowShaderMaterial();
-          glowMaterial.uniforms.glowColor.value = new THREE.Color(this.config.glowColor);
+          glowMaterial.uniforms.glowColor.value = new THREE.Color(statusColor.glow);
           mesh.material = glowMaterial;
         } else {
-          mesh.material.uniforms.glowColor.value = new THREE.Color(this.config.glowColor);
+          mesh.material.uniforms.glowColor.value = new THREE.Color(statusColor.glow);
         }
 
         const targetScale = mesh.userData.originalScale.clone().multiplyScalar(1.2);
@@ -490,7 +502,7 @@ selectItem(index, animate = true) {
       } else {
         if (mesh.material instanceof THREE.ShaderMaterial) {
           mesh.material = new THREE.MeshStandardMaterial({
-            color: this.config.textColor,
+            color: statusColor.text,
             transparent: true,
             opacity: this.config.opacity
           });
@@ -544,18 +556,22 @@ applyHighlightVisuals(indexToHighlight) {
   this.itemMeshes.forEach((mesh, index) => {
     const shouldBeSelected = (index === indexToHighlight);
     const currentlySelected = mesh.userData.isSelected;
+    
+    // Get status-coded color for this menu item
+    const itemLabel = mesh.userData.originalLabel || mesh.name;
+    const statusColor = this.config.useStatusColors 
+      ? getMenuItemColor(itemLabel) 
+      : { glow: this.config.glowColor, text: this.config.textColor };
 
     if (shouldBeSelected && !currentlySelected) {
-      // Apply highlight
+      // Apply highlight with status-coded glow color
       mesh.userData.isSelected = true;
-      // Only apply glow material if it's not already the glow shader
       if (!(mesh.material instanceof THREE.ShaderMaterial)) {
         const glowMaterial = getGlowShaderMaterial();
-        glowMaterial.uniforms.glowColor.value = new THREE.Color(this.config.glowColor);
+        glowMaterial.uniforms.glowColor.value = new THREE.Color(statusColor.glow);
         mesh.material = glowMaterial;
       } else {
-        // If it already has glow, ensure color is correct
-        mesh.material.uniforms.glowColor.value = new THREE.Color(this.config.glowColor);
+        mesh.material.uniforms.glowColor.value = new THREE.Color(statusColor.glow);
       }
 
       // Set scale directly (animation is handled in selectItem if needed)
@@ -566,12 +582,11 @@ applyHighlightVisuals(indexToHighlight) {
       );
 
     } else if (!shouldBeSelected && currentlySelected) {
-      // Remove highlight
+      // Remove highlight - use status-coded text color
       mesh.userData.isSelected = false;
-      // Only revert to standard material if it's currently the glow shader
       if (mesh.material instanceof THREE.ShaderMaterial) {
         mesh.material = new THREE.MeshStandardMaterial({
-          color: this.config.textColor,
+          color: statusColor.text,
           transparent: true,
           opacity: this.config.opacity
         });
@@ -716,17 +731,23 @@ updateCurrentItemFromRotation() {
     // Apply visual highlight to the item that appears closest to the front *during* the scroll
     this.itemMeshes.forEach((mesh, index) => {
       const shouldBeHighlighted = (index === visuallyClosestIndex);
-      const isCurrentlyHighlighted = mesh.userData.isSelected; // Check the current visual state
+      const isCurrentlyHighlighted = mesh.userData.isSelected;
+      
+      // Get status-coded color for this menu item
+      const itemLabel = mesh.userData.originalLabel || mesh.name;
+      const statusColor = this.config.useStatusColors 
+        ? getMenuItemColor(itemLabel) 
+        : { glow: this.config.glowColor, text: this.config.textColor };
 
       if (shouldBeHighlighted && !isCurrentlyHighlighted) {
-        // Apply highlight visuals (glow, scale)
-        mesh.userData.isSelected = true; // Mark as visually selected for this frame
+        // Apply highlight visuals with status-coded glow
+        mesh.userData.isSelected = true;
         if (!(mesh.material instanceof THREE.ShaderMaterial)) {
           const glowMaterial = getGlowShaderMaterial();
-          glowMaterial.uniforms.glowColor.value = new THREE.Color(this.config.glowColor);
+          glowMaterial.uniforms.glowColor.value = new THREE.Color(statusColor.glow);
           mesh.material = glowMaterial;
         } else {
-          mesh.material.uniforms.glowColor.value = new THREE.Color(this.config.glowColor);
+          mesh.material.uniforms.glowColor.value = new THREE.Color(statusColor.glow);
         }
         // Apply scale instantly during scroll tracking
         mesh.scale.set(
@@ -735,11 +756,11 @@ updateCurrentItemFromRotation() {
           mesh.userData.originalScale.z * 1.2
         );
       } else if (!shouldBeHighlighted && isCurrentlyHighlighted) {
-        // Remove highlight visuals
-        mesh.userData.isSelected = false; // Mark as visually deselected for this frame
+        // Remove highlight visuals with status-coded text color
+        mesh.userData.isSelected = false;
         if (mesh.material instanceof THREE.ShaderMaterial) {
           mesh.material = new THREE.MeshStandardMaterial({
-            color: this.config.textColor,
+            color: statusColor.text,
             transparent: true,
             opacity: this.config.opacity
           });
