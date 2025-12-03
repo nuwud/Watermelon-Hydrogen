@@ -1251,9 +1251,70 @@ export function mountCarousel3D(container, menuData) {
                     console.error(`[🍉 Content] Failed to load content for main item ${itemName}:`, error);
                 });
                 
-                // Call the item click handler on the carousel
-                carousel.onItemClick?.(i, itemName);
-                carousel.selectItem(i, true);
+                // IMPORTANT: First rotate the carousel to the clicked item
+                // Then open the submenu AFTER rotation completes
+                // This ensures the item swings to front before submenu spawns
+                const hasSubmenu = !!submenus[itemName];
+                
+                if (hasSubmenu) {
+                    // For items with submenus: rotate first, then open submenu on complete
+                    console.warn(`[🍉 Click] Item ${itemName} has submenu - rotating first, then opening`);
+                    
+                    // Calculate rotation synchronously
+                    const angleStep = (2 * Math.PI) / carousel.itemMeshes.length;
+                    const currentRotation = carousel.itemGroup.rotation.y;
+                    const targetAngle = -i * angleStep;
+                    
+                    // Shortest angular distance
+                    const twoPi = Math.PI * 2;
+                    let current = ((currentRotation % twoPi) + twoPi) % twoPi;
+                    let target = ((targetAngle % twoPi) + twoPi) % twoPi;
+                    let delta = target - current;
+                    if (delta > Math.PI) delta -= twoPi;
+                    if (delta < -Math.PI) delta += twoPi;
+                    
+                    const newRotation = currentRotation + delta;
+                    carousel.currentIndex = i;
+                    carousel.targetRotation = newRotation;
+                    
+                    // Apply visual highlight immediately
+                    carousel.itemMeshes.forEach((mesh, idx) => {
+                        const isSelected = (idx === i);
+                        mesh.userData.isSelected = isSelected;
+                        if (isSelected) {
+                            gsap.to(mesh.scale, {
+                                x: mesh.userData.originalScale.x * 1.2,
+                                y: mesh.userData.originalScale.y * 1.2,
+                                z: mesh.userData.originalScale.z * 1.2,
+                                duration: 0.3
+                            });
+                        } else {
+                            gsap.to(mesh.scale, {
+                                x: mesh.userData.originalScale.x,
+                                y: mesh.userData.originalScale.y,
+                                z: mesh.userData.originalScale.z,
+                                duration: 0.3
+                            });
+                        }
+                    });
+                    
+                    // Animate rotation, THEN open submenu on complete
+                    gsap.to(carousel.itemGroup.rotation, {
+                        y: newRotation,
+                        duration: 0.6,
+                        ease: "power2.out",
+                        onComplete: () => {
+                            console.warn(`[🍉 Click] Rotation complete, now opening submenu for ${itemName}`);
+                            carousel.applyHighlightVisuals?.(i);
+                            // Now open the submenu
+                            carousel.onItemClick?.(i, itemName);
+                        }
+                    });
+                } else {
+                    // For items without submenus: just select normally
+                    console.warn(`[🍉 Click] Item ${itemName} has no submenu - standard selection`);
+                    carousel.selectItem(i, true);
+                }
                 break;
             }
         }
