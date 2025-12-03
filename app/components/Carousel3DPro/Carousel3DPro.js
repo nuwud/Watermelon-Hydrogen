@@ -390,6 +390,9 @@ export class Carousel3DPro extends Group {
 setupEventListeners() {
   if (typeof window === 'undefined') return;
 
+  // Track hovered item for rollover effects
+  this.hoveredIndex = -1;
+
   const handleClick = (event) => {
     if (!this.parent?.userData?.camera) return;
     const mouse = new THREE.Vector2(
@@ -410,7 +413,41 @@ setupEventListeners() {
     }
   };
 
+  // Handle mouse move for hover/rollover effects
+  const handleMouseMove = (event) => {
+    if (!this.parent?.userData?.camera) return;
+    const mouse = new THREE.Vector2(
+      (event.clientX / window.innerWidth) * 2 - 1,
+      -(event.clientY / window.innerHeight) * 2 + 1
+    );
+    this.raycaster.setFromCamera(mouse, this.parent.userData.camera);
+    const intersects = this.raycaster.intersectObjects(this.clickableObjects, false);
+
+    let newHoveredIndex = -1;
+    if (intersects.length > 0) {
+      const hitObject = intersects[0].object;
+      const hitData = hitObject.userData;
+      if (hitData && typeof hitData.index === 'number') {
+        newHoveredIndex = hitData.index;
+      }
+    }
+
+    // Only update if hovered item changed
+    if (newHoveredIndex !== this.hoveredIndex) {
+      this.hoveredIndex = newHoveredIndex;
+      this.updateHoverVisuals();
+      
+      // Dispatch hover event for skyball
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('carousel-item-hover', { 
+          detail: { index: newHoveredIndex } 
+        }));
+      }
+    }
+  };
+
   window.addEventListener('click', handleClick);
+  window.addEventListener('mousemove', handleMouseMove, { passive: true });
   window.addEventListener('wheel', this.handleWheel.bind(this), { passive: false });
   window.addEventListener('mainmenu-scroll', (e) => {
     const delta = e.detail.delta;
@@ -418,6 +455,48 @@ setupEventListeners() {
       this.goToNext();
     } else {
       this.goToPrev();
+    }
+  });
+}
+
+/**
+ * Updates visual hover effects on menu items.
+ * Non-selected items get a bright glow when hovered.
+ */
+updateHoverVisuals() {
+  if (!this.itemMeshes) return;
+  
+  this.itemMeshes.forEach((mesh, index) => {
+    const isSelected = mesh.userData.isSelected;
+    const isHovered = index === this.hoveredIndex;
+    
+    // Skip selected items - they already have full glow
+    if (isSelected) return;
+    
+    if (isHovered) {
+      // Apply bright hover effect - white with cyan tint
+      if (!(mesh.material instanceof THREE.ShaderMaterial)) {
+        mesh.material.color.setHex(0xaaeeff); // Bright cyan-white
+        mesh.material.emissive = new THREE.Color(0x446688);
+        mesh.material.emissiveIntensity = 0.6;
+      }
+      // Scale up slightly on hover
+      const hoverScale = mesh.userData.originalScale.clone().multiplyScalar(1.08);
+      gsap.to(mesh.scale, { x: hoverScale.x, y: hoverScale.y, z: hoverScale.z, duration: 0.15 });
+    } else {
+      // Restore normal non-selected appearance
+      if (!(mesh.material instanceof THREE.ShaderMaterial)) {
+        mesh.material.color.setHex(0xdddddd); // Bright gray-white
+        mesh.material.emissive = new THREE.Color(0x222233);
+        mesh.material.emissiveIntensity = 0.2;
+      }
+      // Restore original scale
+      gsap.to(mesh.scale, {
+        x: mesh.userData.originalScale.x,
+        y: mesh.userData.originalScale.y,
+        z: mesh.userData.originalScale.z,
+        duration: 0.15
+      });
     }
   });
 }

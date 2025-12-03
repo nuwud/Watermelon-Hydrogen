@@ -9,7 +9,7 @@
 // Admin controls can override these later
 export function getMenuItemColor(label) {
   // Return consistent white glow for all items (professional look)
-  return { glow: 0xffffff, text: 0xccddee };
+  return { glow: 0xffffff, text: 0xeeeeff };
 }
 
 // Default configuration for carousel
@@ -19,18 +19,24 @@ export const defaultCarouselStyle = {
   fontSize: 0.5,
   fontHeight: 0.1,
   
-  // Colors - WHITE glow, bright text for visibility
+  // Colors - WHITE glow, BRIGHT text for visibility
   glowColor: 0xffffff,           // White glow for selected
-  textColor: 0xccddee,           // Light blue-gray for non-selected (bright)
+  textColor: 0xddddee,           // Bright white-blue for non-selected
   selectedTextColor: 0xffffff,   // Pure white for selected item
   backgroundColor: 0x1a1a2e,     // Dark blue background
   
+  // Hover colors - bright cyan-white for rollover
+  hoverTextColor: 0xaaeeff,      // Bright cyan on hover
+  hoverEmissive: 0x446688,       // Blue glow on hover
+  hoverEmissiveIntensity: 0.6,   // Strong hover glow
+  
   // Submenu colors - brighter for visibility
-  submenuTextColor: 0xaaccff,    // Brighter blue for submenu items
-  submenuGlowColor: 0x88ccff,    // Soft blue glow for submenu selected
+  submenuTextColor: 0xccddff,    // Bright blue for submenu items
+  submenuGlowColor: 0xaaccff,    // Bright blue glow for submenu selected
+  submenuHoverColor: 0xeeffff,   // Very bright on submenu hover
   
   // Transparency
-  opacity: 0.9,                  // Higher opacity for visibility
+  opacity: 0.95,                 // High opacity for visibility
   selectedOpacity: 1.0,
   
   // Layout
@@ -40,6 +46,7 @@ export const defaultCarouselStyle = {
   // Animations
   rotationSpeed: 0.05,
   selectionScale: 1.2,
+  hoverScale: 1.08,              // Slight scale on hover
   animationDuration: 0.8,
   
   // Glow effect
