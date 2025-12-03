@@ -675,24 +675,29 @@ export class Carousel3DSubmenu extends THREE.Group {
     
     this.raycaster.setFromCamera(mouse, camera);
     
-    // Build array of all clickable objects in submenu
-    const clickableObjects = [];
-    this.itemMeshes.forEach(container => {
-      clickableObjects.push(...container.children);
-    });
-    
-    const intersects = this.raycaster.intersectObjects(clickableObjects, true);
+    // Use recursive intersection on the entire submenu (same as click detection)
+    // This will hit hitAreas, text meshes, icons, etc.
+    const intersects = this.raycaster.intersectObject(this, true);
     
     let newHoveredIndex = -1;
     if (intersects.length > 0) {
-      // Find the parent container with the index
-      let current = intersects[0].object;
-      while (current && current !== this.itemGroup) {
-        if (typeof current.userData?.index === 'number') {
-          newHoveredIndex = current.userData.index;
-          break;
+      const obj = intersects[0].object;
+      
+      // Check if hit object or its parent is a submenu item (same logic as click handler)
+      if (obj.userData?.isSubmenuItem && typeof obj.userData.index === 'number') {
+        newHoveredIndex = obj.userData.index;
+      } else if (obj.parent?.userData?.isSubmenuItem && typeof obj.parent.userData.index === 'number') {
+        newHoveredIndex = obj.parent.userData.index;
+      } else {
+        // Walk up the hierarchy to find container with index
+        let current = obj.parent;
+        while (current && current !== this) {
+          if (current.userData?.isSubmenuItem && typeof current.userData.index === 'number') {
+            newHoveredIndex = current.userData.index;
+            break;
+          }
+          current = current.parent;
         }
-        current = current.parent;
       }
     }
     
