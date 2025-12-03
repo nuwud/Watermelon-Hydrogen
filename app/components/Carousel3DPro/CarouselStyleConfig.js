@@ -47,8 +47,8 @@ export const defaultCarouselStyle = {
   // Submenu open state - dim main menu when submenu is active
   submenuOpenDim: {
     enabled: true,
-    mainMenuDimAmount: 0.55,     // How much to dim main menu (slightly less dim)
-    selectedItemDimAmount: 0.65, // Slightly less dim for selected item
+    mainMenuDimAmount: 0.35,     // Noticeably dimmer when submenu open
+    selectedItemDimAmount: 0.45, // Selected item also dims but slightly less
   },
   
   // Transparency

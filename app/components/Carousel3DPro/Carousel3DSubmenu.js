@@ -424,9 +424,10 @@ export class Carousel3DSubmenu extends THREE.Group {
       const container = new THREE.Group();
       container.add(mesh);
       container.userData.index = index;
-      const hitAreaWidth = textWidth + 1.2;
-      const hitAreaHeight = Math.max(textHeight, 0.6);
-      const hitAreaDepth = 0.3;
+      // BIGGER hitboxes for easier clicking
+      const hitAreaWidth = Math.max(textWidth + 2.0, 3.0); // Minimum 3.0 width
+      const hitAreaHeight = Math.max(textHeight + 0.8, 1.0); // Minimum 1.0 height
+      const hitAreaDepth = 0.8; // Deeper for more forgiving clicks
       const hitArea = new THREE.Mesh(
         new THREE.BoxGeometry(hitAreaWidth, hitAreaHeight, hitAreaDepth),
         new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.01, depthWrite: false })
@@ -644,7 +645,8 @@ export class Carousel3DSubmenu extends THREE.Group {
       const iconMesh = container.userData.iconMesh;
       if (mesh && mesh.userData?.originalColor) {
         mesh.material.color.copy(mesh.userData.originalColor);
-        mesh.material.emissive.set(0x000000);
+        mesh.material.emissive.setHex(0x4488cc); // Base glow for non-selected
+        mesh.material.emissiveIntensity = 0.5;
         mesh.scale.copy(mesh.userData.originalScale);
       }
       if (iconMesh) {
@@ -657,8 +659,10 @@ export class Carousel3DSubmenu extends THREE.Group {
     const mesh = container.userData.mesh;
     const iconMesh = container.userData.iconMesh;
     if (mesh) {
-      mesh.material.color.set(this.config.highlightColor || 0x00ffff);
-      mesh.material.emissive.set(0x003333);
+      // SELECTED: Pronounced GLOW instead of solid turquoise
+      mesh.material.color.setHex(0xffffff); // White base
+      mesh.material.emissive.setHex(0x00ccff); // Bright cyan glow
+      mesh.material.emissiveIntensity = 1.5; // Strong glow to make it obvious
       gsap.to(mesh.scale, { x: mesh.userData.originalScale.x * 1.3, y: mesh.userData.originalScale.y * 1.3, z: mesh.userData.originalScale.z * 1.3, duration: 0.3 });
     }
     if (iconMesh) {
@@ -731,8 +735,16 @@ export class Carousel3DSubmenu extends THREE.Group {
       if (!mesh) return;
       
       if (isSelected) {
-        // Selected item - keep highlight color and scale
-        // Don't override the selection highlight
+        // Selected item ALSO gets hover boost when hovered
+        if (isHovered) {
+          // Boost the glow even more on hover
+          mesh.material.emissive.setHex(0x00ffff); // Brighter cyan
+          mesh.material.emissiveIntensity = 2.0; // Maximum glow
+        } else {
+          // Normal selected state - pronounced glow
+          mesh.material.emissive.setHex(0x00ccff);
+          mesh.material.emissiveIntensity = 1.5;
+        }
         return;
       }
       
@@ -820,7 +832,8 @@ export class Carousel3DSubmenu extends THREE.Group {
         const icon = prev.userData.iconMesh;
         if (mesh) {
           mesh.material.color.copy(mesh.userData.originalColor);
-          mesh.material.emissive.set(0x000000);
+          mesh.material.emissive.setHex(0x4488cc); // Base glow for non-selected
+          mesh.material.emissiveIntensity = 0.5;
           gsap.to(mesh.scale, { ...mesh.userData.originalScale, duration: 0.3 });
         }
         if (icon) {
@@ -833,8 +846,10 @@ export class Carousel3DSubmenu extends THREE.Group {
       const mesh = selected.userData.mesh;
       const icon = selected.userData.iconMesh;
       if (mesh) {
-        mesh.material.color.set(this.config.highlightColor || 0x00ffff);
-        mesh.material.emissive.set(0x003333);
+        // SELECTED: Pronounced GLOW instead of solid turquoise
+        mesh.material.color.setHex(0xffffff); // White base
+        mesh.material.emissive.setHex(0x00ccff); // Bright cyan glow
+        mesh.material.emissiveIntensity = 1.5; // Strong glow
         gsap.to(mesh.scale, { x: mesh.userData.originalScale.x * 1.3, y: mesh.userData.originalScale.y * 1.3, z: mesh.userData.originalScale.z * 1.3, duration: 0.3 });
       }
       if (icon) {
