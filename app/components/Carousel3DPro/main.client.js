@@ -83,8 +83,34 @@ export function mountCarousel3D(container, menuData) {
     const scene = new THREE.Scene(); // Create a new Three.js scene
     let currentTheme = defaultCarouselStyle; // Initialize with default theme
     scene.background = new THREE.Color(0x0a0a1a); // Dark blue-black background
+    
+    // Add fog for distance dimming effect
+    scene.fog = new THREE.Fog(0x0a0a1a, 8, 35); // Start fading at distance 8, fully faded at 35
+    
     const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000); // Set up camera
     camera.position.set(0, 2, 10); // Position the camera
+    
+    // --- Camera-attached spotlight for constant illumination on focus area ---
+    const cameraSpotlight = new THREE.SpotLight(0xffffff, 1.5);
+    cameraSpotlight.angle = Math.PI / 4; // 45 degree cone
+    cameraSpotlight.penumbra = 0.5; // Soft edge
+    cameraSpotlight.decay = 1.5;
+    cameraSpotlight.distance = 30;
+    cameraSpotlight.name = 'cameraSpotlight';
+    camera.add(cameraSpotlight);
+    cameraSpotlight.position.set(0, 0, 0); // At camera position
+    cameraSpotlight.target.position.set(0, 0, -10); // Pointing forward
+    camera.add(cameraSpotlight.target);
+    
+    // Add soft fill light attached to camera for overall visibility
+    const cameraFillLight = new THREE.PointLight(0x6688aa, 0.8, 20);
+    cameraFillLight.name = 'cameraFillLight';
+    camera.add(cameraFillLight);
+    cameraFillLight.position.set(0, 2, 0); // Slightly above camera
+    
+    // Add camera to scene so its children (lights) are rendered
+    scene.add(camera);
+    
     const renderer = new THREE.WebGLRenderer({ antialias: true }); // Create WebGL renderer
     renderer.setSize(window.innerWidth, window.innerHeight); // Set renderer size
     renderer.setPixelRatio(window.devicePixelRatio); // Set pixel ratio for high DPI displays
@@ -798,6 +824,27 @@ export function mountCarousel3D(container, menuData) {
     function setActiveSubmenu(submenu, { parentIndex = null } = {}) {
         activeSubmenu = submenu;
 
+        // Always notify the main carousel about submenu state change for dimming effects
+        if (typeof carousel?.setSubmenuState === 'function') {
+            if (submenu) {
+                carousel.setSubmenuState({
+                    open: true,
+                    parentIndex: parentIndex ?? carousel.currentIndex ?? null,
+                    selectedChildIndex: typeof submenu.currentIndex === 'number' ? submenu.currentIndex : null,
+                });
+            } else {
+                carousel.setSubmenuState({
+                    open: false,
+                    parentIndex: null,
+                    selectedChildIndex: null,
+                });
+            }
+            // Force visual update after state change
+            if (typeof carousel.updateHoverVisuals === 'function') {
+                carousel.updateHoverVisuals();
+            }
+        }
+
         if (mobileEnhancementsEnabled) {
             if (submenu) {
                 carousel.lockRing?.();
@@ -1343,6 +1390,24 @@ export function mountCarousel3D(container, menuData) {
     // Start the animation loop with debug checks
     animate();
     periodicSubmenuCheck();
+    
+    // --- Global mousemove handler for submenu hover effects ---
+    const hoverMouse = new THREE.Vector2();
+    function handleGlobalMouseMove(event) {
+        // Update mouse coordinates for hover detection
+        const rect = renderer.domElement.getBoundingClientRect();
+        hoverMouse.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+        hoverMouse.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+        
+        // Check submenu hover if submenu is active
+        if (activeSubmenu && typeof activeSubmenu.checkHover === 'function') {
+            activeSubmenu.checkHover(hoverMouse, camera);
+        }
+    }
+    
+    // Attach global mousemove for submenu hover
+    window.addEventListener('mousemove', handleGlobalMouseMove, { passive: true });
+    
     // Add debug logging to track submenu front-facing logic
     function debugSubmenuFrontFacing(submenu) { // Check if submenu is defined and has itemMeshes
         if (!submenu || !submenu.itemMeshes) return; // Check if submenu is defined and has itemMeshes

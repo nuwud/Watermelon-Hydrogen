@@ -27,6 +27,7 @@ export class Carousel3DSubmenu extends THREE.Group {
     // State
     this.itemMeshes = [];
     this.currentIndex = 0;
+    this.hoveredIndex = -1; // Track hovered item for rollover effects
     this.watermillRadius = 1.2;
     this.mainCarouselHomeAngle = typeof config.mainCarouselHomeAngle === 'number' ? config.mainCarouselHomeAngle : 0;
     this.rotationAngle = 0;
@@ -36,6 +37,9 @@ export class Carousel3DSubmenu extends THREE.Group {
     this.isAnimating = false;
     this.selectionInProgress = false;
     this.lastSelectTimestamp = 0;
+    
+    // Raycaster for hover detection
+    this.raycaster = new THREE.Raycaster();
 
     // Guard for selection/scroll/highlight race conditions
     this.guard = config.guard instanceof SelectionGuard ? config.guard : new SelectionGuard();
@@ -405,7 +409,16 @@ export class Carousel3DSubmenu extends THREE.Group {
       geometry.center();
       const textWidth = geometry.boundingBox.max.x - geometry.boundingBox.min.x;
       const textHeight = geometry.boundingBox.max.y - geometry.boundingBox.min.y;
-      const material = new THREE.MeshStandardMaterial({ color: this.config.textColor || 0xffffff, transparent: true, opacity: 0.9, emissive: this.config.textEmissive || 0x222222, emissiveIntensity: 0.2 });
+      // Enhanced text material with better glow for dark blue background
+      const material = new THREE.MeshStandardMaterial({ 
+        color: this.config.textColor || 0xffffff, 
+        transparent: true, 
+        opacity: 1.0, 
+        emissive: this.config.textEmissive || 0x3366aa, // Brighter blue emissive
+        emissiveIntensity: 0.5, // Stronger glow
+        metalness: 0.1,
+        roughness: 0.6
+      });
       const mesh = new THREE.Mesh(geometry, material);
 
       const container = new THREE.Group();
@@ -649,6 +662,130 @@ export class Carousel3DSubmenu extends THREE.Group {
         .to(iconMesh.rotation, { x: Math.PI * 0.8, y: Math.PI * 2, z: Math.PI * 0.5, duration: 1, ease: 'power1.inOut' })
         .to(iconMesh.rotation, { x: 0, z: 0, duration: 0.3, ease: 'back.out(2)' }, '-=0.1');
     }
+  }
+
+  /**
+   * Check for hover on submenu items and apply hover effects.
+   * Called from main.client.js during mousemove events.
+   * @param {THREE.Vector2} mouse - Normalized device coordinates (-1 to 1)
+   * @param {THREE.Camera} camera - The camera for raycasting
+   */
+  checkHover(mouse, camera) {
+    if (!this.itemMeshes || this.itemMeshes.length === 0 || !camera) return;
+    
+    this.raycaster.setFromCamera(mouse, camera);
+    
+    // Build array of all clickable objects in submenu
+    const clickableObjects = [];
+    this.itemMeshes.forEach(container => {
+      clickableObjects.push(...container.children);
+    });
+    
+    const intersects = this.raycaster.intersectObjects(clickableObjects, true);
+    
+    let newHoveredIndex = -1;
+    if (intersects.length > 0) {
+      // Find the parent container with the index
+      let current = intersects[0].object;
+      while (current && current !== this.itemGroup) {
+        if (typeof current.userData?.index === 'number') {
+          newHoveredIndex = current.userData.index;
+          break;
+        }
+        current = current.parent;
+      }
+    }
+    
+    // Only update if hovered item changed
+    if (newHoveredIndex !== this.hoveredIndex) {
+      this.hoveredIndex = newHoveredIndex;
+      this.updateHoverVisuals();
+    }
+  }
+
+  /**
+   * Updates hover visual effects on submenu items.
+   * Non-selected items get a subtle glow when hovered.
+   */
+  updateHoverVisuals() {
+    if (!this.itemMeshes) return;
+    
+    this.itemMeshes.forEach((container, index) => {
+      const mesh = container.userData.mesh;
+      const iconMesh = container.userData.iconMesh;
+      const isSelected = index === this.currentIndex;
+      const isHovered = index === this.hoveredIndex;
+      
+      if (!mesh) return;
+      
+      if (isSelected) {
+        // Selected item - keep highlight color and scale
+        // Don't override the selection highlight
+        return;
+      }
+      
+      if (isHovered) {
+        // Hover effect - subtle glow and scale up
+        mesh.material.color.setHex(0xffffff); // Pure white on hover
+        mesh.material.emissive.setHex(0x4488cc); // Blue glow
+        mesh.material.emissiveIntensity = 0.6;
+        
+        // Subtle scale up
+        const targetScale = mesh.userData.originalScale ? 
+          mesh.userData.originalScale.clone().multiplyScalar(1.1) :
+          new THREE.Vector3(1.1, 1.1, 1.1);
+        gsap.to(mesh.scale, { 
+          x: targetScale.x, 
+          y: targetScale.y, 
+          z: targetScale.z, 
+          duration: 0.15,
+          ease: 'power2.out'
+        });
+        
+        // Scale icon on hover too
+        if (iconMesh && iconMesh.userData.originalScale) {
+          const iconTarget = iconMesh.userData.originalScale.clone().multiplyScalar(1.1);
+          gsap.to(iconMesh.scale, {
+            x: iconTarget.x,
+            y: iconTarget.y,
+            z: iconTarget.z,
+            duration: 0.15,
+            ease: 'power2.out'
+          });
+        }
+      } else {
+        // Not hovered, not selected - reset to normal
+        if (mesh.userData.originalColor) {
+          mesh.material.color.copy(mesh.userData.originalColor);
+        } else {
+          mesh.material.color.setHex(0xffffff);
+        }
+        mesh.material.emissive.setHex(0x222266); // Subtle blue emissive for readability
+        mesh.material.emissiveIntensity = 0.3;
+        
+        // Restore original scale
+        if (mesh.userData.originalScale) {
+          gsap.to(mesh.scale, {
+            x: mesh.userData.originalScale.x,
+            y: mesh.userData.originalScale.y,
+            z: mesh.userData.originalScale.z,
+            duration: 0.15,
+            ease: 'power2.out'
+          });
+        }
+        
+        // Restore icon scale
+        if (iconMesh && iconMesh.userData.originalScale) {
+          gsap.to(iconMesh.scale, {
+            x: iconMesh.userData.originalScale.x,
+            y: iconMesh.userData.originalScale.y,
+            z: iconMesh.userData.originalScale.z,
+            duration: 0.15,
+            ease: 'power2.out'
+          });
+        }
+      }
+    });
   }
 
   selectItem(index, animate = true, createPreview = false) {
