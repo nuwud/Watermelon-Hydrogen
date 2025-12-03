@@ -88,7 +88,8 @@ export function Carousel3DMenu({menuData}) {
             position: 'relative',
           }}
         >
-          <BackgroundStage />
+          {/* BackgroundStage disabled - background now integrated into carousel scene via BackgroundManager */}
+          {/* <BackgroundStage /> */}
           {isClientReady && (
             <Suspense fallback={<div style={{color: 'cyan'}}>Loading 3D...</div>}>
               <Carousel3DProWrapper items={items} />

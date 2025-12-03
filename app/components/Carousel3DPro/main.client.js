@@ -19,8 +19,10 @@ import {ContentManager} from '../../utils/contentManager.js';
 import {getItemAngles} from '../../utils/carouselAngleUtils.js';
 import {enhanceCartIntegration} from '../../utils/cartIntegrationEnhancer.js';
 
-// NOTE: Background system is now handled by BackgroundStage React component
-// Access via window.__wmBackground API: getMode(), setMode(), cycleMode(), getValidModes()
+// Background system imports (dynamic to avoid SSR issues)
+let BackgroundManager = null;
+let InteractivePolygonsWall = null;
+let BackgroundDome = null;
 
 // --- RUNTIME FACTORY (browser-only) ---
 // Builds and mounts the 3D carousel and returns control hooks.
@@ -88,9 +90,51 @@ export function mountCarousel3D(container, menuData) {
     renderer.setPixelRatio(window.devicePixelRatio); // Set pixel ratio for high DPI displays
     container.appendChild(renderer.domElement); // Append renderer to the container
 
-    // NOTE: Background rendering is now handled by BackgroundStage (React component)
-    // The unified background system lives in app/components/backgrounds/BackgroundStage.jsx
-    // Access via window.__wmBackground API: getMode(), setMode(), cycleMode()
+    // --- BackgroundManager Setup ---
+    let backgroundManager = null;
+
+    // Initialize background system asynchronously to avoid SSR issues
+    (async () => {
+        try {
+            const bgModule = await import('./backgrounds/BackgroundManager.js');
+            const hexagonModule = await import('./backgrounds/InteractiveHexagonWall.js');
+            const polygonsModule = await import('./backgrounds/InteractivePolygonsWall.js');
+            const domeModule = await import('./BackgroundDome.js');
+
+            BackgroundManager = bgModule.BackgroundManager;
+            const InteractiveHexagonWall = hexagonModule.default;
+            InteractivePolygonsWall = polygonsModule.default;
+            BackgroundDome = domeModule.BackgroundDome;
+
+            backgroundManager = new BackgroundManager(scene, camera, renderer, {
+                defaultBackground: 'hexagons',
+                persistSelection: true,
+            });
+
+            // Register available backgrounds
+            backgroundManager.register('hexagons', InteractiveHexagonWall, { label: 'Interactive Hexagon Wall' });
+            backgroundManager.register('polygons', InteractivePolygonsWall, { label: 'Interactive Polygons Wall' });
+            backgroundManager.register('dome', BackgroundDome, { label: 'Iridescent Dome' });
+
+            // Try to restore last selected background, default to hexagons if none stored
+            const stored = localStorage.getItem('wm_background_mode');
+            if (stored && backgroundManager.backgrounds.has(stored)) {
+                backgroundManager.setActive(stored);
+            } else {
+                // Set hexagons as the default
+                backgroundManager.setActive('hexagons');
+            }
+
+            console.log('[🍉 Carousel] BackgroundManager initialized with', backgroundManager.getBackgrounds().length, 'backgrounds');
+
+            // Expose for debug panel
+            if (typeof window !== 'undefined') {
+                window.__wmBackgroundManager = backgroundManager;
+            }
+        } catch (e) {
+            console.warn('[🍉 Carousel] BackgroundManager failed to initialize:', e);
+        }
+    })();
 
     // Ensure a hidden, focusable button exists for keyboard-based submenu closing
     if (!submenuCloseProxyButton) {
@@ -1253,7 +1297,10 @@ export function mountCarousel3D(container, menuData) {
                     console.warn('[Watermelon] Active submenu exists but update method is missing or not a function');
                 }
                 
-                // NOTE: Background updates are handled by BackgroundStage React component
+                // Update background manager (integrated polygon wall, etc.)
+                if (backgroundManager) {
+                    backgroundManager.update(0.016);
+                }
                 
                 controls.update(); 
                 renderer.render(scene, camera); 
@@ -1349,7 +1396,16 @@ export function mountCarousel3D(container, menuData) {
             console.warn("Cleared waitForWindowWM interval."); // Debug log
         }
         console.warn("Timeouts and intervals cleared."); // Debug log
-        // NOTE: BackgroundManager disposal removed - background is handled by BackgroundStage React component
+        // Dispose BackgroundManager
+        if (backgroundManager) {
+            try {
+                backgroundManager.dispose();
+                backgroundManager = null;
+                console.warn("BackgroundManager disposed."); // Debug log
+            } catch (e) {
+                console.warn("BackgroundManager dispose error:", e);
+            }
+        }
         // Phase 2: Remove Global Event Listeners
         console.warn("Removing global event listeners..."); // Debug log
         detachMobilePointerHandlers();
@@ -1535,12 +1591,15 @@ export function mountCarousel3D(container, menuData) {
                 })));
             },
             repairState: repairBrokenState,
-            // Background management utilities - now via BackgroundStage React component
-            // Access window.__wmBackground for: getMode(), setMode(), cycleMode(), getValidModes()
-            getBackgroundMode: () => window.__wmBackground?.getMode?.() || 'honeycomb',
-            setBackgroundMode: (mode) => window.__wmBackground?.setMode?.(mode),
-            cycleBackgroundMode: () => window.__wmBackground?.cycleMode?.(),
-            getValidBackgroundModes: () => window.__wmBackground?.getValidModes?.() || [],
+            // Background management utilities - via integrated BackgroundManager
+            getBackgroundManager: () => backgroundManager,
+            listBackgrounds: () => backgroundManager?.getBackgrounds() || [],
+            setBackground: (id) => backgroundManager?.setActive(id),
+            cycleBackground: () => backgroundManager?.cycleNext(),
+            getBackgroundMode: () => backgroundManager?.activeBackgroundId || 'polygons',
+            setBackgroundMode: (mode) => backgroundManager?.setActive(mode),
+            cycleBackgroundMode: () => backgroundManager?.cycleNext(),
+            getValidBackgroundModes: () => backgroundManager?.getBackgrounds()?.map(b => b.id) || ['polygons'],
         }
     };
 }

@@ -6,6 +6,7 @@
  */
 
 export { BackgroundManager } from './BackgroundManager.js';
+export { default as InteractiveHexagonWall } from './InteractiveHexagonWall.js';
 export { default as InteractivePolygonsWall } from './InteractivePolygonsWall.js';
 
 // Re-export the BackgroundDome from parent directory for convenience
