@@ -19,6 +19,11 @@ import {ContentManager} from '../../utils/contentManager.js';
 import {getItemAngles} from '../../utils/carouselAngleUtils.js';
 import {enhanceCartIntegration} from '../../utils/cartIntegrationEnhancer.js';
 
+// Background system imports (dynamic to avoid SSR issues)
+let BackgroundManager = null;
+let InteractivePolygonsWall = null;
+let BackgroundDome = null;
+
 // --- RUNTIME FACTORY (browser-only) ---
 // Builds and mounts the 3D carousel and returns control hooks.
 // Keep behavior the same; this only restores correct scoping.
@@ -84,6 +89,49 @@ export function mountCarousel3D(container, menuData) {
     renderer.setSize(window.innerWidth, window.innerHeight); // Set renderer size
     renderer.setPixelRatio(window.devicePixelRatio); // Set pixel ratio for high DPI displays
     container.appendChild(renderer.domElement); // Append renderer to the container
+
+    // --- BackgroundManager Setup ---
+    let backgroundManager = null;
+    
+    // Initialize background system asynchronously to avoid SSR issues
+    (async () => {
+        try {
+            const bgModule = await import('./backgrounds/BackgroundManager.js');
+            const polygonsModule = await import('./backgrounds/InteractivePolygonsWall.js');
+            const domeModule = await import('./BackgroundDome.js');
+            
+            BackgroundManager = bgModule.BackgroundManager;
+            InteractivePolygonsWall = polygonsModule.default;
+            BackgroundDome = domeModule.BackgroundDome;
+            
+            backgroundManager = new BackgroundManager(scene, camera, renderer, {
+                defaultBackground: 'polygons',
+                persistSelection: true,
+            });
+            
+            // Register available backgrounds
+            backgroundManager.register('dome', BackgroundDome, { label: 'Iridescent Dome' });
+            backgroundManager.register('polygons', InteractivePolygonsWall, { label: 'Interactive Polygons Wall' });
+            
+            // Try to restore last selected background, default to polygons if none stored
+            const stored = localStorage.getItem('wm_background_mode');
+            if (stored && backgroundManager.backgrounds.has(stored)) {
+                backgroundManager.setActive(stored);
+            } else {
+                // Set polygons as the default
+                backgroundManager.setActive('polygons');
+            }
+            
+            console.log('[🍉 Carousel] BackgroundManager initialized with', backgroundManager.getBackgrounds().length, 'backgrounds');
+            
+            // Expose for debug panel
+            if (typeof window !== 'undefined') {
+                window.__wmBackgroundManager = backgroundManager;
+            }
+        } catch (e) {
+            console.warn('[🍉 Carousel] BackgroundManager failed to initialize:', e);
+        }
+    })();
 
     // Ensure a hidden, focusable button exists for keyboard-based submenu closing
     if (!submenuCloseProxyButton) {
@@ -1246,6 +1294,11 @@ export function mountCarousel3D(container, menuData) {
                     console.warn('[Watermelon] Active submenu exists but update method is missing or not a function');
                 }
                 
+                // Update background manager (uses deltaTime ~0.016 for 60fps)
+                if (backgroundManager) {
+                    backgroundManager.update(0.016);
+                }
+                
                 controls.update(); 
                 renderer.render(scene, camera); 
             } catch (error) {
@@ -1340,6 +1393,20 @@ export function mountCarousel3D(container, menuData) {
             console.warn("Cleared waitForWindowWM interval."); // Debug log
         }
         console.warn("Timeouts and intervals cleared."); // Debug log
+        // Phase 1.75: Dispose BackgroundManager
+        if (backgroundManager) {
+            console.warn("Disposing BackgroundManager..."); // Debug log
+            try {
+                backgroundManager.dispose();
+                backgroundManager = null;
+                if (typeof window !== 'undefined') {
+                    delete window.__wmBackgroundManager;
+                }
+                console.warn("BackgroundManager disposed."); // Debug log
+            } catch (bgError) {
+                console.error("Error disposing BackgroundManager:", bgError);
+            }
+        }
         // Phase 2: Remove Global Event Listeners
         console.warn("Removing global event listeners..."); // Debug log
         detachMobilePointerHandlers();
@@ -1524,7 +1591,12 @@ export function mountCarousel3D(container, menuData) {
                     position: [c.position.x, c.position.y, c.position.z]
                 })));
             },
-            repairState: repairBrokenState
+            repairState: repairBrokenState,
+            // Background management utilities
+            getBackgroundManager: () => backgroundManager,
+            listBackgrounds: () => backgroundManager?.getBackgrounds() || [],
+            setBackground: (id) => backgroundManager?.setActive(id),
+            cycleBackground: () => backgroundManager?.cycleNext(),
         }
     };
 }
