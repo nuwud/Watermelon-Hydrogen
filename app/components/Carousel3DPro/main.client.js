@@ -1322,7 +1322,12 @@ export function mountCarousel3D(container, menuData) {
         if (!isTransitioning) {
             // Wrap in try-catch to prevent animation loop from breaking if an update fails
             try {
-                carousel.update(); 
+                carousel.update();
+                
+                // Update distance dimming visuals every frame
+                if (typeof carousel.updateHoverVisuals === 'function') {
+                    carousel.updateHoverVisuals();
+                }
                 
                 // Update central content panel
                 if (centralPanel && centralPanel.update) {
@@ -1333,6 +1338,11 @@ export function mountCarousel3D(container, menuData) {
                 if (canUpdateSubmenu) {
                     try {
                         activeSubmenu.update();
+                        
+                        // Update submenu hover visuals every frame too
+                        if (typeof activeSubmenu.updateHoverVisuals === 'function') {
+                            activeSubmenu.updateHoverVisuals();
+                        }
                         
                         // Check if we should regenerate items if they're missing
                         if (doDetailedCheck && activeSubmenu.itemMeshes.length === 0 && activeSubmenu.font) {

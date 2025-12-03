@@ -536,18 +536,20 @@ updateHoverVisuals() {
       // Subtle hover effect - slight brightness boost and glow
       mesh.material.color.setHex(0xffffff);
       mesh.material.emissive = new THREE.Color(0x6699cc);
-      mesh.material.emissiveIntensity = 1.0 * brightnessFactor; // Toned down from 1.8
+      mesh.material.emissiveIntensity = 1.2; // Full glow on hover, no distance dimming
       mesh.material.opacity = 1.0;
       
       // Subtle scale up on hover
       const hoverScale = mesh.userData.originalScale.clone().multiplyScalar(this.config.hoverScale || 1.08);
       gsap.to(mesh.scale, { x: hoverScale.x, y: hoverScale.y, z: hoverScale.z, duration: 0.15 });
     } else {
-      // Normal non-selected appearance with distance dimming
+      // Normal non-selected appearance with VISIBLE distance dimming
       mesh.material.color.setHex(0xffffff);
       mesh.material.emissive = new THREE.Color(0x4477aa);
-      mesh.material.emissiveIntensity = 0.5 * brightnessFactor; // Reduced base glow for better distance contrast
-      mesh.material.opacity = submenuOpen ? Math.max(0.5, brightnessFactor) : Math.max(0.6, brightnessFactor);
+      // Apply distance factor directly to emissive - distant items are dimmer
+      mesh.material.emissiveIntensity = 0.6 * distanceFactor * submenuDimFactor;
+      // Also apply to opacity for more visible depth effect
+      mesh.material.opacity = distanceFactor * submenuDimFactor;
       
       // Restore original scale
       gsap.to(mesh.scale, {
