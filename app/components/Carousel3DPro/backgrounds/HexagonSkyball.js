@@ -1,24 +1,25 @@
 /**
- * HexagonSkyball - Hexagon grid mapped to inside of a sphere
- * Creates an enveloping hexagon background that wraps around the entire scene
- * Uses grid-based UV mapping like the flat wall, but wrapped onto a sphere
- * Includes mouse reactivity when not engaged with menu
+ * CerebroSkyball - Geodesic dome/sphere background (X-Men Cerebro style)
+ * Uses true 3D icosahedral tessellation with EXTRUDED triangular panels
+ * Panels have 3D depth and follow the mouse with subtle tilting
+ * Visible gaps between panels show the depth and movement
  */
 
 const DEFAULT_CONFIG = {
-    sphereRadius: 60,           // Sphere size
-    hexSize: 4.0,               // LARGER hexagons like flat wall
-    hexSpacingX: 2.1,           // Tight spacing multiplier (smaller = tighter)
-    hexSpacingY: 1.65,          // Tight vertical spacing
+    sphereRadius: 55,           // Sphere size
+    subdivisions: 3,            // Icosahedron subdivisions (2-4, higher = more panels)
+    panelDepth: 0.8,            // Extrusion depth for 3D panels
+    panelGap: 0.05,             // Gap between panels (5% shrink)
     lightIntensity: 60,
     lightDistance: 200,
     ambientIntensity: 0.5,
-    roughness: 0.5,
-    metalness: 0.2,
-    emissiveBase: 0.35,
-    lookAtStrength: 15,         // Mouse reactivity strength
+    roughness: 0.4,
+    metalness: 0.5,
+    emissiveBase: 0.3,
+    mouseInfluence: 0.15,       // How much panels tilt toward mouse (subtle)
     pauseWhenMenuActive: true,
     idleTimeout: 2000,
+    panelColors: [0x2a3d5a, 0x253652, 0x354868, 0x2f4560], // Dark blue panels for contrast
 };
 
 let THREE = null;
@@ -28,7 +29,7 @@ let camera = null;
 let config = { ...DEFAULT_CONFIG };
 
 let skyballGroup = null;
-let hexMeshes = [];
+let panelMeshes = [];
 let light1, light2, light3, light4, ambientLight, hemisphereLight;
 let animationActive = false;
 let isInteractive = true;
@@ -41,7 +42,7 @@ let mouseTarget = { x: 0, y: 0 };
 
 export async function init(sceneRef, cameraRef, rendererRef, options) {
     if (typeof window === 'undefined') return;
-    
+
     THREE = await import('three');
     try {
         const gsapModule = await import('gsap');
@@ -49,169 +50,202 @@ export async function init(sceneRef, cameraRef, rendererRef, options) {
     } catch (e) {
         gsap = null;
     }
-    
+
     scene = sceneRef;
     camera = cameraRef;
     config = { ...DEFAULT_CONFIG, ...options };
-    
+
     skyballGroup = new THREE.Group();
-    skyballGroup.name = 'HexagonSkyball_group';
+    skyballGroup.name = 'CerebroSkyball_group';
     scene.add(skyballGroup);
-    
-    createHexagonSphere();
+
+    createGeodesicSphere();
     createLights();
     setupMouseListeners();
     setupMenuActivityListeners();
-    
+
     animationActive = true;
-    console.log('[HexagonSkyball] Initialized with', hexMeshes.length, 'hexagons on sphere');
+    console.log('[CerebroSkyball] Initialized with', panelMeshes.length, 'geodesic 3D panels');
 }
 
-function createHexagonSphere() {
+function createGeodesicSphere() {
     if (!THREE || !skyballGroup) return;
-    
+
     const radius = config.sphereRadius;
-    const hexSize = config.hexSize;
+    const detail = config.subdivisions;
+
+    // Create icosahedron geometry for perfect geodesic sphere
+    const icoGeo = new THREE.IcosahedronGeometry(radius, detail);
     
-    // Create base hexagon geometry - LARGER like flat wall
-    const hexGeo = createHexagonGeometry(6, 0, 0, hexSize, 0);
-    
-    // Material with good visibility
-    const mat = new THREE.MeshStandardMaterial({
-        color: 0xffffff,
-        roughness: config.roughness,
-        metalness: config.metalness,
-        emissive: 0x223344,
-        emissiveIntensity: config.emissiveBase,
-        side: THREE.DoubleSide,
-    });
-    
-    // Grid-based placement on sphere using UV-like coordinates
-    // Calculate grid dimensions based on sphere surface area
-    const circumference = 2 * Math.PI * radius;
-    const dx = Math.cos(Math.PI / 6) * hexSize * config.hexSpacingX;
-    const dy = hexSize * config.hexSpacingY;
-    
-    // Number of hexagons around equator and from pole to pole
-    const nxEquator = Math.floor(circumference / dx);
-    const nyMeridian = Math.floor((Math.PI * radius) / dy);
-    
-    hexMeshes = [];
-    
-    for (let j = 0; j < nyMeridian; j++) {
-        // Latitude angle (phi) from 0 to PI
-        const phi = (j + 0.5) / nyMeridian * Math.PI;
-        
-        // Adjust number of hexagons per row based on latitude (fewer near poles)
-        const rowRadius = radius * Math.sin(phi);
-        const rowCircumference = 2 * Math.PI * rowRadius;
-        const nxRow = Math.max(3, Math.floor(rowCircumference / dx));
-        
-        for (let i = 0; i < nxRow; i++) {
-            // Longitude angle (theta) from 0 to 2PI
-            // Offset every other row for honeycomb pattern
-            const offset = (j % 2) * (Math.PI / nxRow);
-            const theta = (i / nxRow) * 2 * Math.PI + offset;
-            
-            const mesh = new THREE.Mesh(hexGeo, mat.clone());
-            
-            // Spherical to Cartesian conversion
-            mesh.position.x = radius * Math.sin(phi) * Math.cos(theta);
-            mesh.position.y = radius * Math.cos(phi);  // Y is up
-            mesh.position.z = radius * Math.sin(phi) * Math.sin(theta);
-            
-            // Orient hexagon to face inward (toward center)
-            mesh.lookAt(0, 0, 0);
-            
-            // Store data for animations
-            mesh.userData.originalPos = mesh.position.clone();
-            mesh.userData.originalRot = mesh.rotation.clone();
-            mesh.userData.index = hexMeshes.length;
-            mesh.userData.introComplete = false;
-            
-            hexMeshes.push(mesh);
-            skyballGroup.add(mesh);
-        }
+    // We need to get the non-indexed faces
+    const nonIndexed = icoGeo.toNonIndexed();
+    const positions = nonIndexed.attributes.position.array;
+    const faceCount = positions.length / 9; // 3 vertices * 3 coords per face
+
+    panelMeshes = [];
+
+    for (let f = 0; f < faceCount; f++) {
+        const i = f * 9;
+
+        // Get the three vertices of this triangle
+        const v1 = new THREE.Vector3(positions[i], positions[i+1], positions[i+2]);
+        const v2 = new THREE.Vector3(positions[i+3], positions[i+4], positions[i+5]);
+        const v3 = new THREE.Vector3(positions[i+6], positions[i+7], positions[i+8]);
+
+        // Calculate center of triangle (on sphere surface)
+        const center = new THREE.Vector3().addVectors(v1, v2).add(v3).divideScalar(3);
+        const normal = center.clone().normalize();
+
+        // Shrink triangle toward center for gaps
+        const shrinkFactor = 1 - config.panelGap;
+        const sv1 = v1.clone().sub(center).multiplyScalar(shrinkFactor).add(center);
+        const sv2 = v2.clone().sub(center).multiplyScalar(shrinkFactor).add(center);
+        const sv3 = v3.clone().sub(center).multiplyScalar(shrinkFactor).add(center);
+
+        // Create BufferGeometry directly for the extruded triangle
+        // This avoids the Shape/ExtrudeGeometry complexity that was causing alignment issues
+        const geometry = createExtrudedTriangle(sv1, sv2, sv3, center, normal, config.panelDepth);
+
+        // Subtle color variation
+        const colorIndex = f % config.panelColors.length;
+        const baseColor = config.panelColors[colorIndex];
+
+        const mat = new THREE.MeshStandardMaterial({
+            color: baseColor,
+            roughness: config.roughness,
+            metalness: config.metalness,
+            emissive: 0x1a2a3a,
+            emissiveIntensity: config.emissiveBase,
+            side: THREE.DoubleSide,
+        });
+
+        const mesh = new THREE.Mesh(geometry, mat);
+
+        // Store data for animations
+        mesh.userData.center = center.clone();
+        mesh.userData.normal = normal.clone();
+        mesh.userData.index = f;
+        mesh.userData.baseEmissive = config.emissiveBase;
+
+        panelMeshes.push(mesh);
+        skyballGroup.add(mesh);
     }
+
+    // Clean up
+    icoGeo.dispose();
+    nonIndexed.dispose();
 }
 
-function createHexagonGeometry(n, x, y, s, r) {
-    if (!THREE) return null;
+function createExtrudedTriangle(v1, v2, v3, center, normal, depth) {
+    // Create a prism from the triangle, extruding inward along the normal
+    const inwardNormal = normal.clone().negate();
     
-    const points = [];
-    const dt = 2 * Math.PI / n;
-    
-    for (let i = 0; i < n; i++) {
-        const t = Math.PI / 2 + r + i * dt;
-        points.push([x + Math.cos(t) * s, y + Math.sin(t) * s]);
-    }
-    
-    const shape = new THREE.Shape();
-    points.forEach((p, i) => {
-        if (i === 0) shape.moveTo(p[0], p[1]);
-        else shape.lineTo(p[0], p[1]);
-    });
-    shape.lineTo(points[0][0], points[0][1]);
-    
-    const geometry = new THREE.ExtrudeGeometry(shape, {
-        steps: 1,
-        depth: 0.6,
-        bevelEnabled: false
-    });
-    geometry.translate(0, 0, -0.3);
+    // Inner vertices (extruded inward)
+    const iv1 = v1.clone().add(inwardNormal.clone().multiplyScalar(depth));
+    const iv2 = v2.clone().add(inwardNormal.clone().multiplyScalar(depth));
+    const iv3 = v3.clone().add(inwardNormal.clone().multiplyScalar(depth));
+
+    // Create geometry with 8 triangles:
+    // - 1 front face (outer)
+    // - 1 back face (inner)
+    // - 3 side faces (2 triangles each = 6 triangles)
+    const vertices = [];
+    const normals = [];
+
+    // Helper to add a triangle with its normal
+    const addTri = (a, b, c, n) => {
+        vertices.push(a.x, a.y, a.z, b.x, b.y, b.z, c.x, c.y, c.z);
+        normals.push(n.x, n.y, n.z, n.x, n.y, n.z, n.x, n.y, n.z);
+    };
+
+    // Front face (outer) - facing outward
+    addTri(v1, v2, v3, normal);
+
+    // Back face (inner) - facing inward
+    addTri(iv3, iv2, iv1, inwardNormal);
+
+    // Side faces - each edge needs 2 triangles
+    // Edge v1-v2
+    const n12 = new THREE.Vector3().crossVectors(
+        v2.clone().sub(v1),
+        iv1.clone().sub(v1)
+    ).normalize();
+    addTri(v1, iv1, v2, n12);
+    addTri(v2, iv1, iv2, n12);
+
+    // Edge v2-v3
+    const n23 = new THREE.Vector3().crossVectors(
+        v3.clone().sub(v2),
+        iv2.clone().sub(v2)
+    ).normalize();
+    addTri(v2, iv2, v3, n23);
+    addTri(v3, iv2, iv3, n23);
+
+    // Edge v3-v1
+    const n31 = new THREE.Vector3().crossVectors(
+        v1.clone().sub(v3),
+        iv3.clone().sub(v3)
+    ).normalize();
+    addTri(v3, iv3, v1, n31);
+    addTri(v1, iv3, iv1, n31);
+
+    const geometry = new THREE.BufferGeometry();
+    geometry.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3));
+    geometry.setAttribute('normal', new THREE.Float32BufferAttribute(normals, 3));
+
     return geometry;
 }
 
 function createLights() {
     if (!THREE || !scene) return;
-    
+
     const intensity = config.lightIntensity;
     const distance = config.lightDistance;
-    
+
     // Ambient for base visibility
-    ambientLight = new THREE.AmbientLight(0x334455, config.ambientIntensity);
+    ambientLight = new THREE.AmbientLight(0x223344, config.ambientIntensity);
     ambientLight.name = 'skyball_ambient';
     scene.add(ambientLight);
-    
-    // Hemisphere light for natural gradient
-    hemisphereLight = new THREE.HemisphereLight(0x5577aa, 0x332244, 0.4);
+
+    // Hemisphere light for natural gradient (Cerebro blue-purple feel)
+    hemisphereLight = new THREE.HemisphereLight(0x4466aa, 0x221133, 0.5);
     hemisphereLight.name = 'skyball_hemisphere';
     scene.add(hemisphereLight);
-    
-    // 4 colored point lights that orbit inside
-    light1 = new THREE.PointLight(0xff4488, intensity, distance);
+
+    // 4 colored point lights that orbit inside - cooler Cerebro palette
+    light1 = new THREE.PointLight(0x6688ff, intensity, distance); // Blue
     light1.name = 'skyball_light1';
     scene.add(light1);
-    
-    light2 = new THREE.PointLight(0x44ff88, intensity, distance);
+
+    light2 = new THREE.PointLight(0x88aaff, intensity, distance); // Light blue
     light2.name = 'skyball_light2';
     scene.add(light2);
-    
-    light3 = new THREE.PointLight(0x4488ff, intensity, distance);
+
+    light3 = new THREE.PointLight(0x4466cc, intensity, distance); // Deep blue
     light3.name = 'skyball_light3';
     scene.add(light3);
-    
-    light4 = new THREE.PointLight(0xff8844, intensity, distance);
+
+    light4 = new THREE.PointLight(0x9988ff, intensity, distance); // Purple-blue
     light4.name = 'skyball_light4';
     scene.add(light4);
 }
 
 function setupMouseListeners() {
     if (typeof window === 'undefined') return;
-    
+
     function onMouseMove(e) {
         // Normalize mouse to -1 to 1
         mouseTarget.x = (e.clientX / window.innerWidth) * 2 - 1;
         mouseTarget.y = -(e.clientY / window.innerHeight) * 2 + 1;
     }
-    
+
     function onMouseEnter() { mouseOver = true; }
     function onMouseLeave() { mouseOver = false; }
-    
+
     window.addEventListener('mousemove', onMouseMove, { passive: true });
     document.body.addEventListener('mouseenter', onMouseEnter, { passive: true });
     document.body.addEventListener('mouseleave', onMouseLeave, { passive: true });
-    
+
     window._wmSkyballCleanup = window._wmSkyballCleanup || [];
     window._wmSkyballCleanup.push(() => {
         window.removeEventListener('mousemove', onMouseMove);
@@ -222,109 +256,110 @@ function setupMouseListeners() {
 
 function setupMenuActivityListeners() {
     if (typeof window === 'undefined') return;
-    
+
     function onMenuActivity() {
         isInteractive = false;
         if (menuIdleTimer) clearTimeout(menuIdleTimer);
         menuIdleTimer = setTimeout(() => { isInteractive = true; }, config.idleTimeout);
     }
-    
+
     const events = ['carousel-item-hover', 'carousel-item-click', 'carousel-submenu-open', 'carousel-submenu-close', 'carousel-rotation-start'];
     events.forEach(ev => window.addEventListener(ev, onMenuActivity, { passive: true }));
-    
+
     window._wmSkyballCleanup = window._wmSkyballCleanup || [];
     events.forEach(ev => window._wmSkyballCleanup.push(() => window.removeEventListener(ev, onMenuActivity)));
 }
 
 export function update() {
     if (!animationActive || !THREE) return;
-    
+
     const time = Date.now() * 0.001;
-    const orbitRadius = config.sphereRadius * 0.45;
-    
+    const orbitRadius = config.sphereRadius * 0.4;
+
     // Smooth mouse tracking
-    mouse.x += (mouseTarget.x - mouse.x) * 0.05;
-    mouse.y += (mouseTarget.y - mouse.y) * 0.05;
-    
+    mouse.x += (mouseTarget.x - mouse.x) * 0.08;
+    mouse.y += (mouseTarget.y - mouse.y) * 0.08;
+
     // Animate lights in 3D orbits
     if (light1) {
-        light1.position.x = Math.sin(time * 0.25) * orbitRadius;
-        light1.position.y = Math.cos(time * 0.35) * orbitRadius * 0.7;
-        light1.position.z = Math.sin(time * 0.2) * orbitRadius;
+        light1.position.x = Math.sin(time * 0.15) * orbitRadius;
+        light1.position.y = Math.cos(time * 0.2) * orbitRadius * 0.6;
+        light1.position.z = Math.sin(time * 0.12) * orbitRadius;
     }
     if (light2) {
-        light2.position.x = Math.cos(time * 0.3) * orbitRadius;
-        light2.position.y = Math.sin(time * 0.4) * orbitRadius * 0.7;
-        light2.position.z = Math.cos(time * 0.25) * orbitRadius;
+        light2.position.x = Math.cos(time * 0.18) * orbitRadius;
+        light2.position.y = Math.sin(time * 0.25) * orbitRadius * 0.6;
+        light2.position.z = Math.cos(time * 0.15) * orbitRadius;
     }
     if (light3) {
-        light3.position.x = Math.sin(time * 0.35 + Math.PI) * orbitRadius;
-        light3.position.y = Math.cos(time * 0.45 + Math.PI) * orbitRadius * 0.7;
-        light3.position.z = Math.sin(time * 0.3 + Math.PI) * orbitRadius;
+        light3.position.x = Math.sin(time * 0.2 + Math.PI) * orbitRadius;
+        light3.position.y = Math.cos(time * 0.28 + Math.PI) * orbitRadius * 0.6;
+        light3.position.z = Math.sin(time * 0.18 + Math.PI) * orbitRadius;
     }
     if (light4) {
-        light4.position.x = Math.cos(time * 0.4 + Math.PI) * orbitRadius;
-        light4.position.y = Math.sin(time * 0.5 + Math.PI) * orbitRadius * 0.7;
-        light4.position.z = Math.cos(time * 0.35 + Math.PI) * orbitRadius;
+        light4.position.x = Math.cos(time * 0.22 + Math.PI) * orbitRadius;
+        light4.position.y = Math.sin(time * 0.3 + Math.PI) * orbitRadius * 0.6;
+        light4.position.z = Math.cos(time * 0.2 + Math.PI) * orbitRadius;
     }
-    
-    // Mouse-reactive lookAt behavior when interactive (not engaged with menu)
+
+    // Subtle group rotation based on mouse - makes all panels shift together
     if (isInteractive && mouseOver) {
-        const lookAtZ = config.lookAtStrength;
-        const targetX = mouse.x * lookAtZ;
-        const targetY = mouse.y * lookAtZ;
+        const targetRotX = mouse.y * config.mouseInfluence;
+        const targetRotY = mouse.x * config.mouseInfluence;
         
-        for (let i = 0; i < hexMeshes.length; i++) {
-            const mesh = hexMeshes[i];
-            // Each hexagon looks toward a point influenced by mouse position
-            const lookTarget = new THREE.Vector3(targetX, targetY, 0);
-            
-            // Calculate direction from hex to center, then offset by mouse
-            const toCenter = mesh.position.clone().normalize();
-            const offset = lookTarget.clone().multiplyScalar(0.3);
-            const finalTarget = offset;
-            
-            // Smooth lookAt toward mouse-influenced center
-            mesh.lookAt(finalTarget);
-        }
+        skyballGroup.rotation.x += (targetRotX - skyballGroup.rotation.x) * 0.05;
+        skyballGroup.rotation.y += (targetRotY - skyballGroup.rotation.y) * 0.05;
+    } else {
+        // Gentle idle rotation
+        skyballGroup.rotation.x += (Math.sin(time * 0.1) * 0.02 - skyballGroup.rotation.x) * 0.02;
+        skyballGroup.rotation.y += (Math.cos(time * 0.08) * 0.02 - skyballGroup.rotation.y) * 0.02;
     }
-    
-    // Gentle pulse effect
-    const pulsePhase = time * 0.6;
-    for (let i = 0; i < hexMeshes.length; i++) {
-        const mesh = hexMeshes[i];
-        const phase = pulsePhase + i * 0.01;
-        const pulse = Math.sin(phase) * 0.12;
-        mesh.material.emissiveIntensity = config.emissiveBase + pulse;
+
+    // Pulse effect on panels
+    for (let i = 0; i < panelMeshes.length; i++) {
+        const mesh = panelMeshes[i];
+        const center = mesh.userData.center;
+        const waveOffset = (center.x + center.y + center.z) * 0.02;
+        const pulse = Math.sin(time * 0.5 + waveOffset) * 0.1;
+        mesh.material.emissiveIntensity = mesh.userData.baseEmissive + pulse;
+
+        // Panels facing toward mouse get extra glow
+        if (isInteractive && mouseOver) {
+            const panelDir = center.clone().normalize();
+            const mouseDir = new THREE.Vector3(mouse.x, mouse.y, -0.5).normalize();
+            const dot = panelDir.dot(mouseDir);
+            const mouseInfluence = Math.max(0, dot) * 0.25;
+            mesh.material.emissiveIntensity += mouseInfluence;
+        }
     }
 }
 
 export function setInteractive(interactive) { isInteractive = interactive; }
 
 export function dispose() {
-    console.log('[HexagonSkyball] Disposing');
+    console.log('[CerebroSkyball] Disposing');
     animationActive = false;
-    
+
     if (menuIdleTimer) { clearTimeout(menuIdleTimer); menuIdleTimer = null; }
-    
+
     if (typeof window !== 'undefined' && window._wmSkyballCleanup) {
         window._wmSkyballCleanup.forEach(fn => { try { fn(); } catch (e) {} });
         delete window._wmSkyballCleanup;
     }
-    
+
     if (skyballGroup && scene) {
         scene.remove(skyballGroup);
-        hexMeshes.forEach(m => { 
-            if (m.geometry) m.geometry.dispose(); 
-            if (m.material) m.material.dispose(); 
+        panelMeshes.forEach(m => {
+            if (m.geometry) m.geometry.dispose();
+            if (m.material) m.material.dispose();
         });
     }
-    
+
     if (scene) {
         [light1, light2, light3, light4, ambientLight, hemisphereLight].forEach(l => { if (l) scene.remove(l); });
     }
-    
-    hexMeshes = [];
+
+    panelMeshes = [];
     skyballGroup = null;
     light1 = light2 = light3 = light4 = ambientLight = hemisphereLight = null;
     scene = camera = THREE = gsap = null;
