@@ -515,24 +515,24 @@ updateHoverVisuals() {
     }
     
     if (isHovered && !submenuOpen) {
-      // Apply bright hover effect - cyan-white
-      mesh.material.color.setHex(0xccffff);
-      mesh.material.emissive = new THREE.Color(0x66aacc);
-      mesh.material.emissiveIntensity = 0.8 * brightnessFactor;
+      // Apply brilliant hover effect - pure white with strong glow
+      mesh.material.color.setHex(0xffffff);
+      mesh.material.emissive = new THREE.Color(0x88ccff);
+      mesh.material.emissiveIntensity = 1.2 * brightnessFactor;
       mesh.material.opacity = 1.0;
       
       // Scale up on hover
       const hoverScale = mesh.userData.originalScale.clone().multiplyScalar(this.config.hoverScale || 1.1);
       gsap.to(mesh.scale, { x: hoverScale.x, y: hoverScale.y, z: hoverScale.z, duration: 0.15 });
     } else {
-      // Normal non-selected appearance with distance/submenu dimming
-      const baseColor = new THREE.Color(0xe8eeff);
+      // Normal non-selected appearance - MUCH brighter white with blue tint
+      const baseColor = new THREE.Color(0xf8faff);
       baseColor.multiplyScalar(brightnessFactor);
       mesh.material.color.copy(baseColor);
       
-      mesh.material.emissive = new THREE.Color(0x334455);
-      mesh.material.emissiveIntensity = 0.25 * brightnessFactor;
-      mesh.material.opacity = Math.max(0.6, this.config.opacity * brightnessFactor);
+      mesh.material.emissive = new THREE.Color(0x445566);
+      mesh.material.emissiveIntensity = 0.35 * brightnessFactor;
+      mesh.material.opacity = Math.max(0.7, this.config.opacity * brightnessFactor);
       
       // Restore original scale
       gsap.to(mesh.scale, {

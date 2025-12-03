@@ -152,10 +152,10 @@ export class Carousel3DSubmenu extends THREE.Group {
           textGeometry.center();
           const textMaterial = new THREE.MeshStandardMaterial({
             color: 0xffffff,
-            emissive: 0x99ccff,
-            emissiveIntensity: 0.5,
+            emissive: 0xaaddff,
+            emissiveIntensity: 0.7,
             transparent: true,
-            opacity: 0.9
+            opacity: 1.0
           });
           text = new THREE.Mesh(textGeometry, textMaterial);
           text.scale.set(0.75, 0.75, 0.75);

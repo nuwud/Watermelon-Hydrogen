@@ -8,19 +8,19 @@
 const DEFAULT_CONFIG = {
     sphereRadius: 55,           // Sphere size
     subdivisions: 3,            // Icosahedron subdivisions (2-4, higher = more panels)
-    panelDepth: 1.2,            // Extrusion depth for 3D panels
-    panelGap: 0.06,             // Gap between panels (larger for visible edges)
-    lightIntensity: 60,
+    panelDepth: 0.8,            // Extrusion depth for 3D panels (reduced for cleaner look)
+    panelGap: 0.04,             // Gap between panels (smaller for tighter look)
+    lightIntensity: 70,
     lightDistance: 200,
-    ambientIntensity: 0.5,
-    roughness: 0.4,
-    metalness: 0.5,
-    emissiveBase: 0.3,
-    lookAtStrength: 40,         // How strongly panels follow mouse
-    lookAtZ: 30,                // Z position of lookAt target
+    ambientIntensity: 0.6,
+    roughness: 0.5,
+    metalness: 0.4,
+    emissiveBase: 0.35,
+    lookAtStrength: 35,         // How strongly panels follow mouse
+    lookAtZ: 25,                // Z position of lookAt target (closer for smoother effect)
     pauseWhenMenuActive: true,
     idleTimeout: 2000,
-    panelColors: [0x3a4d6a, 0x2f4562, 0x445877, 0x3d506b], // Blue-gray panels
+    panelColors: [0x2a3d5a, 0x253652, 0x354868, 0x2f4560], // Darker blue panels for contrast
 };
 
 let THREE = null;
@@ -102,16 +102,19 @@ function createGeodesicSphere() {
         const sv2 = v2.clone().sub(center).multiplyScalar(shrinkFactor).add(center);
         const sv3 = v3.clone().sub(center).multiplyScalar(shrinkFactor).add(center);
         
-        // Create 2D triangle shape for extrusion
-        // Project to local 2D space for the Shape
+        // Create consistent local coordinate frame on the sphere surface
         const normal = centerNormalized.clone();
-        const up = new THREE.Vector3(0, 1, 0);
-        if (Math.abs(normal.dot(up)) > 0.99) up.set(1, 0, 0);
         
-        const tangent = new THREE.Vector3().crossVectors(up, normal).normalize();
-        const bitangent = new THREE.Vector3().crossVectors(normal, tangent);
+        // Choose a consistent reference vector to create tangent
+        // Use world Y unless face is near poles, then use X
+        let refVec = new THREE.Vector3(0, 1, 0);
+        if (Math.abs(normal.y) > 0.95) refVec.set(1, 0, 0);
         
-        // Project vertices to 2D local space
+        // Create orthonormal basis (tangent, bitangent on sphere surface)
+        const tangent = new THREE.Vector3().crossVectors(refVec, normal).normalize();
+        const bitangent = new THREE.Vector3().crossVectors(normal, tangent).normalize();
+        
+        // Project vertices to 2D local space using the basis
         const toLocal = (v) => {
             const rel = v.clone().sub(center);
             return new THREE.Vector2(rel.dot(tangent), rel.dot(bitangent));
@@ -128,17 +131,24 @@ function createGeodesicSphere() {
         shape.lineTo(p3.x, p3.y);
         shape.lineTo(p1.x, p1.y);
         
-        // Extrude for 3D depth
+        // Extrude for 3D depth - extrude INWARD (negative Z in local space)
         const extrudeSettings = {
             steps: 1,
             depth: config.panelDepth,
             bevelEnabled: true,
-            bevelThickness: 0.15,
-            bevelSize: 0.1,
+            bevelThickness: 0.12,
+            bevelSize: 0.08,
             bevelSegments: 2
         };
         
         const triGeo = new THREE.ExtrudeGeometry(shape, extrudeSettings);
+        
+        // Center the geometry so it rotates around its center
+        triGeo.computeBoundingBox();
+        const bbox = triGeo.boundingBox;
+        const centerOffset = new THREE.Vector3();
+        bbox.getCenter(centerOffset);
+        triGeo.translate(-centerOffset.x, -centerOffset.y, -config.panelDepth / 2);
         
         // Subtle color variation
         const colorIndex = f % config.panelColors.length;
@@ -155,19 +165,22 @@ function createGeodesicSphere() {
         
         const mesh = new THREE.Mesh(triGeo, mat);
         
-        // Position at center and orient facing inward
+        // Position at sphere surface
         mesh.position.copy(center);
         
-        // Create rotation matrix to align with sphere surface
-        const quaternion = new THREE.Quaternion();
-        quaternion.setFromUnitVectors(new THREE.Vector3(0, 0, 1), normal.clone().negate());
-        mesh.quaternion.copy(quaternion);
+        // Build rotation matrix from our orthonormal basis
+        // tangent = local X, bitangent = local Y, normal = local Z (facing inward)
+        const rotationMatrix = new THREE.Matrix4();
+        rotationMatrix.makeBasis(tangent, bitangent, normal.clone().negate());
+        mesh.quaternion.setFromRotationMatrix(rotationMatrix);
         
         // Store data for animations
         mesh.userData.originalPos = center.clone();
         mesh.userData.center = center.clone();
         mesh.userData.normal = centerNormalized.clone();
         mesh.userData.originalQuaternion = mesh.quaternion.clone();
+        mesh.userData.tangent = tangent.clone();
+        mesh.userData.bitangent = bitangent.clone();
         mesh.userData.index = f;
         mesh.userData.baseEmissive = config.emissiveBase;
         mesh.userData.introComplete = true;
@@ -301,14 +314,51 @@ export function update() {
         lookAtZ = config.lookAtZ + 20;
     }
     
-    const lookAtTarget = new THREE.Vector3(lookAtX, lookAtY, lookAtZ);
+    // Calculate lookAt influence for panels - smooth, subtle tilting
+    let tiltX, tiltY;
     
-    // Make each panel look at the mouse target
+    if (isInteractive && mouseOver) {
+        // Mouse-driven tilt
+        tiltX = mouse.x * config.lookAtStrength * 0.02; // Convert to radians-like value
+        tiltY = mouse.y * config.lookAtStrength * 0.02;
+    } else {
+        // Gentle idle movement
+        tiltX = Math.sin(time * 0.2) * 0.15;
+        tiltY = Math.cos(time * 0.15) * 0.1;
+    }
+    
+    // Make each panel tilt toward the mouse while maintaining base orientation
     for (let i = 0; i < panelMeshes.length; i++) {
         const mesh = panelMeshes[i];
-        if (mesh.userData.introComplete) {
-            // Each panel rotates to face the lookAt target
-            mesh.lookAt(lookAtTarget);
+        if (mesh.userData.introComplete && mesh.userData.originalQuaternion) {
+            // Start from original orientation
+            mesh.quaternion.copy(mesh.userData.originalQuaternion);
+            
+            // Calculate per-panel tilt based on position on sphere
+            const center = mesh.userData.center;
+            const normalizedCenter = center.clone().normalize();
+            
+            // Panels facing toward the mouse get more tilt
+            const mouseDir = new THREE.Vector3(mouse.x, mouse.y, -0.5).normalize();
+            const facing = Math.max(0, normalizedCenter.dot(mouseDir));
+            
+            // Create subtle tilt rotation
+            const tiltAmount = facing * 0.3 + 0.1; // Base tilt + mouse influence
+            const tiltQuat = new THREE.Quaternion();
+            
+            // Apply tilt in local space (around tangent and bitangent axes)
+            const tiltAxis = new THREE.Vector3(
+                -tiltY * tiltAmount,  // Tilt around X based on mouseY
+                tiltX * tiltAmount,   // Tilt around Y based on mouseX
+                0
+            );
+            
+            if (tiltAxis.length() > 0.001) {
+                const angle = tiltAxis.length();
+                tiltAxis.normalize();
+                tiltQuat.setFromAxisAngle(tiltAxis, angle);
+                mesh.quaternion.multiply(tiltQuat);
+            }
         }
         
         // Subtle pulse effect based on position
@@ -317,12 +367,12 @@ export function update() {
         const pulse = Math.sin(time * 0.4 + waveOffset) * 0.1;
         mesh.material.emissiveIntensity = mesh.userData.baseEmissive + pulse;
         
-        // Panels closer to lookAt direction get extra glow
+        // Panels closer to mouse direction get extra glow
         if (isInteractive && mouseOver) {
             const panelDir = center.clone().normalize();
             const mouseDir = new THREE.Vector3(mouse.x, mouse.y, -0.5).normalize();
             const dot = panelDir.dot(mouseDir);
-            const mouseInfluence = Math.max(0, dot) * 0.3;
+            const mouseInfluence = Math.max(0, dot) * 0.35;
             mesh.material.emissiveIntensity += mouseInfluence;
         }
     }

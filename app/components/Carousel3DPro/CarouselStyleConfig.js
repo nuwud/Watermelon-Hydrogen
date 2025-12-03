@@ -8,8 +8,8 @@
 // Simple white glow for all menu items
 // Admin controls can override these later
 export function getMenuItemColor(label) {
-  // Return consistent bright colors for contrast against blue background
-  return { glow: 0xffffff, text: 0xf0f4ff };
+  // Return very bright colors for maximum contrast against blue background
+  return { glow: 0xffffff, text: 0xffffff };
 }
 
 // Default configuration for carousel
@@ -19,20 +19,20 @@ export const defaultCarouselStyle = {
   fontSize: 0.5,
   fontHeight: 0.1,
   
-  // Colors - LIGHTER menu for contrast against blue background
+  // Colors - VERY BRIGHT menu for contrast against blue background
   glowColor: 0xffffff,           // White glow for selected
-  textColor: 0xe8eeff,           // Very light blue-white for non-selected (lighter!)
+  textColor: 0xffffff,           // Pure white for non-selected (much brighter!)
   selectedTextColor: 0xffffff,   // Pure white for selected item
   backgroundColor: 0x1a1a2e,     // Dark blue background
   
-  // Hover colors - bright cyan-white for rollover
-  hoverTextColor: 0xccffff,      // Bright cyan on hover
-  hoverEmissive: 0x66aacc,       // Strong blue glow on hover
-  hoverEmissiveIntensity: 0.8,   // Strong hover glow
+  // Hover colors - brilliant white-cyan for rollover
+  hoverTextColor: 0xffffff,      // Pure white on hover
+  hoverEmissive: 0x88ccff,       // Strong blue-white glow on hover
+  hoverEmissiveIntensity: 1.2,   // Very strong hover glow
   
-  // Submenu colors - LIGHTER for visibility
-  submenuTextColor: 0xddeeff,    // Very light blue for submenu items
-  submenuGlowColor: 0xbbddff,    // Light blue glow for submenu selected
+  // Submenu colors - VERY BRIGHT for visibility
+  submenuTextColor: 0xffffff,    // Pure white for submenu items
+  submenuGlowColor: 0xccddff,    // Light blue-white glow for submenu selected
   submenuHoverColor: 0xffffff,   // Pure white on submenu hover
   
   // Distance-based dimming (depth fog effect)
@@ -40,19 +40,19 @@ export const defaultCarouselStyle = {
     enabled: true,
     nearDistance: 3,             // Items closer than this are full brightness
     farDistance: 8,              // Items farther than this are maximum dimmed
-    minOpacity: 0.4,             // Minimum opacity for far items
-    minBrightness: 0.5,          // Minimum brightness multiplier for far items
+    minOpacity: 0.5,             // Minimum opacity for far items (higher)
+    minBrightness: 0.6,          // Minimum brightness multiplier for far items (higher)
   },
   
   // Submenu open state - dim main menu when submenu is active
   submenuOpenDim: {
     enabled: true,
-    mainMenuDimAmount: 0.5,      // How much to dim main menu (0.5 = 50% brightness)
-    selectedItemDimAmount: 0.6,  // Slightly less dim for selected item
+    mainMenuDimAmount: 0.55,     // How much to dim main menu (slightly less dim)
+    selectedItemDimAmount: 0.65, // Slightly less dim for selected item
   },
   
   // Transparency
-  opacity: 0.95,                 // High opacity for visibility
+  opacity: 1.0,                  // Full opacity for maximum visibility
   selectedOpacity: 1.0,
   
   // Layout
@@ -62,11 +62,11 @@ export const defaultCarouselStyle = {
   // Animations
   rotationSpeed: 0.05,
   selectionScale: 1.2,
-  hoverScale: 1.1,               // More noticeable scale on hover
+  hoverScale: 1.12,              // More noticeable scale on hover
   animationDuration: 0.8,
   
   // Glow effect
-  glowIntensity: 2.5,            // Stronger glow
+  glowIntensity: 3.0,            // Much stronger glow
   glowSize: 1.15,
   pulseSpeed: 2.0,
   
