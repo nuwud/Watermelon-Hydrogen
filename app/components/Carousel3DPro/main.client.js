@@ -262,7 +262,10 @@ export function mountCarousel3D(container, menuData) {
     let lastTouchTime = 0; // Track the last touch time
     let touchVelocity = 0; // Track touch velocity for momentum effect
     let isTouchMoving = false; // Track if touch has moved (swipe vs tap)
+    let lastScrollTime = 0; // Debounce scroll events
     const TAP_THRESHOLD = 10; // Max pixels of movement to still count as a tap
+    const SWIPE_THRESHOLD = 30; // Min pixels to trigger a scroll/spin action (increased for control)
+    const SCROLL_DEBOUNCE_MS = 150; // Minimum ms between scroll events
     // Handle touch start
     const touchStartHandler = (event) => { // 
         if (event.touches.length === 1) { // Only handle single touch events
@@ -291,28 +294,41 @@ export function mountCarousel3D(container, menuData) {
             isTouchMoving = true; // This is now a swipe, not a tap
             event.preventDefault(); // Prevent default scrolling only when swiping
         }
-        // Calculate velocity for smooth navigation
+        
+        // Calculate velocity for momentum (but don't use it for continuous scrolling)
         const now = Date.now(); // Get the current time
         const timeDelta = now - lastTouchTime; // Calculate time since last touch event
         if (timeDelta > 0) { // Avoid division by zero
-            touchVelocity = Math.sqrt(deltaX * deltaX + deltaY * deltaY) / timeDelta; // Calculate touch velocity
+            touchVelocity = totalMovement / timeDelta; // Calculate touch velocity
         }
+        
         // Use the dominant axis (horizontal or vertical)
-        const isHorizontalSwipe = Math.abs(deltaX) > Math.abs(deltaY); // Determine if the swipe is more horizontal than vertical
-        // Apply threshold to avoid accidental swipes
-        const swipeThreshold = 5; // Set a threshold for swipe detection
+        const isHorizontalSwipe = Math.abs(deltaX) > Math.abs(deltaY);
+        
+        // Check debounce - don't scroll too fast
+        const canScroll = (now - lastScrollTime) > SCROLL_DEBOUNCE_MS;
+        
         if (activeSubmenu) {
-            // For submenu, use vertical swipe
-            if (!isHorizontalSwipe && Math.abs(deltaY) > swipeThreshold) { // Check if the swipe is vertical and exceeds the threshold
-                activeSubmenu.scrollSubmenu(deltaY > 0 ? -1 : 1); // Invert for natural feel
-                touchStartY = touchY; // Reset for continuous scrolling
+            // SUBMENU MODE: Only allow vertical scrolling, block horizontal
+            // This prevents main carousel from moving while scrolling submenu
+            if (!isHorizontalSwipe && Math.abs(deltaY) > SWIPE_THRESHOLD && canScroll) {
+                const direction = deltaY > 0 ? -1 : 1; // Invert for natural feel
+                activeSubmenu.scrollSubmenu(direction);
+                lastScrollTime = now;
+                // Reset start position for next scroll gesture
+                touchStartY = touchY;
+                touchStartX = touchX; // Also reset X to prevent drift
             }
+            // Block all main carousel interaction when submenu is open
         } else {
-            // For main carousel, use horizontal swipe
-            if (isHorizontalSwipe && Math.abs(deltaX) > swipeThreshold) { // Check if the swipe is horizontal and exceeds the threshold
-                const angleStep = (2 * Math.PI) / items.length; // Calculate angle step based on number of items
-                carousel.spin(deltaX > 0 ? angleStep : -angleStep); // Direction feels natural
-                touchStartX = touchX; // Reset for continuous rotation
+            // MAIN CAROUSEL MODE: Only horizontal swipe
+            if (isHorizontalSwipe && Math.abs(deltaX) > SWIPE_THRESHOLD && canScroll) {
+                const angleStep = (2 * Math.PI) / items.length;
+                carousel.spin(deltaX > 0 ? angleStep : -angleStep);
+                lastScrollTime = now;
+                // Reset start position for next spin gesture  
+                touchStartX = touchX;
+                touchStartY = touchY;
             }
         }
         lastTouchTime = now; // Update the last touch time
@@ -336,17 +352,18 @@ export function mountCarousel3D(container, menuData) {
             }
         }
         
-        // Apply momentum based on final velocity (this is a swipe)
-        if (touchVelocity > 0.5) { // Check if the velocity exceeds a threshold
-            if (activeSubmenu) { // If a submenu is active
+        // Apply momentum only for fast swipes (higher threshold for more control)
+        // Reduced momentum effect for more controlled feel
+        if (touchVelocity > 1.0 && event.changedTouches.length > 0) {
+            if (activeSubmenu) {
+                // Only apply momentum to submenu, not main carousel
                 const direction = touchStartY < event.changedTouches[0].clientY ? -1 : 1;
-                // Apply momentum scrolling to submenu
-                activeSubmenu.scrollSubmenu(direction); // Invert for natural feel
-            } else { // If no submenu is active
+                activeSubmenu.scrollSubmenu(direction);
+            } else {
+                // Apply momentum to main carousel only when no submenu
                 const direction = touchStartX < event.changedTouches[0].clientX ? 1 : -1;
-                // Apply momentum to carousel
-                const angleStep = (2 * Math.PI) / items.length; // Calculate angle step based on number of items    
-                carousel.spin(direction * angleStep); // Direction feels natural
+                const angleStep = (2 * Math.PI) / items.length;
+                carousel.spin(direction * angleStep);
             }
         }
         
@@ -1283,6 +1300,20 @@ export function mountCarousel3D(container, menuData) {
                 // Then open the submenu AFTER rotation completes
                 // This ensures the item swings to front before submenu spawns
                 const hasSubmenu = !!submenus[itemName];
+                
+                // Check if clicking the same item that already has a submenu open
+                // In that case, close the submenu instead of opening a new one
+                if (activeSubmenu && carousel.currentIndex === i) {
+                    console.warn(`[🍉 Click] Clicking same item with open submenu - closing`);
+                    closeSubmenu();
+                    break;
+                }
+                
+                // Check if another submenu is already open - close it first
+                if (activeSubmenu) {
+                    console.warn(`[🍉 Click] Another submenu is open - closing it first`);
+                    closeSubmenu(true); // Immediate close
+                }
                 
                 if (hasSubmenu) {
                     // For items with submenus: rotate first, then open submenu on complete
