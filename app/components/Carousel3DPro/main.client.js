@@ -84,18 +84,18 @@ export function mountCarousel3D(container, menuData) {
     let currentTheme = defaultCarouselStyle; // Initialize with default theme
     scene.background = new THREE.Color(0x0a0a1a); // Dark blue-black background
     
-    // Add fog for distance dimming effect
-    scene.fog = new THREE.Fog(0x0a0a1a, 8, 35); // Start fading at distance 8, fully faded at 35
+    // Add fog for distance dimming effect - subtle depth cue
+    scene.fog = new THREE.Fog(0x0a0a1a, 12, 45); // Start fading at distance 12, fully faded at 45
     
     const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000); // Set up camera
     camera.position.set(0, 2, 10); // Position the camera
     
     // --- Camera-attached spotlight for constant illumination on focus area ---
-    const cameraSpotlight = new THREE.SpotLight(0xffffff, 1.5);
-    cameraSpotlight.angle = Math.PI / 4; // 45 degree cone
-    cameraSpotlight.penumbra = 0.5; // Soft edge
-    cameraSpotlight.decay = 1.5;
-    cameraSpotlight.distance = 30;
+    const cameraSpotlight = new THREE.SpotLight(0xffffff, 2.5); // Increased intensity
+    cameraSpotlight.angle = Math.PI / 3; // 60 degree cone - wider coverage
+    cameraSpotlight.penumbra = 0.6; // Softer edge
+    cameraSpotlight.decay = 1.2; // Less decay for better reach
+    cameraSpotlight.distance = 40;
     cameraSpotlight.name = 'cameraSpotlight';
     camera.add(cameraSpotlight);
     cameraSpotlight.position.set(0, 0, 0); // At camera position
@@ -103,7 +103,7 @@ export function mountCarousel3D(container, menuData) {
     camera.add(cameraSpotlight.target);
     
     // Add soft fill light attached to camera for overall visibility
-    const cameraFillLight = new THREE.PointLight(0x6688aa, 0.8, 20);
+    const cameraFillLight = new THREE.PointLight(0x88aacc, 1.2, 25); // Brighter, warmer, longer range
     cameraFillLight.name = 'cameraFillLight';
     camera.add(cameraFillLight);
     cameraFillLight.position.set(0, 2, 0); // Slightly above camera

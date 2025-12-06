@@ -38,17 +38,17 @@ export const defaultCarouselStyle = {
   // Distance-based dimming (depth fog effect)
   distanceDimming: {
     enabled: true,
-    nearDistance: 3,             // Items closer than this are full brightness
-    farDistance: 8,              // Items farther than this are maximum dimmed
-    minOpacity: 0.5,             // Minimum opacity for far items (higher)
-    minBrightness: 0.6,          // Minimum brightness multiplier for far items (higher)
+    nearDistance: 4,             // Items closer than this are full brightness
+    farDistance: 12,             // Items farther than this are maximum dimmed (wider range)
+    minOpacity: 0.4,             // Minimum opacity for far items
+    minBrightness: 0.45,         // Minimum brightness multiplier - noticeable but not harsh
   },
   
   // Submenu open state - dim main menu when submenu is active
   submenuOpenDim: {
     enabled: true,
-    mainMenuDimAmount: 0.35,     // Noticeably dimmer when submenu open
-    selectedItemDimAmount: 0.45, // Selected item also dims but slightly less
+    mainMenuDimAmount: 0.25,     // Very dim when submenu open - let submenu shine
+    selectedItemDimAmount: 0.30, // Selected item also dims significantly
   },
   
   // Transparency

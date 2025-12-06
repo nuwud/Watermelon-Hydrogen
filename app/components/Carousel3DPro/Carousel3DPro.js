@@ -288,13 +288,13 @@ export class Carousel3DPro extends Group {
       
       // Use MeshStandardMaterial with STRONG EMISSIVE for bright glowing text
       const material = new THREE.MeshStandardMaterial({
-        color: 0xffffff,           // Pure white base
-        emissive: 0x6699ff,        // Strong blue-white glow
-        emissiveIntensity: 0.8,    // VERY strong emission for visibility
+        color: 0xeeffff,           // Slightly cyan-tinted white for better visibility
+        emissive: 0x88bbff,        // Brighter blue-white glow for better readability
+        emissiveIntensity: 1.0,    // Strong emission for visibility in dark scene
         transparent: true,
         opacity: 1.0,
-        metalness: 0.15,
-        roughness: 0.3
+        metalness: 0.1,            // Reduced metalness for cleaner look
+        roughness: 0.25            // Slightly smoother for better light reflection
       });
 
       const mesh = new THREE.Mesh(p.geometry, material);
@@ -533,23 +533,23 @@ updateHoverVisuals() {
     }
     
     if (isHovered && !submenuOpen) {
-      // Subtle hover effect - slight brightness boost and glow
-      mesh.material.color.setHex(0xffffff);
-      mesh.material.emissive = new THREE.Color(0x6699cc);
-      mesh.material.emissiveIntensity = 1.2; // Full glow on hover, no distance dimming
+      // Hover effect - pronounced brightness boost and glow
+      mesh.material.color.setHex(0xeeffff); // Slight cyan tint
+      mesh.material.emissive = new THREE.Color(0x99ccff); // Brighter blue-white glow
+      mesh.material.emissiveIntensity = 1.5; // Strong glow on hover
       mesh.material.opacity = 1.0;
       
       // Subtle scale up on hover
-      const hoverScale = mesh.userData.originalScale.clone().multiplyScalar(this.config.hoverScale || 1.08);
+      const hoverScale = mesh.userData.originalScale.clone().multiplyScalar(this.config.hoverScale || 1.12);
       gsap.to(mesh.scale, { x: hoverScale.x, y: hoverScale.y, z: hoverScale.z, duration: 0.15 });
     } else {
       // Normal non-selected appearance with VISIBLE distance dimming
-      mesh.material.color.setHex(0xffffff);
-      mesh.material.emissive = new THREE.Color(0x4477aa);
+      mesh.material.color.setHex(0xeeffff); // Consistent cyan-tinted white
+      mesh.material.emissive = new THREE.Color(0x6699cc); // Brighter base emissive
       // Apply distance factor directly to emissive - distant items are dimmer
-      mesh.material.emissiveIntensity = 0.6 * distanceFactor * submenuDimFactor;
-      // Also apply to opacity for more visible depth effect
-      mesh.material.opacity = distanceFactor * submenuDimFactor;
+      mesh.material.emissiveIntensity = 0.8 * distanceFactor * submenuDimFactor;
+      // Also apply to opacity for more visible depth effect  
+      mesh.material.opacity = Math.max(0.4, distanceFactor * submenuDimFactor); // Never fully invisible
       
       // Restore original scale
       gsap.to(mesh.scale, {

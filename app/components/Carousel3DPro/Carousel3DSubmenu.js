@@ -646,8 +646,8 @@ export class Carousel3DSubmenu extends THREE.Group {
       const iconMesh = container.userData.iconMesh;
       if (mesh && mesh.userData?.originalColor) {
         mesh.material.color.copy(mesh.userData.originalColor);
-        mesh.material.emissive.setHex(0x4488cc); // Base glow for non-selected
-        mesh.material.emissiveIntensity = 0.5;
+        mesh.material.emissive.setHex(0x6699cc); // Brighter base glow for non-selected
+        mesh.material.emissiveIntensity = 0.7;   // More visible base glow
         mesh.scale.copy(mesh.userData.originalScale);
       }
       if (iconMesh) {
@@ -660,10 +660,10 @@ export class Carousel3DSubmenu extends THREE.Group {
     const mesh = container.userData.mesh;
     const iconMesh = container.userData.iconMesh;
     if (mesh) {
-      // SELECTED: Pronounced GLOW instead of solid turquoise
-      mesh.material.color.setHex(0xffffff); // White base
-      mesh.material.emissive.setHex(0x00ccff); // Bright cyan glow
-      mesh.material.emissiveIntensity = 0.9; // Moderate glow - leaves room for hover boost
+      // SELECTED: Pronounced GLOW - bright and readable
+      mesh.material.color.setHex(0xeeffff); // Cyan-tinted white base
+      mesh.material.emissive.setHex(0x44ddff); // Brighter cyan glow
+      mesh.material.emissiveIntensity = 1.2; // Strong glow for selected item
       gsap.to(mesh.scale, { x: mesh.userData.originalScale.x * 1.3, y: mesh.userData.originalScale.y * 1.3, z: mesh.userData.originalScale.z * 1.3, duration: 0.3 });
     }
     if (iconMesh) {
