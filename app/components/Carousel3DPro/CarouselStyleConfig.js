@@ -158,10 +158,15 @@ export const carouselConfig = {
     enableNewMotion: false,
   },
   mobile: {
-    enableMobileEnhancements: false,
+    enableMobileEnhancements: true,  // Enable mobile-specific features
+    enableFerrisWheelMode: true,     // Vertical carousel on mobile
     longPressMs: 350,
     tapSlopPx: 8,
     raycastPadding: 0.06,
+    ferrisWheelRadius: 4,            // Radius for vertical wheel
+    ferrisWheelTilt: 0.15,           // Slight tilt for 3D effect (radians)
+    submenuOrbitRadius: 2.5,         // How far submenu orbits from selected item
+    breakpoint: 768,                 // Width below which mobile mode activates
   },
   visual: {
     submenuDim: 0.55,

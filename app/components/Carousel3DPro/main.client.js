@@ -353,7 +353,7 @@ export function mountCarousel3D(container, menuData) {
         
         if (touchState.gestureType && canScroll && !touchState.handled) {
             if (activeSubmenu) {
-                // SUBMENU MODE: Only vertical swipes work
+                // SUBMENU MODE: Only vertical swipes work (submenu is always vertical ring)
                 if (touchState.gestureType === 'swipe-v' && Math.abs(deltaY) > MOBILE_CONFIG.SWIPE_THRESHOLD) {
                     const direction = deltaY > 0 ? -1 : 1;
                     activeSubmenu.scrollSubmenu(direction);
@@ -363,21 +363,44 @@ export function mountCarousel3D(container, menuData) {
                     touchState.startX = touchState.currentX;
                     event.preventDefault();
                 }
-                // BLOCK horizontal swipes when submenu is open - don't let main carousel move
+                // BLOCK other swipes when submenu is open - don't let main carousel move
             } else {
-                // MAIN CAROUSEL MODE: Only horizontal swipes work
-                if (touchState.gestureType === 'swipe-h' && Math.abs(deltaX) > MOBILE_CONFIG.SWIPE_THRESHOLD) {
-                    const angleStep = (2 * Math.PI) / items.length;
-                    carousel.spin(deltaX > 0 ? angleStep : -angleStep);
-                    touchState.lastScrollTime = now;
-                    // Reset start position
-                    touchState.startX = touchState.currentX;
-                    touchState.startY = touchState.currentY;
-                    event.preventDefault();
+                // MAIN CAROUSEL MODE: Swipe direction depends on layout mode
+                const isFerrisWheel = carousel.userData?.isFerrisWheel;
+                const angleStep = (2 * Math.PI) / items.length;
+                
+                if (isFerrisWheel) {
+                    // FERRIS WHEEL MODE: Vertical swipes control main menu
+                    if (touchState.gestureType === 'swipe-v' && Math.abs(deltaY) > MOBILE_CONFIG.SWIPE_THRESHOLD) {
+                        // Swipe up = next item, swipe down = previous
+                        const direction = deltaY > 0 ? -1 : 1;
+                        spinFerrisWheel(direction * angleStep);
+                        touchState.lastScrollTime = now;
+                        touchState.startY = touchState.currentY;
+                        touchState.startX = touchState.currentX;
+                        event.preventDefault();
+                    }
+                } else {
+                    // HORIZONTAL MODE: Horizontal swipes control main menu
+                    if (touchState.gestureType === 'swipe-h' && Math.abs(deltaX) > MOBILE_CONFIG.SWIPE_THRESHOLD) {
+                        carousel.spin(deltaX > 0 ? angleStep : -angleStep);
+                        touchState.lastScrollTime = now;
+                        touchState.startX = touchState.currentX;
+                        touchState.startY = touchState.currentY;
+                        event.preventDefault();
+                    }
                 }
             }
         }
     };
+    
+    // Helper function to spin Ferris wheel (rotates around X axis)
+    function spinFerrisWheel(deltaAngle) {
+        if (!carousel.itemGroup) return;
+        carousel.targetRotation += deltaAngle;
+        carousel.lastInteractionType = 'scroll';
+        console.warn('[🍉 Ferris] Spinning by', deltaAngle.toFixed(2), 'rad');
+    }
     
     // Touch end handler
     const touchEndHandler = (event) => {
@@ -427,13 +450,23 @@ export function mountCarousel3D(container, menuData) {
             const velocity = distance / Math.max(duration, 1);
             
             if (velocity > MOBILE_CONFIG.MOMENTUM_THRESHOLD) {
+                const angleStep = (2 * Math.PI) / items.length;
+                const isFerrisWheel = carousel.userData?.isFerrisWheel;
+                
                 if (activeSubmenu && touchState.gestureType === 'swipe-v') {
+                    // Submenu scroll
                     const direction = deltaY > 0 ? -1 : 1;
                     activeSubmenu.scrollSubmenu(direction);
-                } else if (!activeSubmenu && touchState.gestureType === 'swipe-h') {
-                    const direction = deltaX > 0 ? 1 : -1;
-                    const angleStep = (2 * Math.PI) / items.length;
-                    carousel.spin(direction * angleStep);
+                } else if (!activeSubmenu) {
+                    if (isFerrisWheel && touchState.gestureType === 'swipe-v') {
+                        // Ferris wheel momentum - vertical swipe
+                        const direction = deltaY > 0 ? -1 : 1;
+                        spinFerrisWheel(direction * angleStep);
+                    } else if (!isFerrisWheel && touchState.gestureType === 'swipe-h') {
+                        // Horizontal carousel momentum
+                        const direction = deltaX > 0 ? 1 : -1;
+                        carousel.spin(direction * angleStep);
+                    }
                 }
             }
         }
@@ -704,6 +737,127 @@ export function mountCarousel3D(container, menuData) {
     const carousel = new Carousel3DPro(items, currentTheme); // Create the carousel instance
     carousel.userData = { camera }; // Store camera reference in userData for later access
     carousel.isAnimating = false; // Track animation state
+    
+    // =======================
+    // MOBILE FERRIS WHEEL MODE
+    // =======================
+    const mobileConfig = carouselConfig?.mobile || {};
+    const isMobileDevice = () => {
+        return window.innerWidth < (mobileConfig.breakpoint || 768) || 
+               ('ontouchstart' in window && window.innerWidth < 1024);
+    };
+    
+    let isFerrisWheelMode = isMobileDevice() && (mobileConfig.enableFerrisWheelMode !== false);
+    
+    // Function to convert carousel to Ferris wheel (vertical) layout
+    function applyFerrisWheelLayout() {
+        if (!carousel.itemGroup || !carousel.itemMeshes) return;
+        
+        const ferrisRadius = mobileConfig.ferrisWheelRadius || 4;
+        const tilt = mobileConfig.ferrisWheelTilt || 0.15;
+        const itemCount = carousel.itemMeshes.length;
+        const angleStep = (2 * Math.PI) / itemCount;
+        
+        // Reposition items for vertical wheel (rotate around X axis)
+        carousel.itemMeshes.forEach((mesh, index) => {
+            const angle = angleStep * index;
+            // Ferris wheel: items positioned in Y-Z plane instead of X-Z
+            mesh.position.x = 0; // Center horizontally
+            mesh.position.y = ferrisRadius * Math.sin(angle);
+            mesh.position.z = ferrisRadius * Math.cos(angle);
+            
+            // Face the camera (look at camera position)
+            mesh.rotation.x = -angle; // Rotate to face outward from wheel
+            mesh.rotation.y = 0;
+            
+            // Update hit area position
+            if (mesh.userData.hitArea) {
+                mesh.userData.hitArea.position.copy(mesh.position);
+                mesh.userData.hitArea.rotation.copy(mesh.rotation);
+            }
+        });
+        
+        // Apply slight tilt to the whole wheel for 3D effect
+        carousel.itemGroup.rotation.z = tilt;
+        
+        // Store the rotation axis for this mode
+        carousel.userData.rotationAxis = 'x'; // Ferris wheel rotates around X
+        carousel.userData.isFerrisWheel = true;
+        
+        console.warn('[🍉 Mobile] Ferris wheel layout applied', { 
+            itemCount, 
+            radius: ferrisRadius,
+            tilt 
+        });
+    }
+    
+    // Function to revert to horizontal carousel
+    function applyHorizontalLayout() {
+        if (!carousel.itemGroup || !carousel.itemMeshes) return;
+        
+        const cylinderRadius = carousel.cylinderRadius || 5;
+        const itemCount = carousel.itemMeshes.length;
+        const angleStep = (2 * Math.PI) / itemCount;
+        
+        carousel.itemMeshes.forEach((mesh, index) => {
+            const angle = angleStep * index;
+            mesh.position.x = cylinderRadius * Math.sin(angle);
+            mesh.position.y = 0;
+            mesh.position.z = cylinderRadius * Math.cos(angle);
+            mesh.rotation.y = Math.atan2(mesh.position.x, mesh.position.z);
+            mesh.rotation.x = 0;
+            
+            if (mesh.userData.hitArea) {
+                mesh.userData.hitArea.position.copy(mesh.position);
+                mesh.userData.hitArea.rotation.copy(mesh.rotation);
+            }
+        });
+        
+        carousel.itemGroup.rotation.z = 0;
+        carousel.itemGroup.rotation.x = 0;
+        carousel.userData.rotationAxis = 'y';
+        carousel.userData.isFerrisWheel = false;
+        
+        console.warn('[🍉 Desktop] Horizontal layout applied');
+    }
+    
+    // Apply layout after carousel is ready
+    const applyMobileLayoutWhenReady = () => {
+        if (carousel.itemMeshes && carousel.itemMeshes.length > 0) {
+            if (isFerrisWheelMode) {
+                applyFerrisWheelLayout();
+            }
+        } else {
+            // Wait for items to be created
+            setTimeout(applyMobileLayoutWhenReady, 100);
+        }
+    };
+    
+    // Start checking for items to be ready
+    setTimeout(applyMobileLayoutWhenReady, 200);
+    
+    // Handle window resize - switch layout if crossing breakpoint
+    const handleLayoutResize = () => {
+        const wasFerrisWheel = isFerrisWheelMode;
+        isFerrisWheelMode = isMobileDevice() && (mobileConfig.enableFerrisWheelMode !== false);
+        
+        if (wasFerrisWheel !== isFerrisWheelMode) {
+            if (isFerrisWheelMode) {
+                applyFerrisWheelLayout();
+            } else {
+                applyHorizontalLayout();
+            }
+            // Reset rotation to current index position
+            const angleStep = (2 * Math.PI) / items.length;
+            if (isFerrisWheelMode) {
+                carousel.itemGroup.rotation.x = -carousel.currentIndex * angleStep;
+            } else {
+                carousel.itemGroup.rotation.y = -carousel.currentIndex * angleStep;
+            }
+        }
+    };
+    
+    window.addEventListener('resize', handleLayoutResize);
     
     // Initialize Central Content Panel system
     const centralPanel = new CentralContentPanel({

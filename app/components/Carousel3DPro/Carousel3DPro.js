@@ -661,8 +661,14 @@ selectItem(index, animate = true) {
     });
 
     if (animate) {
+      // Animate using correct rotation axis based on layout mode
+      const isFerrisWheel = this.userData?.isFerrisWheel;
+      const rotationProp = isFerrisWheel ? 'x' : 'y';
+      const rotationTarget = {};
+      rotationTarget[rotationProp] = newRotation;
+      
       gsap.to(this.itemGroup.rotation, {
-        y: newRotation,
+        ...rotationTarget,
         duration: 0.6,
         ease: "power2.out",
         onComplete: () => {
@@ -670,7 +676,13 @@ selectItem(index, animate = true) {
         }
       });
     } else {
-      this.itemGroup.rotation.y = newRotation;
+      // Set rotation immediately using correct axis
+      const isFerrisWheel = this.userData?.isFerrisWheel;
+      if (isFerrisWheel) {
+        this.itemGroup.rotation.x = newRotation;
+      } else {
+        this.itemGroup.rotation.y = newRotation;
+      }
       this.applyHighlightVisuals(this.currentIndex);
     }
   }, { lockRotation: true });
@@ -812,7 +824,10 @@ handleWheel(event) {
 update() {
   // Only handle smooth rotation if not in a locked state
   if (this.guard.canAnimate()) {
-    const current = this.itemGroup.rotation.y;
+    // Determine rotation axis based on layout mode
+    const isFerrisWheel = this.userData?.isFerrisWheel;
+    const rotationProp = isFerrisWheel ? 'x' : 'y';
+    const current = this.itemGroup.rotation[rotationProp];
     const diff = this.targetRotation - current;
     const twoPi = Math.PI * 2;
 
@@ -823,7 +838,7 @@ update() {
     const threshold = 0.005;
 
     if (Math.abs(shortest) > threshold) {
-      this.itemGroup.rotation.y += shortest * this.rotationSpeed;
+      this.itemGroup.rotation[rotationProp] += shortest * this.rotationSpeed;
       this.isSpinning = true;
       
       // Only update highlighting if not locked
@@ -831,12 +846,12 @@ update() {
         this.updateCurrentItemFromRotation();
       }
     } else if (this.isSpinning) {
-      this.itemGroup.rotation.y = this.targetRotation;
+      this.itemGroup.rotation[rotationProp] = this.targetRotation;
       this.isSpinning = false;
 
       // Only update the current index if not locked
       if (this.guard.canUpdateHighlight()) {
-        const finalIndex = this.calculateIndexFromRotation(this.itemGroup.rotation.y);
+        const finalIndex = this.calculateIndexFromRotation(this.itemGroup.rotation[rotationProp]);
         if (finalIndex !== this.currentIndex) {
           this.currentIndex = finalIndex;
           this.applyHighlightVisuals(finalIndex);
@@ -864,7 +879,10 @@ updateCurrentItemFromRotation() {
     return;
   }
 
-  const currentRotation = this.itemGroup.rotation.y;
+  // Use correct rotation axis based on layout mode
+  const isFerrisWheel = this.userData?.isFerrisWheel;
+  const rotationProp = isFerrisWheel ? 'x' : 'y';
+  const currentRotation = this.itemGroup.rotation[rotationProp];
   const visuallyClosestIndex = this.calculateIndexFromRotation(currentRotation);
 
   if (visuallyClosestIndex !== undefined) {
