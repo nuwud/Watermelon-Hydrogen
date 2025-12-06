@@ -261,6 +261,8 @@ export function mountCarousel3D(container, menuData) {
     let touchStartY = 0; // Track initial touch Y position
     let lastTouchTime = 0; // Track the last touch time
     let touchVelocity = 0; // Track touch velocity for momentum effect
+    let isTouchMoving = false; // Track if touch has moved (swipe vs tap)
+    const TAP_THRESHOLD = 10; // Max pixels of movement to still count as a tap
     // Handle touch start
     const touchStartHandler = (event) => { // 
         if (event.touches.length === 1) { // Only handle single touch events
@@ -268,21 +270,27 @@ export function mountCarousel3D(container, menuData) {
             touchStartY = event.touches[0].clientY; // Store initial touch Y position
             lastTouchTime = Date.now(); // Store the current time
             touchVelocity = 0; // Reset touch velocity
+            isTouchMoving = false; // Reset movement flag
 
-            // Prevent default to avoid unintended scrolling
-            event.preventDefault(); // Prevent default browser behavior (page scrolling)
+            // DON'T preventDefault here - allow click events to fire for taps
+            // We'll preventDefault in touchmove only when actually swiping
         }
     };
     // Handle touch move for swipe detection
     const touchMoveHandler = (event) => { // 
         if (event.touches.length !== 1) return; // Only handle single touch events
-        // Prevent default browser behavior (page scrolling)
-        event.preventDefault(); // Prevent default browser behavior (page scrolling)
         const touchX = event.touches[0].clientX; // Get current touch X position
         const touchY = event.touches[0].clientY; // Get current touch Y position
         // Calculate swipe distance and direction 
         const deltaX = touchX - touchStartX; // Calculate change in X position
         const deltaY = touchY - touchStartY; // Calculate change in Y position
+        
+        // Check if we've moved enough to be considered a swipe
+        const totalMovement = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
+        if (totalMovement > TAP_THRESHOLD) {
+            isTouchMoving = true; // This is now a swipe, not a tap
+            event.preventDefault(); // Prevent default scrolling only when swiping
+        }
         // Calculate velocity for smooth navigation
         const now = Date.now(); // Get the current time
         const timeDelta = now - lastTouchTime; // Calculate time since last touch event
@@ -311,7 +319,24 @@ export function mountCarousel3D(container, menuData) {
     };
     // Handle touch end with momentum effect
     const touchEndHandler = (event) => { // 
-        // Apply momentum based on final velocity
+        // Check if this was a tap (no significant movement)
+        if (!isTouchMoving && event.changedTouches.length > 0) {
+            const touch = event.changedTouches[0];
+            const deltaX = touch.clientX - touchStartX;
+            const deltaY = touch.clientY - touchStartY;
+            const totalMovement = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
+            
+            if (totalMovement <= TAP_THRESHOLD) {
+                // This was a tap - trigger click handler
+                console.warn('[🍉 Mobile] Tap detected at', touch.clientX, touch.clientY);
+                handleCarouselClick({ clientX: touch.clientX, clientY: touch.clientY });
+                // Reset and return early - don't apply momentum
+                isTouchMoving = false;
+                return;
+            }
+        }
+        
+        // Apply momentum based on final velocity (this is a swipe)
         if (touchVelocity > 0.5) { // Check if the velocity exceeds a threshold
             if (activeSubmenu) { // If a submenu is active
                 const direction = touchStartY < event.changedTouches[0].clientY ? -1 : 1;
@@ -324,6 +349,9 @@ export function mountCarousel3D(container, menuData) {
                 carousel.spin(direction * angleStep); // Direction feels natural
             }
         }
+        
+        // Reset movement flag
+        isTouchMoving = false;
     };
     // Function to enable all event handlers (touch and wheel)
     function enableAllEventHandlers() { // Re-attach all event listeners
