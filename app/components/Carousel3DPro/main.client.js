@@ -256,119 +256,204 @@ export function mountCarousel3D(container, menuData) {
         // Only call original handler for middle mouse + wheel
         originalOnWheel.call(this, event);
     };
-    // MOBILE SUPPORT: Add touch event handlers for swipe navigation
-    let touchStartX = 0; // Track initial touch X position
-    let touchStartY = 0; // Track initial touch Y position
-    let lastTouchTime = 0; // Track the last touch time
-    let touchVelocity = 0; // Track touch velocity for momentum effect
-    let isTouchMoving = false; // Track if touch has moved (swipe vs tap)
-    let lastScrollTime = 0; // Debounce scroll events
-    const TAP_THRESHOLD = 10; // Max pixels of movement to still count as a tap
-    const SWIPE_THRESHOLD = 30; // Min pixels to trigger a scroll/spin action (increased for control)
-    const SCROLL_DEBOUNCE_MS = 150; // Minimum ms between scroll events
-    // Handle touch start
-    const touchStartHandler = (event) => { // 
-        if (event.touches.length === 1) { // Only handle single touch events
-            touchStartX = event.touches[0].clientX; // Store initial touch X position
-            touchStartY = event.touches[0].clientY; // Store initial touch Y position
-            lastTouchTime = Date.now(); // Store the current time
-            touchVelocity = 0; // Reset touch velocity
-            isTouchMoving = false; // Reset movement flag
-
-            // DON'T preventDefault here - allow click events to fire for taps
-            // We'll preventDefault in touchmove only when actually swiping
+    // =======================
+    // MOBILE TOUCH SYSTEM (Complete Rewrite)
+    // =======================
+    // State machine for touch gestures
+    const touchState = {
+        active: false,           // Is a touch currently happening
+        startX: 0,               // Touch start X position
+        startY: 0,               // Touch start Y position
+        startTime: 0,            // Touch start timestamp
+        currentX: 0,             // Current touch X
+        currentY: 0,             // Current touch Y
+        gestureType: null,       // 'tap', 'swipe-h', 'swipe-v', or null
+        handled: false,          // Was this gesture already handled
+        lastScrollTime: 0,       // Debounce for scroll actions
+        touchId: null,           // Track specific touch identifier
+    };
+    
+    // Spawning lock to prevent multiple submenu spawns
+    let isSpawningSubmenu = false;
+    let lastTapTime = 0;
+    const DOUBLE_TAP_THRESHOLD = 300; // ms
+    
+    // Configuration
+    const MOBILE_CONFIG = {
+        TAP_THRESHOLD: 15,       // Max pixels to count as tap
+        TAP_MAX_DURATION: 300,   // Max ms for a tap
+        SWIPE_THRESHOLD: 40,     // Min pixels to trigger swipe action
+        SCROLL_DEBOUNCE: 200,    // ms between scroll actions
+        MOMENTUM_THRESHOLD: 0.8, // Min velocity for momentum
+    };
+    
+    // Detect if we're on a touch device
+    const isTouchDevice = () => 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+    
+    // Prevent native click events on touch devices to avoid double-firing
+    let touchWasHandled = false;
+    const clickBlocker = (event) => {
+        if (touchWasHandled) {
+            console.warn('[🍉 Mobile] Blocking native click after touch handling');
+            event.preventDefault();
+            event.stopPropagation();
+            touchWasHandled = false;
+            return false;
         }
     };
-    // Handle touch move for swipe detection
-    const touchMoveHandler = (event) => { // 
-        if (event.touches.length !== 1) return; // Only handle single touch events
-        const touchX = event.touches[0].clientX; // Get current touch X position
-        const touchY = event.touches[0].clientY; // Get current touch Y position
-        // Calculate swipe distance and direction 
-        const deltaX = touchX - touchStartX; // Calculate change in X position
-        const deltaY = touchY - touchStartY; // Calculate change in Y position
+    
+    // Touch start handler
+    const touchStartHandler = (event) => {
+        if (event.touches.length !== 1) return; // Only single touch
         
-        // Check if we've moved enough to be considered a swipe
-        const totalMovement = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
-        if (totalMovement > TAP_THRESHOLD) {
-            isTouchMoving = true; // This is now a swipe, not a tap
-            event.preventDefault(); // Prevent default scrolling only when swiping
-        }
+        const touch = event.touches[0];
+        touchState.active = true;
+        touchState.startX = touch.clientX;
+        touchState.startY = touch.clientY;
+        touchState.currentX = touch.clientX;
+        touchState.currentY = touch.clientY;
+        touchState.startTime = Date.now();
+        touchState.gestureType = null;
+        touchState.handled = false;
+        touchState.touchId = touch.identifier;
         
-        // Calculate velocity for momentum (but don't use it for continuous scrolling)
-        const now = Date.now(); // Get the current time
-        const timeDelta = now - lastTouchTime; // Calculate time since last touch event
-        if (timeDelta > 0) { // Avoid division by zero
-            touchVelocity = totalMovement / timeDelta; // Calculate touch velocity
-        }
-        
-        // Use the dominant axis (horizontal or vertical)
-        const isHorizontalSwipe = Math.abs(deltaX) > Math.abs(deltaY);
-        
-        // Check debounce - don't scroll too fast
-        const canScroll = (now - lastScrollTime) > SCROLL_DEBOUNCE_MS;
-        
-        if (activeSubmenu) {
-            // SUBMENU MODE: Only allow vertical scrolling, block horizontal
-            // This prevents main carousel from moving while scrolling submenu
-            if (!isHorizontalSwipe && Math.abs(deltaY) > SWIPE_THRESHOLD && canScroll) {
-                const direction = deltaY > 0 ? -1 : 1; // Invert for natural feel
-                activeSubmenu.scrollSubmenu(direction);
-                lastScrollTime = now;
-                // Reset start position for next scroll gesture
-                touchStartY = touchY;
-                touchStartX = touchX; // Also reset X to prevent drift
-            }
-            // Block all main carousel interaction when submenu is open
-        } else {
-            // MAIN CAROUSEL MODE: Only horizontal swipe
-            if (isHorizontalSwipe && Math.abs(deltaX) > SWIPE_THRESHOLD && canScroll) {
-                const angleStep = (2 * Math.PI) / items.length;
-                carousel.spin(deltaX > 0 ? angleStep : -angleStep);
-                lastScrollTime = now;
-                // Reset start position for next spin gesture  
-                touchStartX = touchX;
-                touchStartY = touchY;
-            }
-        }
-        lastTouchTime = now; // Update the last touch time
+        // Don't preventDefault here - we need to determine gesture type first
     };
-    // Handle touch end with momentum effect
-    const touchEndHandler = (event) => { // 
-        // Check if this was a tap (no significant movement)
-        if (!isTouchMoving && event.changedTouches.length > 0) {
-            const touch = event.changedTouches[0];
-            const deltaX = touch.clientX - touchStartX;
-            const deltaY = touch.clientY - touchStartY;
-            const totalMovement = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
-            
-            if (totalMovement <= TAP_THRESHOLD) {
-                // This was a tap - trigger click handler
-                console.warn('[🍉 Mobile] Tap detected at', touch.clientX, touch.clientY);
-                handleCarouselClick({ clientX: touch.clientX, clientY: touch.clientY });
-                // Reset and return early - don't apply momentum
-                isTouchMoving = false;
-                return;
-            }
+    
+    // Touch move handler  
+    const touchMoveHandler = (event) => {
+        if (!touchState.active || event.touches.length !== 1) return;
+        
+        const touch = event.touches[0];
+        if (touch.identifier !== touchState.touchId) return;
+        
+        touchState.currentX = touch.clientX;
+        touchState.currentY = touch.clientY;
+        
+        const deltaX = touchState.currentX - touchState.startX;
+        const deltaY = touchState.currentY - touchState.startY;
+        const distance = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
+        
+        // Determine gesture type if not yet determined
+        if (!touchState.gestureType && distance > MOBILE_CONFIG.TAP_THRESHOLD) {
+            const isHorizontal = Math.abs(deltaX) > Math.abs(deltaY);
+            touchState.gestureType = isHorizontal ? 'swipe-h' : 'swipe-v';
+            // Once we've determined it's a swipe, prevent scrolling
+            event.preventDefault();
         }
         
-        // Apply momentum only for fast swipes (higher threshold for more control)
-        // Reduced momentum effect for more controlled feel
-        if (touchVelocity > 1.0 && event.changedTouches.length > 0) {
+        // If already determined as swipe, continue preventing default
+        if (touchState.gestureType) {
+            event.preventDefault();
+        }
+        
+        // Handle swipe gestures during move (for continuous scrolling)
+        const now = Date.now();
+        const canScroll = (now - touchState.lastScrollTime) > MOBILE_CONFIG.SCROLL_DEBOUNCE;
+        
+        if (touchState.gestureType && canScroll && !touchState.handled) {
             if (activeSubmenu) {
-                // Only apply momentum to submenu, not main carousel
-                const direction = touchStartY < event.changedTouches[0].clientY ? -1 : 1;
-                activeSubmenu.scrollSubmenu(direction);
+                // SUBMENU MODE: Only vertical swipes work
+                if (touchState.gestureType === 'swipe-v' && Math.abs(deltaY) > MOBILE_CONFIG.SWIPE_THRESHOLD) {
+                    const direction = deltaY > 0 ? -1 : 1;
+                    activeSubmenu.scrollSubmenu(direction);
+                    touchState.lastScrollTime = now;
+                    // Reset start position for continuous scrolling
+                    touchState.startY = touchState.currentY;
+                    touchState.startX = touchState.currentX;
+                    event.preventDefault();
+                }
+                // BLOCK horizontal swipes when submenu is open - don't let main carousel move
             } else {
-                // Apply momentum to main carousel only when no submenu
-                const direction = touchStartX < event.changedTouches[0].clientX ? 1 : -1;
-                const angleStep = (2 * Math.PI) / items.length;
-                carousel.spin(direction * angleStep);
+                // MAIN CAROUSEL MODE: Only horizontal swipes work
+                if (touchState.gestureType === 'swipe-h' && Math.abs(deltaX) > MOBILE_CONFIG.SWIPE_THRESHOLD) {
+                    const angleStep = (2 * Math.PI) / items.length;
+                    carousel.spin(deltaX > 0 ? angleStep : -angleStep);
+                    touchState.lastScrollTime = now;
+                    // Reset start position
+                    touchState.startX = touchState.currentX;
+                    touchState.startY = touchState.currentY;
+                    event.preventDefault();
+                }
+            }
+        }
+    };
+    
+    // Touch end handler
+    const touchEndHandler = (event) => {
+        if (!touchState.active) return;
+        
+        const touch = event.changedTouches[0];
+        if (touch && touch.identifier !== touchState.touchId) return;
+        
+        const deltaX = (touch?.clientX || touchState.currentX) - touchState.startX;
+        const deltaY = (touch?.clientY || touchState.currentY) - touchState.startY;
+        const distance = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
+        const duration = Date.now() - touchState.startTime;
+        
+        // Determine if this was a tap
+        const isTap = distance <= MOBILE_CONFIG.TAP_THRESHOLD && 
+                      duration <= MOBILE_CONFIG.TAP_MAX_DURATION &&
+                      !touchState.gestureType;
+        
+        if (isTap && !touchState.handled) {
+            console.warn('[🍉 Mobile] Tap detected at', touch?.clientX, touch?.clientY);
+            
+            // Check for double-tap (could be used for zoom or special actions)
+            const now = Date.now();
+            const isDoubleTap = (now - lastTapTime) < DOUBLE_TAP_THRESHOLD;
+            lastTapTime = now;
+            
+            if (isDoubleTap) {
+                console.warn('[🍉 Mobile] Double-tap detected - ignoring');
+            } else {
+                // Single tap - handle it
+                touchState.handled = true;
+                touchWasHandled = true; // Block the upcoming native click event
+                
+                // Use setTimeout to let the event loop settle, preventing race conditions
+                setTimeout(() => {
+                    if (!isSpawningSubmenu) {
+                        handleCarouselClick({ clientX: touch?.clientX || touchState.startX, clientY: touch?.clientY || touchState.startY });
+                    }
+                }, 10);
+            }
+            
+            event.preventDefault();
+        }
+        
+        // Apply momentum for fast swipes (only if not a tap)
+        if (touchState.gestureType && !touchState.handled) {
+            const velocity = distance / Math.max(duration, 1);
+            
+            if (velocity > MOBILE_CONFIG.MOMENTUM_THRESHOLD) {
+                if (activeSubmenu && touchState.gestureType === 'swipe-v') {
+                    const direction = deltaY > 0 ? -1 : 1;
+                    activeSubmenu.scrollSubmenu(direction);
+                } else if (!activeSubmenu && touchState.gestureType === 'swipe-h') {
+                    const direction = deltaX > 0 ? 1 : -1;
+                    const angleStep = (2 * Math.PI) / items.length;
+                    carousel.spin(direction * angleStep);
+                }
             }
         }
         
-        // Reset movement flag
-        isTouchMoving = false;
+        // Reset state
+        touchState.active = false;
+        touchState.gestureType = null;
+        touchState.touchId = null;
+        
+        // Clear the touch-handled flag after a short delay
+        setTimeout(() => { touchWasHandled = false; }, 100);
+    };
+    
+    // Touch cancel handler
+    const touchCancelHandler = () => {
+        touchState.active = false;
+        touchState.gestureType = null;
+        touchState.handled = false;
+        touchState.touchId = null;
+        touchWasHandled = false;
     };
     // Function to enable all event handlers (touch and wheel)
     function enableAllEventHandlers() { // Re-attach all event listeners
@@ -385,18 +470,29 @@ export function mountCarousel3D(container, menuData) {
     }
     // Function to enable touch events
     function enableTouchEvents() {
-        // Reset touch variables
-        touchStartX = 0; // Reset initial touch X position
-        touchStartY = 0; // Reset initial touch Y position
-        lastTouchTime = 0; // Reset last touch time
-        touchVelocity = 0; // Reset touch velocity
-        // Re-attach touch event listeners
-        window.removeEventListener('touchstart', touchStartHandler, { passive: false }); // Remove existing touchstart listener
-        window.removeEventListener('touchmove', touchMoveHandler, { passive: false }); // Remove existing touchmove listener
-        window.removeEventListener('touchend', touchEndHandler, { passive: false }); // Remove existing touchend listener
-        window.addEventListener('touchstart', touchStartHandler, { passive: false }); // Attach touchstart event listener
-        window.addEventListener('touchmove', touchMoveHandler, { passive: false }); // Attach touchmove event listener
-        window.addEventListener('touchend', touchEndHandler, { passive: false }); // Attach touchend event listener
+        // Reset touch state
+        touchState.active = false;
+        touchState.gestureType = null;
+        touchState.handled = false;
+        touchWasHandled = false;
+        
+        // Remove existing listeners first
+        window.removeEventListener('touchstart', touchStartHandler, { passive: false });
+        window.removeEventListener('touchmove', touchMoveHandler, { passive: false });
+        window.removeEventListener('touchend', touchEndHandler, { passive: false });
+        window.removeEventListener('touchcancel', touchCancelHandler, { passive: false });
+        
+        // Add touch listeners
+        window.addEventListener('touchstart', touchStartHandler, { passive: false });
+        window.addEventListener('touchmove', touchMoveHandler, { passive: false });
+        window.addEventListener('touchend', touchEndHandler, { passive: false });
+        window.addEventListener('touchcancel', touchCancelHandler, { passive: false });
+        
+        // Add click blocker for touch devices
+        if (isTouchDevice()) {
+            window.removeEventListener('click', clickBlocker, true);
+            window.addEventListener('click', clickBlocker, true);
+        }
     }
     // Function to enable wheel handler
     function enableWheelHandler() { // Re-attach wheel event listener
@@ -924,12 +1020,20 @@ export function mountCarousel3D(container, menuData) {
             return;
         }
         
+        // Check spawning lock FIRST - prevents concurrent spawns from touch+click
+        if (isSpawningSubmenu) {
+            console.warn('[🍉 Click] Spawning already in progress, ignoring duplicate click.');
+            return;
+        }
+        
         // Check if a transition is allowed using the guard
         if (!globalGuard.canSelect()) {
             console.warn('[Watermelon] Submenu transition in progress or animation locked. Skipping click.');
             return;
         }
         
+        // SET the spawning lock immediately
+        isSpawningSubmenu = true;
         console.warn(`[🍉 Click] Processing click on item ${index}: ${item}`);
         
         // Use the withTransition helper for clean state management
@@ -994,10 +1098,13 @@ export function mountCarousel3D(container, menuData) {
                 console.error('[Watermelon] Error during submenu transition:', err);
                 // Ensure handlers are re-enabled even if an error occurs
                 enableAllEventHandlers();
+                // ALWAYS clear spawning lock on error
+                isSpawningSubmenu = false;
             }
         });
         
-        // Add a small buffer after transition completes
+        // Clear spawning lock and add a small buffer after transition completes
+        isSpawningSubmenu = false;
         setTimeout(() => {
             isTransitioning = false; // For backward compatibility
             console.warn('[Watermelon] Submenu transition complete.');
@@ -1138,6 +1245,12 @@ export function mountCarousel3D(container, menuData) {
     }
     // Define click handler
     function handleCarouselClick(event) {
+        // Check spawning lock first - prevents double-clicks
+        if (isSpawningSubmenu) {
+            console.warn('[🍉 Click] Spawning in progress, ignoring click.');
+            return;
+        }
+        
         // Optional: If transition has been stuck for too long, repair the state
         if (globalGuard.isTransitioning) {
             const now = Date.now();
