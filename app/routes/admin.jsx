@@ -491,8 +491,6 @@ export default function AdminPanel() {
             </ConfigSection>
           )}
         </div>
-
-        {/* Preview Panel (placeholder for now) */}
         <div style={styles.previewPanel}>
           <h3 style={styles.previewTitle}>Live Preview</h3>
           <p style={styles.previewHint}>

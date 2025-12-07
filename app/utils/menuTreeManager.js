@@ -28,7 +28,7 @@ export function parseMenuTree(menuStructure) {
   };
 
   // Parse each top-level menu item
-  menuStructure.menu.forEach((item, index) => {
+  menuStructure.menu.forEach((item) => {
     const node = parseMenuItem(item, menuTree.root, 1, menuTree);
     menuTree.root.children.push(node);
   });
@@ -52,8 +52,8 @@ function parseMenuItem(item, parent, depth, tree) {
     description: item.description || null,
     model3D: item.model3D || null,
     productType: item.productType || null,
-    parent: parent,
-    depth: depth,
+    parent,
+    depth,
     children: [],
     hasChildren: false
   };
