@@ -424,16 +424,16 @@ export class Carousel3DSubmenu extends THREE.Group {
       const container = new THREE.Group();
       container.add(mesh);
       container.userData.index = index;
-      // Balanced hitboxes - tight but reliable for click detection
-      // Account for icon on the left side (iconOffset ~0.7) plus small margin
-      const hitAreaWidth = textWidth + 0.9; // Text width + icon space + small margin
-      const hitAreaHeight = Math.max(textHeight + 0.25, 0.5); // Snug vertical fit
-      const hitAreaDepth = 0.4; // Moderate depth for reliable raycasting
+      // LARGER hitboxes for easier clicking - especially on desktop
+      // Make them BIG and generous for reliable click detection
+      const hitAreaWidth = textWidth + 2.0; // Much wider - text width + generous padding
+      const hitAreaHeight = Math.max(textHeight + 0.8, 0.8); // Taller for easy clicking
+      const hitAreaDepth = 1.0; // DEEP for reliable raycasting from any angle
       const hitArea = new THREE.Mesh(
         new THREE.BoxGeometry(hitAreaWidth, hitAreaHeight, hitAreaDepth),
         new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.01, depthWrite: false })
       );
-      hitArea.position.z = -0.1; // Slightly behind text for better raycast hit
+      hitArea.position.z = 0.3; // Move FORWARD (toward camera) for better hit detection
       // IMPORTANT: Set userData on hitArea for click detection
       hitArea.userData = {
         isSubmenuItem: true,

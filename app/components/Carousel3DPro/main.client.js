@@ -214,8 +214,64 @@ export function mountCarousel3D(container, menuData) {
     controls.minDistance = 5; // Minimum distance for zooming in
     
     // =======================
-    // MOBILE CAMERA CONSTRAINTS
+    // MOBILE CAMERA CONSTRAINTS & LAYER SYSTEM
     // =======================
+    
+    // Mobile layer positions - camera shifts RIGHT through layers
+    // Layer 0: Main menu (default)
+    // Layer 1: Submenu (shifted right)
+    // Layer 2: Display/Content (shifted further right)
+    const mobileLayers = {
+        mainMenu: { x: 0, y: 0, z: 12 },      // Center view of main menu
+        submenu: { x: 3, y: 0, z: 10 },       // Shifted right, closer for submenu
+        display: { x: 6, y: 0, z: 8 },        // Further right for content display
+    };
+    let currentMobileLayer = 'mainMenu';
+    
+    // Function to smoothly transition camera to a layer
+    function transitionToLayer(layerName, duration = 0.5) {
+        if (!isMobileNow) return; // Only on mobile
+        
+        const layer = mobileLayers[layerName];
+        if (!layer) return;
+        
+        currentMobileLayer = layerName;
+        console.warn(`[🍉 Mobile] Transitioning to layer: ${layerName}`);
+        
+        gsap.to(camera.position, {
+            x: layer.x,
+            y: layer.y,
+            z: layer.z,
+            duration,
+            ease: "power2.out",
+            onUpdate: () => {
+                camera.lookAt(layer.x, 0, 0); // Look at the layer's X position
+            }
+        });
+    }
+    
+    // Function to navigate back one layer (display → submenu → mainMenu)
+    function navigateBackLayer(duration = 0.4) {
+        if (!isMobileNow) return;
+        
+        const layerOrder = ['mainMenu', 'submenu', 'display'];
+        const currentIdx = layerOrder.indexOf(currentMobileLayer);
+        
+        if (currentIdx > 0) {
+            const previousLayer = layerOrder[currentIdx - 1];
+            transitionToLayer(previousLayer, duration);
+            console.warn(`[🍉 Mobile] Navigated back to: ${previousLayer}`);
+        }
+    }
+    
+    // Expose layer transition for submenu/display systems
+    if (typeof window !== 'undefined') {
+        window.__wmTransitionToLayer = transitionToLayer;
+        window.__wmNavigateBackLayer = navigateBackLayer;
+        window.__wmGetCurrentLayer = () => currentMobileLayer;
+        window.__wmMobileLayers = mobileLayers;
+    }
+    
     if (isMobileNow) {
         // MOBILE: Lock the camera - disable ALL OrbitControls interactions
         controls.enabled = false; // Completely disable OrbitControls on mobile
@@ -223,11 +279,11 @@ export function mountCarousel3D(container, menuData) {
         controls.enablePan = false;
         controls.enableZoom = false;
         
-        // Lock camera to fixed mobile-optimized position
-        camera.position.set(0, 0, 12); // Centered, pulled back for better view
+        // Lock camera to initial mobile-optimized position (main menu layer)
+        camera.position.set(mobileLayers.mainMenu.x, mobileLayers.mainMenu.y, mobileLayers.mainMenu.z);
         camera.lookAt(0, 0, 0);
         
-        console.warn('[🍉 Mobile] Camera locked, OrbitControls disabled');
+        console.warn('[🍉 Mobile] Camera locked, OrbitControls disabled, layer system active');
     } else {
         // DESKTOP: Full OrbitControls experience
         controls.enableZoom = true;
@@ -316,23 +372,23 @@ export function mountCarousel3D(container, menuData) {
     let lastTapTime = 0;
     const DOUBLE_TAP_THRESHOLD = 300; // ms
     
-    // Configuration - MOBILE uses stricter settings
+    // Configuration - MOBILE uses adjusted settings (less rigid)
     const isMobileTouch = isMobileDeviceEarly();
     const MOBILE_CONFIG = isMobileTouch ? {
-        // MOBILE-OPTIMIZED: Stricter thresholds, no momentum, snap-to-item
-        TAP_THRESHOLD: 20,       // More forgiving tap detection
-        TAP_MAX_DURATION: 400,   // Longer tap allowance
-        SWIPE_THRESHOLD: 60,     // Higher threshold = more deliberate swipes required
-        SCROLL_DEBOUNCE: 300,    // Longer debounce = slower, more controlled navigation
-        MOMENTUM_THRESHOLD: 999, // Effectively disable momentum on mobile (too wild)
-        SNAP_TO_ITEM: true,      // Always snap to nearest item
+        // MOBILE: Balanced settings - stable but not stiff
+        TAP_THRESHOLD: 18,       // Forgiving tap detection
+        TAP_MAX_DURATION: 350,   // Reasonable tap time
+        SWIPE_THRESHOLD: 45,     // Moderate threshold - responsive but not twitchy
+        SCROLL_DEBOUNCE: 180,    // Faster response for smoother feel
+        MOMENTUM_THRESHOLD: 2.0, // Allow SOME momentum (not wild, but not stiff)
+        SNAP_TO_ITEM: true,      // Snap to nearest item for stability
     } : {
-        // DESKTOP: Original settings
-        TAP_THRESHOLD: 15,
+        // DESKTOP: Smooth and responsive
+        TAP_THRESHOLD: 12,
         TAP_MAX_DURATION: 300,
-        SWIPE_THRESHOLD: 40,
-        SCROLL_DEBOUNCE: 200,
-        MOMENTUM_THRESHOLD: 0.8,
+        SWIPE_THRESHOLD: 30,     // Lower for responsive feel
+        SCROLL_DEBOUNCE: 150,    // Faster debounce
+        MOMENTUM_THRESHOLD: 0.5, // Allow more momentum
         SNAP_TO_ITEM: false,
     };
     
@@ -850,6 +906,7 @@ export function mountCarousel3D(container, menuData) {
         const angleStep = (2 * Math.PI) / itemCount;
         
         // Reposition items for vertical wheel (rotate around X axis)
+        // IMPORTANT: Items stay LEVEL like Ferris wheel carts - they don't rotate with the wheel
         carousel.itemMeshes.forEach((mesh, index) => {
             const angle = angleStep * index;
             // Ferris wheel: items positioned in Y-Z plane instead of X-Z
@@ -857,14 +914,16 @@ export function mountCarousel3D(container, menuData) {
             mesh.position.y = ferrisRadius * Math.sin(angle);
             mesh.position.z = ferrisRadius * Math.cos(angle);
             
-            // Face the camera (look at camera position)
-            mesh.rotation.x = -angle; // Rotate to face outward from wheel
-            mesh.rotation.y = 0;
+            // FERRIS CART STYLE: Items stay LEVEL (rotation.x = 0)
+            // They don't tilt with their position on the wheel
+            mesh.rotation.x = 0; // Stay level!
+            mesh.rotation.y = 0; // Face forward
+            mesh.rotation.z = 0; // No tilt
             
-            // Update hit area position
+            // Update hit area position (also stays level)
             if (mesh.userData.hitArea) {
                 mesh.userData.hitArea.position.copy(mesh.position);
-                mesh.userData.hitArea.rotation.copy(mesh.rotation);
+                mesh.userData.hitArea.rotation.set(0, 0, 0); // Level
             }
         });
         
@@ -1320,6 +1379,13 @@ export function mountCarousel3D(container, menuData) {
                 
                 console.warn(`[🍉 Click] Submenu spawn completed for ${item}`);
                 
+                // MOBILE LAYER: Shift camera to submenu layer when submenu opens
+                const isMobileForLayer = typeof window !== 'undefined' && window.innerWidth < 768;
+                if (isMobileForLayer && typeof transitionToLayer === 'function') {
+                    transitionToLayer('submenu', 0.5);
+                    console.warn('[🍉 Mobile Layer] Transitioned to submenu layer');
+                }
+                
                 // Check if the submenu is actually created and in the scene
                 if (activeSubmenu) {
                     console.warn('[🍉 Click] Submenu is active after spawn:', {
@@ -1416,6 +1482,11 @@ export function mountCarousel3D(container, menuData) {
         // Use the guard to manage transition state
         globalGuard.isTransitioning = true;
         isTransitioning = true; // For backward compatibility
+        
+        // MOBILE: Transition camera back to main menu layer
+        if (isMobileNow && typeof transitionToLayer === 'function') {
+            transitionToLayer('mainMenu', 0.4);
+        }
         
         console.warn('[Watermelon] Manual closeSubmenu called.');
         
@@ -1596,6 +1667,13 @@ export function mountCarousel3D(container, menuData) {
                     loadContentForItem(parentItem, item).then(contentData => {
                         if (contentData) {
                             console.warn(`[🍉 Content] Successfully loaded content for ${parentItem} > ${item}`);
+                            
+                            // MOBILE LAYER: Shift camera to display layer when content is loaded
+                            const isMobileForLayer = typeof window !== 'undefined' && window.innerWidth < 768;
+                            if (isMobileForLayer && typeof transitionToLayer === 'function') {
+                                transitionToLayer('display', 0.5);
+                                console.warn('[🍉 Mobile Layer] Transitioned to display layer');
+                            }
                             
                             // Handle special content types that might need floating panels
                             if (contentData.type === 'cart' || 
