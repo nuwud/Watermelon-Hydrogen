@@ -52,7 +52,9 @@ const DEFAULT_CONFIG = {
     ferrisWheelRadius: 4,
     breakpoint: 768,
   },
-  // Scatter Animation settings
+  // Theme preset
+  activeTheme: 'default',
+  // Scatter animation settings
   scatter: {
     enabled: true,
     scatterDistance: 3.0,
@@ -62,11 +64,9 @@ const DEFAULT_CONFIG = {
     mobileScatterDistance: 2.0,
     dimOpacity: 0.3,
   },
-  // Theme preset
-  activeTheme: 'default',
 };
 
-export async function loader() {
+export async function loader({request}) {
   // In production, load from Shopify Metaobjects
   // For now, return defaults
   return json({
@@ -411,9 +411,9 @@ export default function AdminPanel() {
           )}
 
           {activeTab === 'scatter' && (
-            <ConfigSection title="Ring Scatter Animation">
+            <ConfigSection title="Scatter Animation">
               <ToggleInput
-                label="Enable Scatter Animation"
+                label="Enable Scatter"
                 value={config.scatter.enabled}
                 onChange={v => updateConfig('scatter', 'enabled', v)}
               />
@@ -426,7 +426,7 @@ export default function AdminPanel() {
                 onChange={v => updateConfig('scatter', 'scatterDistance', v)}
               />
               <SliderInput
-                label="Animation Duration (s)"
+                label="Animation Duration"
                 value={config.scatter.scatterDuration}
                 min={0.2}
                 max={1.5}
@@ -434,18 +434,18 @@ export default function AdminPanel() {
                 onChange={v => updateConfig('scatter', 'scatterDuration', v)}
               />
               <SliderInput
-                label="Stagger Delay (s)"
+                label="Stagger Delay"
                 value={config.scatter.staggerDelay}
-                min={0.01}
-                max={0.15}
+                min={0}
+                max={0.1}
                 step={0.01}
                 onChange={v => updateConfig('scatter', 'staggerDelay', v)}
               />
               <SliderInput
-                label="Selected Zoom Forward"
+                label="Selected Zoom"
                 value={config.scatter.selectedZoom}
                 min={0.2}
-                max={2}
+                max={1.5}
                 step={0.1}
                 onChange={v => updateConfig('scatter', 'selectedZoom', v)}
               />
@@ -454,43 +454,28 @@ export default function AdminPanel() {
                 value={config.scatter.mobileScatterDistance}
                 min={1}
                 max={4}
-                step={0.5}
+                step={0.25}
                 onChange={v => updateConfig('scatter', 'mobileScatterDistance', v)}
               />
               <SliderInput
                 label="Dim Opacity"
                 value={config.scatter.dimOpacity}
-                min={0.1}
-                max={0.8}
-                step={0.05}
+                min={0}
+                max={1}
+                step={0.1}
                 onChange={v => updateConfig('scatter', 'dimOpacity', v)}
               />
-              
-              {/* Test Button */}
-              <div style={{marginTop: '20px', paddingTop: '15px', borderTop: '1px solid #333'}}>
-                <button 
-                  onClick={() => {
-                    if (typeof window !== 'undefined') {
-                      window.dispatchEvent(new CustomEvent('watermelon-scatter-test'));
-                    }
-                  }} 
-                  style={{
-                    background: 'linear-gradient(135deg, #4488ff, #00aaff)',
-                    color: 'white',
-                    border: 'none',
-                    padding: '12px 20px',
-                    borderRadius: '8px',
-                    cursor: 'pointer',
-                    fontWeight: 'bold',
-                    width: '100%'
-                  }}
-                >
-                  ðŸŽ¯ Test Scatter Animation
-                </button>
-              </div>
+              <button
+                onClick={() => window.dispatchEvent(new Event('watermelon-scatter-test'))}
+                style={{...styles.buttonPrimary, marginTop: '20px'}}
+              >
+                í¾¯ Test Scatter Animation
+              </button>
             </ConfigSection>
           )}
         </div>
+
+        {/* Preview Panel (placeholder for now) */}
         <div style={styles.previewPanel}>
           <h3 style={styles.previewTitle}>Live Preview</h3>
           <p style={styles.previewHint}>
