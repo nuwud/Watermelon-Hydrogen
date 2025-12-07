@@ -175,6 +175,78 @@ export function mountCarousel3D(container, menuData) {
         }
     })();
 
+    // =======================
+    // ADMIN CONFIG LISTENER (Phase 4)
+    // Listen for real-time config updates from the admin panel
+    // =======================
+    function applyAdminConfig(config) {
+        if (!config) return;
+        
+        console.log('[🍉 Admin] Applying config update:', config);
+        
+        // Apply scene settings
+        if (config.scene) {
+            if (config.scene.backgroundColor) {
+                scene.background = new THREE.Color(config.scene.backgroundColor);
+            }
+            if (config.scene.fogColor && scene.fog) {
+                scene.fog.color = new THREE.Color(config.scene.fogColor);
+            }
+            if (typeof config.scene.fogNear === 'number' && scene.fog) {
+                scene.fog.near = config.scene.fogNear;
+            }
+            if (typeof config.scene.fogFar === 'number' && scene.fog) {
+                scene.fog.far = config.scene.fogFar;
+            }
+        }
+        
+        // Apply camera settings
+        if (config.camera) {
+            if (typeof config.camera.fov === 'number') {
+                camera.fov = config.camera.fov;
+                camera.updateProjectionMatrix();
+            }
+            if (typeof config.camera.spotlightIntensity === 'number' && cameraSpotlight) {
+                cameraSpotlight.intensity = config.camera.spotlightIntensity;
+            }
+            if (typeof config.camera.spotlightAngle === 'number' && cameraSpotlight) {
+                cameraSpotlight.angle = (config.camera.spotlightAngle * Math.PI) / 180;
+            }
+            if (typeof config.camera.fillLightIntensity === 'number' && cameraFillLight) {
+                cameraFillLight.intensity = config.camera.fillLightIntensity;
+            }
+        }
+        
+        // Apply carousel settings (if carousel exists)
+        if (config.carousel && carousel) {
+            if (typeof config.carousel.rotationSpeed === 'number') {
+                carousel.rotationSpeed = config.carousel.rotationSpeed;
+            }
+            if (typeof config.carousel.highlightScale === 'number') {
+                carousel.highlightScale = config.carousel.highlightScale;
+            }
+        }
+    }
+    
+    // Load saved config on startup
+    if (typeof window !== 'undefined') {
+        const savedConfig = localStorage.getItem('watermelon-admin-config');
+        if (savedConfig) {
+            try {
+                const config = JSON.parse(savedConfig);
+                // Delay apply to let scene fully initialize
+                setTimeout(() => applyAdminConfig(config), 500);
+            } catch (e) {
+                console.warn('[🍉 Admin] Failed to load saved config:', e);
+            }
+        }
+        
+        // Listen for real-time config updates
+        window.addEventListener('watermelon-config-update', (e) => {
+            applyAdminConfig(e.detail);
+        });
+    }
+
     // Ensure a hidden, focusable button exists for keyboard-based submenu closing
     if (!submenuCloseProxyButton) {
         submenuCloseProxyButton = document.createElement('button');
