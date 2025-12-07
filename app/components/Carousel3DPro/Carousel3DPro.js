@@ -525,9 +525,9 @@ updateHoverVisuals() {
     
     // Skip shader materials (selected items have glow shader)
     if (mesh.material instanceof THREE.ShaderMaterial) {
-      // For selected items, adjust glow intensity based on dimming
+      // For selected items, adjust glow intensity based on combined brightness
       if (mesh.material.uniforms?.intensity) {
-        mesh.material.uniforms.intensity.value = 2.0 * submenuDimFactor;
+        mesh.material.uniforms.intensity.value = 2.0 * brightnessFactor;
       }
       return;
     }

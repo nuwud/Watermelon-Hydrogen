@@ -438,8 +438,8 @@ export class Carousel3DSubmenu extends THREE.Group {
       hitArea.userData = {
         isSubmenuItem: true,
         isHitArea: true,
-        index: index,
-        item: item
+        index,
+        item
       };
       container.add(hitArea);
 
