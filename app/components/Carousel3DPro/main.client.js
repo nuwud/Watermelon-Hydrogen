@@ -223,8 +223,8 @@ export function mountCarousel3D(container, menuData) {
     // Layer 2: Display/Content (shifted further right)
     const mobileLayers = {
         mainMenu: { x: 0, y: 0, z: 12 },      // Center view of main menu
-        submenu: { x: 3, y: 0, z: 10 },       // Shifted right, closer for submenu
-        display: { x: 6, y: 0, z: 8 },        // Further right for content display
+        submenu: { x: 2, y: 0, z: 10 },       // Shifted right slightly, closer for submenu
+        display: { x: 4, y: 0, z: 8 },        // Further right for content display
     };
     let currentMobileLayer = 'mainMenu';
     
@@ -232,13 +232,19 @@ export function mountCarousel3D(container, menuData) {
     function transitionToLayer(layerName, duration = 0.5) {
         // Check mobile status DYNAMICALLY each time
         const isMobileCheck = typeof window !== 'undefined' && window.innerWidth < 768;
-        if (!isMobileCheck) return; // Only on mobile
+        if (!isMobileCheck) {
+            console.warn(`[🍉 Mobile Layer] Skipped - not mobile (width: ${window.innerWidth})`);
+            return;
+        }
         
         const layer = mobileLayers[layerName];
-        if (!layer) return;
+        if (!layer) {
+            console.warn(`[🍉 Mobile Layer] Unknown layer: ${layerName}`);
+            return;
+        }
         
         currentMobileLayer = layerName;
-        console.warn(`[🍉 Mobile] Transitioning to layer: ${layerName}`);
+        console.warn(`[🍉 Mobile Layer] Transitioning camera to: ${layerName}`, layer);
         
         gsap.to(camera.position, {
             x: layer.x,
@@ -247,7 +253,11 @@ export function mountCarousel3D(container, menuData) {
             duration,
             ease: "power2.out",
             onUpdate: () => {
-                camera.lookAt(layer.x, 0, 0); // Look at the layer's X position
+                // Always look at the carousel center, not the layer X offset
+                camera.lookAt(0, 0, 0);
+            },
+            onComplete: () => {
+                console.warn(`[🍉 Mobile Layer] Transition complete to: ${layerName}`);
             }
         });
     }

@@ -858,17 +858,6 @@ update() {
         }
       }
     }
-    
-    // FERRIS WHEEL: Keep items facing camera (counter-rotate to stay level)
-    if (isFerrisWheel && this.itemMeshes) {
-      const groupRotation = this.itemGroup.rotation.x;
-      this.itemMeshes.forEach((mesh) => {
-        // Counter-rotate each item so it always faces the camera
-        mesh.rotation.x = -groupRotation;
-        mesh.rotation.y = 0;
-        mesh.rotation.z = 0;
-      });
-    }
   }
 
   // Maintain shader glow if applicable
@@ -950,19 +939,21 @@ updateCurrentItemFromRotation() {
  * 
  * @description
  * This method calculates which item in the carousel should be considered the front-facing item
- * based on the current rotation. It works by:
- * 1. Calculating the angular step between items based on the total number of items
- * 2. Normalizing the current rotation to a value between 0 and 2π
- * 3. Finding the item with the smallest angular difference to the front position
- * 
- * The method handles wrapping around the circle to ensure the shortest distance is always used.
+ * based on the current rotation. For Ferris wheel mode (rotating around X axis), the front 
+ * is at the bottom of the wheel (closest to camera).
  */
 calculateIndexFromRotation(rotation/**, axis = 'y'*/) {
   if (!this.itemMeshes.length) return undefined;
   const angleStep = (2 * Math.PI) / this.items.length;
   const twoPi = Math.PI * 2;
-  const currentRotation = rotation; // Use the provided rotation value
-  const frontAngleInGroupSpace = ((-currentRotation % twoPi) + twoPi) % twoPi;
+  const currentRotation = rotation;
+  
+  // For Ferris wheel mode, the "front" item is at the bottom of the wheel
+  // This corresponds to an offset of π/2 from the standard front position
+  const isFerrisWheel = this.userData?.isFerrisWheel;
+  const frontOffset = isFerrisWheel ? (Math.PI / 2) : 0;
+  
+  const frontAngleInGroupSpace = (((-currentRotation + frontOffset) % twoPi) + twoPi) % twoPi;
   let closestIndex = 0;
   let minAngleDiff = twoPi;
 
