@@ -858,6 +858,17 @@ update() {
         }
       }
     }
+    
+    // FERRIS WHEEL: Keep items facing camera (counter-rotate to stay level)
+    if (isFerrisWheel && this.itemMeshes) {
+      const groupRotation = this.itemGroup.rotation.x;
+      this.itemMeshes.forEach((mesh) => {
+        // Counter-rotate each item so it always faces the camera
+        mesh.rotation.x = -groupRotation;
+        mesh.rotation.y = 0;
+        mesh.rotation.z = 0;
+      });
+    }
   }
 
   // Maintain shader glow if applicable

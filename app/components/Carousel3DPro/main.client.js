@@ -230,7 +230,9 @@ export function mountCarousel3D(container, menuData) {
     
     // Function to smoothly transition camera to a layer
     function transitionToLayer(layerName, duration = 0.5) {
-        if (!isMobileNow) return; // Only on mobile
+        // Check mobile status DYNAMICALLY each time
+        const isMobileCheck = typeof window !== 'undefined' && window.innerWidth < 768;
+        if (!isMobileCheck) return; // Only on mobile
         
         const layer = mobileLayers[layerName];
         if (!layer) return;
@@ -252,7 +254,9 @@ export function mountCarousel3D(container, menuData) {
     
     // Function to navigate back one layer (display → submenu → mainMenu)
     function navigateBackLayer(duration = 0.4) {
-        if (!isMobileNow) return;
+        // Check mobile status DYNAMICALLY each time
+        const isMobileCheck = typeof window !== 'undefined' && window.innerWidth < 768;
+        if (!isMobileCheck) return;
         
         const layerOrder = ['mainMenu', 'submenu', 'display'];
         const currentIdx = layerOrder.indexOf(currentMobileLayer);
@@ -1484,7 +1488,8 @@ export function mountCarousel3D(container, menuData) {
         isTransitioning = true; // For backward compatibility
         
         // MOBILE: Transition camera back to main menu layer
-        if (isMobileNow && typeof transitionToLayer === 'function') {
+        // transitionToLayer has its own mobile check, so just call it
+        if (typeof transitionToLayer === 'function') {
             transitionToLayer('mainMenu', 0.4);
         }
         
@@ -1590,18 +1595,15 @@ export function mountCarousel3D(container, menuData) {
         // Add explicit debug 
         console.warn('[🍉 Click] Processing carousel click at', event.clientX, event.clientY);
         
+        // Get accurate mouse coordinates relative to canvas
+        const rect = renderer.domElement.getBoundingClientRect();
         const mouse = new THREE.Vector2(
-            (event.clientX / window.innerWidth) * 2 - 1,
-            -(event.clientY / window.innerHeight) * 2 + 1
+            ((event.clientX - rect.left) / rect.width) * 2 - 1,
+            -((event.clientY - rect.top) / rect.height) * 2 + 1
         );
         
         const raycaster = new THREE.Raycaster();
         raycaster.setFromCamera(mouse, camera);
-        
-        // Get accurate mouse coordinates relative to canvas
-        const rect = renderer.domElement.getBoundingClientRect();
-        mouse.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
-        mouse.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
         
         // DEBUG: Check for any intersections with the scene
         const allIntersects = raycaster.intersectObjects(scene.children, true);
@@ -1707,7 +1709,17 @@ export function mountCarousel3D(container, menuData) {
         // User must close the submenu first (click same item, ESC, or click empty space)
         // ============================================
         if (activeSubmenu) {
-            // Check if the user is clicking the currently selected main item (to close submenu)
+            console.warn(`[🍉 Click] Submenu is open - checking if click should be blocked`);
+            console.warn(`[🍉 Click] itemsHit.length = ${itemsHit.length}`);
+            
+            // If no main carousel items were hit, close the submenu (clicked empty space)
+            if (itemsHit.length === 0) {
+                console.warn(`[🍉 Click] Clicked empty space while submenu open - closing submenu`);
+                closeSubmenu();
+                return;
+            }
+            
+            // Check each hit to see if it's a main carousel item
             for (const hit of itemsHit) {
                 let current = hit.object;
                 while (current && current.parent !== carousel.itemGroup) {
@@ -1715,6 +1727,7 @@ export function mountCarousel3D(container, menuData) {
                 }
                 if (current && current.userData.index !== undefined) {
                     const clickedIndex = current.userData.index;
+                    console.warn(`[🍉 Click] Found main item at index ${clickedIndex}, current is ${carousel.currentIndex}`);
                     
                     // Only allow clicking the SAME item (to toggle/close submenu)
                     if (clickedIndex === carousel.currentIndex) {
@@ -1730,14 +1743,9 @@ export function mountCarousel3D(container, menuData) {
                 }
             }
             
-            // If click didn't hit any main carousel item, it might be empty space - close submenu
-            if (itemsHit.length === 0) {
-                console.warn(`[🍉 Click] Clicked empty space while submenu open - closing submenu`);
-                closeSubmenu();
-                return;
-            }
-            
-            return; // Safety exit - submenu is open, don't process main carousel clicks
+            // Safety exit - if we got here with submenu open, block the click
+            console.warn(`[🍉 Click] Safety block - submenu is open, blocking all main clicks`);
+            return;
         }
         
         // ============================================
