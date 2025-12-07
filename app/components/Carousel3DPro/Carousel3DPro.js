@@ -533,16 +533,48 @@ updateHoverVisuals() {
     }
     
     if (isHovered && !submenuOpen) {
-      // Hover effect - pronounced brightness boost and glow
-      mesh.material.color.setHex(0xeeffff); // Slight cyan tint
-      mesh.material.emissive = new THREE.Color(0x99ccff); // Brighter blue-white glow
-      mesh.material.emissiveIntensity = 1.5; // Strong glow on hover
+      // ENHANCED HOVER EFFECT - pronounced glow, scale, and subtle pulse
+      mesh.material.color.setHex(0xffffff); // Pure white for maximum contrast
+      mesh.material.emissive = new THREE.Color(0xaaddff); // Bright cyan-white glow
+      mesh.material.emissiveIntensity = 2.0; // Strong glow on hover
       mesh.material.opacity = 1.0;
       
-      // Subtle scale up on hover
-      const hoverScale = mesh.userData.originalScale.clone().multiplyScalar(this.config.hoverScale || 1.12);
-      gsap.to(mesh.scale, { x: hoverScale.x, y: hoverScale.y, z: hoverScale.z, duration: 0.15 });
+      // Scale up with elastic ease for "pop" effect
+      const hoverScale = mesh.userData.originalScale.clone().multiplyScalar(this.config.hoverScale || 1.15);
+      gsap.to(mesh.scale, { 
+        x: hoverScale.x, 
+        y: hoverScale.y, 
+        z: hoverScale.z, 
+        duration: 0.2,
+        ease: 'back.out(1.5)' // Elastic overshoot for satisfying pop
+      });
+      
+      // Add subtle continuous pulse animation (if not already pulsing)
+      if (!mesh.userData.isPulsing) {
+        mesh.userData.isPulsing = true;
+        mesh.userData.pulseAnimation = gsap.to(mesh.material, {
+          emissiveIntensity: 2.5,
+          duration: 0.6,
+          yoyo: true,
+          repeat: -1,
+          ease: 'sine.inOut'
+        });
+      }
+      
+      // Change cursor to pointer
+      if (typeof document !== 'undefined') {
+        document.body.style.cursor = 'pointer';
+      }
     } else {
+      // Stop pulsing if active
+      if (mesh.userData.isPulsing) {
+        mesh.userData.isPulsing = false;
+        if (mesh.userData.pulseAnimation) {
+          mesh.userData.pulseAnimation.kill();
+          mesh.userData.pulseAnimation = null;
+        }
+      }
+      
       // Normal non-selected appearance with VISIBLE distance dimming
       mesh.material.color.setHex(0xeeffff); // Consistent cyan-tinted white
       mesh.material.emissive = new THREE.Color(0x6699cc); // Brighter base emissive
@@ -551,13 +583,19 @@ updateHoverVisuals() {
       // Also apply to opacity for more visible depth effect  
       mesh.material.opacity = Math.max(0.4, distanceFactor * submenuDimFactor); // Never fully invisible
       
-      // Restore original scale
+      // Restore original scale with smooth ease
       gsap.to(mesh.scale, {
         x: mesh.userData.originalScale.x,
         y: mesh.userData.originalScale.y,
         z: mesh.userData.originalScale.z,
-        duration: 0.15
+        duration: 0.2,
+        ease: 'power2.out'
       });
+    }
+    
+    // Reset cursor if nothing is hovered
+    if (this.hoveredIndex === -1 && typeof document !== 'undefined') {
+      document.body.style.cursor = 'default';
     }
   });
 }

@@ -750,35 +750,61 @@ export class Carousel3DSubmenu extends THREE.Group {
       }
       
       if (isHovered) {
-        // Subtle hover effect - brightness boost and glow
-        mesh.material.color.setHex(0xeeffff); // Slight cyan tint on hover
-        mesh.material.emissive.setHex(0x55aadd); // Brighter blue glow
-        mesh.material.emissiveIntensity = 0.9; // Noticeable but not overwhelming
+        // ENHANCED hover effect - brightness boost, glow, and pulse
+        mesh.material.color.setHex(0xffffff); // Pure white on hover
+        mesh.material.emissive.setHex(0x77ccff); // Brighter cyan-blue glow
+        mesh.material.emissiveIntensity = 1.2; // Strong glow
         
-        // Scale up on hover
+        // Scale up with elastic ease for satisfying pop
         const targetScale = mesh.userData.originalScale ? 
-          mesh.userData.originalScale.clone().multiplyScalar(1.12) :
-          new THREE.Vector3(1.12, 1.12, 1.12);
+          mesh.userData.originalScale.clone().multiplyScalar(1.15) :
+          new THREE.Vector3(1.15, 1.15, 1.15);
         gsap.to(mesh.scale, { 
           x: targetScale.x, 
           y: targetScale.y, 
           z: targetScale.z, 
-          duration: 0.15,
-          ease: 'power2.out'
+          duration: 0.2,
+          ease: 'back.out(1.3)'
         });
+        
+        // Add subtle pulse on hover (if not already pulsing)
+        if (!mesh.userData.isPulsing) {
+          mesh.userData.isPulsing = true;
+          mesh.userData.pulseAnimation = gsap.to(mesh.material, {
+            emissiveIntensity: 1.5,
+            duration: 0.5,
+            yoyo: true,
+            repeat: -1,
+            ease: 'sine.inOut'
+          });
+        }
         
         // Scale icon on hover too
         if (iconMesh && iconMesh.userData.originalScale) {
-          const iconTarget = iconMesh.userData.originalScale.clone().multiplyScalar(1.12);
+          const iconTarget = iconMesh.userData.originalScale.clone().multiplyScalar(1.15);
           gsap.to(iconMesh.scale, {
             x: iconTarget.x,
             y: iconTarget.y,
             z: iconTarget.z,
-            duration: 0.15,
-            ease: 'power2.out'
+            duration: 0.2,
+            ease: 'back.out(1.3)'
           });
         }
+        
+        // Change cursor to pointer
+        if (typeof document !== 'undefined') {
+          document.body.style.cursor = 'pointer';
+        }
       } else {
+        // Stop pulsing if active
+        if (mesh.userData.isPulsing) {
+          mesh.userData.isPulsing = false;
+          if (mesh.userData.pulseAnimation) {
+            mesh.userData.pulseAnimation.kill();
+            mesh.userData.pulseAnimation = null;
+          }
+        }
+        
         // Not hovered, not selected - reset to normal with good glow
         if (mesh.userData.originalColor) {
           mesh.material.color.copy(mesh.userData.originalColor);
