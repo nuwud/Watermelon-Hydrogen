@@ -228,15 +228,24 @@ export function mountCarousel3D(container, menuData) {
         event.stopPropagation(); // Stop propagation to prevent interference with other handlers
         // Navigate menus based on wheel direction
         const delta = event.deltaY; // Get the wheel delta
-        // Use the guard to check if scrolling is allowed
+        
+        // SUBMENU OPEN: Wheel scrolls ONLY the submenu, not main carousel
         if (activeSubmenu) {
             // Only scroll submenu if it allows scrolling
             if (activeSubmenu.guard && activeSubmenu.guard.canScroll()) {
                 activeSubmenu.scrollSubmenu(delta > 0 ? 1 : -1); // Invert for natural feel
+            } else if (activeSubmenu.scrollSubmenu) {
+                // Fallback if no guard but method exists
+                activeSubmenu.scrollSubmenu(delta > 0 ? 1 : -1);
             } else {
-                console.warn('[Watermelon] Submenu scroll blocked by guard.');
+                console.warn('[Watermelon] Submenu scroll blocked or method not available.');
             }
-        } else if (isWheelHandlerActive && globalGuard.canScroll()) {
+            // CRITICAL: Return here to prevent main carousel from scrolling
+            return;
+        }
+        
+        // NO SUBMENU: Normal main carousel scrolling
+        if (isWheelHandlerActive && globalGuard.canScroll()) {
             // Only navigate main carousel if scrolling is allowed
             const angleStep = (2 * Math.PI) / items.length; // Calculate angle step based on number of items
             carousel.spin(delta > 0 ? -angleStep : angleStep); // Invert direction for natural feel
@@ -1532,6 +1541,48 @@ export function mountCarousel3D(container, menuData) {
         const itemsHit = raycaster.intersectObjects(carousel.itemGroup.children, true);
         console.warn(`[🍉 Click] Found ${itemsHit.length} intersections with main carousel items`);
         
+        // ============================================
+        // SUBMENU OPEN BLOCKING LOGIC
+        // When a submenu is open, BLOCK clicks on OTHER main menu items
+        // User must close the submenu first (click same item, ESC, or click empty space)
+        // ============================================
+        if (activeSubmenu) {
+            // Check if the user is clicking the currently selected main item (to close submenu)
+            for (const hit of itemsHit) {
+                let current = hit.object;
+                while (current && current.parent !== carousel.itemGroup) {
+                    current = current.parent;
+                }
+                if (current && current.userData.index !== undefined) {
+                    const clickedIndex = current.userData.index;
+                    
+                    // Only allow clicking the SAME item (to toggle/close submenu)
+                    if (clickedIndex === carousel.currentIndex) {
+                        console.warn(`[🍉 Click] Submenu open - clicking same item to close`);
+                        closeSubmenu();
+                        return; // Exit after closing
+                    } else {
+                        // Block clicks on OTHER items - require explicit close first
+                        console.warn(`[🍉 Click] BLOCKED: Submenu is open. Close submenu first before selecting another item.`);
+                        console.warn(`[🍉 Click] Clicked index ${clickedIndex}, but submenu is open for index ${carousel.currentIndex}`);
+                        return; // Block this click
+                    }
+                }
+            }
+            
+            // If click didn't hit any main carousel item, it might be empty space - close submenu
+            if (itemsHit.length === 0) {
+                console.warn(`[🍉 Click] Clicked empty space while submenu open - closing submenu`);
+                closeSubmenu();
+                return;
+            }
+            
+            return; // Safety exit - submenu is open, don't process main carousel clicks
+        }
+        
+        // ============================================
+        // NORMAL MAIN CAROUSEL CLICK HANDLING (no submenu open)
+        // ============================================
         for (const hit of itemsHit) {
             let current = hit.object;
             
@@ -1539,7 +1590,7 @@ export function mountCarousel3D(container, menuData) {
             while (current && current.parent !== carousel.itemGroup) {
                 current = current.parent;
             }
-              if (current && current.userData.index !== undefined) {
+            if (current && current.userData.index !== undefined) {
                 const i = current.userData.index;
                 const itemName = items[i];
                 
@@ -1548,9 +1599,9 @@ export function mountCarousel3D(container, menuData) {
 
                 if (mobileEnhancementsEnabled) {
                     updateSubmenuInteractionState({
-                        open: !!activeSubmenu,
+                        open: false, // No submenu open yet
                         parentIndex: i,
-                        selectedChildIndex: activeSubmenu ? activeSubmenu.currentIndex ?? null : null,
+                        selectedChildIndex: null,
                     });
                 }
                 
@@ -1568,27 +1619,15 @@ export function mountCarousel3D(container, menuData) {
                 // This ensures the item swings to front before submenu spawns
                 const hasSubmenu = !!submenus[itemName];
                 
-                // Check if clicking the same item that already has a submenu open
-                // In that case, close the submenu instead of opening a new one
-                if (activeSubmenu && carousel.currentIndex === i) {
-                    console.warn(`[🍉 Click] Clicking same item with open submenu - closing`);
-                    closeSubmenu();
-                    break;
-                }
-                
-                // Check if another submenu is already open - close it first
-                if (activeSubmenu) {
-                    console.warn(`[🍉 Click] Another submenu is open - closing it first`);
-                    closeSubmenu(true); // Immediate close
-                }
-                
                 if (hasSubmenu) {
                     // For items with submenus: rotate first, then open submenu on complete
                     console.warn(`[🍉 Click] Item ${itemName} has submenu - rotating first, then opening`);
                     
-                    // Calculate rotation synchronously
+                    // Calculate rotation synchronously - use correct axis based on layout
+                    const isFerrisWheel = carousel.userData?.isFerrisWheel;
+                    const rotationProp = isFerrisWheel ? 'x' : 'y';
                     const angleStep = (2 * Math.PI) / carousel.itemMeshes.length;
-                    const currentRotation = carousel.itemGroup.rotation.y;
+                    const currentRotation = carousel.itemGroup.rotation[rotationProp];
                     const targetAngle = -i * angleStep;
                     
                     // Shortest angular distance
@@ -1624,9 +1663,12 @@ export function mountCarousel3D(container, menuData) {
                         }
                     });
                     
-                    // Animate rotation, THEN open submenu on complete
+                    // Animate rotation using correct axis, THEN open submenu on complete
+                    const rotationTarget = {};
+                    rotationTarget[rotationProp] = newRotation;
+                    
                     gsap.to(carousel.itemGroup.rotation, {
-                        y: newRotation,
+                        ...rotationTarget,
                         duration: 0.6,
                         ease: "power2.out",
                         onComplete: () => {
@@ -1660,13 +1702,35 @@ export function mountCarousel3D(container, menuData) {
     }
     window.addEventListener('click', handleCarouselClick); // Attach click event listener to the window
     // Define keydown handler 
-    const keydownHandler = (e) => { // Check if a submenu is active
-        if (e.key === 'ArrowRight') carousel.goToNext(); // Check if the right arrow key is pressed
-        else if (e.key === 'ArrowLeft') carousel.goToPrev(); // Check if the left arrow key is pressed
-        else if (e.key === 'Escape' && activeSubmenu) {
+    const keydownHandler = (e) => {
+        // ESC always works to close submenu
+        if (e.key === 'Escape' && activeSubmenu) {
+            console.warn('[🍉 Key] ESC pressed - closing submenu');
             closeSubmenu();
             submenuCloseProxyButton?.focus?.();
+            return;
         }
+        
+        // Block arrow keys on main carousel when submenu is open
+        if (activeSubmenu) {
+            // Optional: Could allow Up/Down to navigate submenu here
+            if (e.key === 'ArrowUp' && activeSubmenu.goToPrev) {
+                e.preventDefault();
+                activeSubmenu.goToPrev();
+            } else if (e.key === 'ArrowDown' && activeSubmenu.goToNext) {
+                e.preventDefault();
+                activeSubmenu.goToNext();
+            } else if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
+                // Block left/right arrows on main carousel when submenu is open
+                console.warn('[🍉 Key] Arrow key blocked - submenu is open');
+                e.preventDefault();
+            }
+            return;
+        }
+        
+        // Normal main carousel navigation (no submenu open)
+        if (e.key === 'ArrowRight') carousel.goToNext();
+        else if (e.key === 'ArrowLeft') carousel.goToPrev();
     };
     window.addEventListener('keydown', keydownHandler); // Attach keydown event listener to the window
     const themes = [defaultCarouselStyle, darkTheme, cyberpunkTheme, lightTheme, minimalTheme]; // Define available themes
