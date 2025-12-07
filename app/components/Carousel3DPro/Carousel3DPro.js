@@ -846,6 +846,19 @@ update() {
       this.itemGroup.rotation[rotationProp] += shortest * this.rotationSpeed;
       this.isSpinning = true;
       
+      // FERRIS WHEEL: Counter-rotate items so they always face camera
+      if (isFerrisWheel && this.itemMeshes) {
+        const wheelRotation = this.itemGroup.rotation.x;
+        this.itemMeshes.forEach((mesh) => {
+          // Counter-rotate around X to cancel out wheel rotation
+          // Items stay level (facing +Z toward camera)
+          mesh.rotation.x = -wheelRotation;
+          if (mesh.userData.hitArea) {
+            mesh.userData.hitArea.rotation.x = -wheelRotation;
+          }
+        });
+      }
+      
       // Only update highlighting if not locked
       if (this.guard.canUpdateHighlight()) {
         this.updateCurrentItemFromRotation();
@@ -853,6 +866,17 @@ update() {
     } else if (this.isSpinning) {
       this.itemGroup.rotation[rotationProp] = this.targetRotation;
       this.isSpinning = false;
+      
+      // Final counter-rotation sync for Ferris wheel
+      if (isFerrisWheel && this.itemMeshes) {
+        const wheelRotation = this.itemGroup.rotation.x;
+        this.itemMeshes.forEach((mesh) => {
+          mesh.rotation.x = -wheelRotation;
+          if (mesh.userData.hitArea) {
+            mesh.userData.hitArea.rotation.x = -wheelRotation;
+          }
+        });
+      }
 
       // Only update the current index if not locked
       if (this.guard.canUpdateHighlight()) {
