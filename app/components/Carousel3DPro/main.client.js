@@ -18,16 +18,8 @@ import {CentralContentPanel} from './CentralContentPanel.js';
 import {ContentManager} from '../../utils/contentManager.js';
 import {getItemAngles} from '../../utils/carouselAngleUtils.js';
 import {enhanceCartIntegration} from '../../utils/cartIntegrationEnhancer.js';
-import {
-    initializeMenuTree,
-    initializeMenuTreeWithAPI,
-    getMenuTree,
-    getChildLabels,
-    hasNestedChildren,
-    getNodeByLabel,
-    getBreadcrumbs,
-    NavigationHistory
-} from '../../utils/menuTreeManager.js';
+// Menu tree utilities - Phase 5 will use getChildLabels and getNodeByLabel for deep nesting
+import {initializeMenuTreeWithAPI} from '../../utils/menuTreeManager.js';
 
 // Background system imports (dynamic to avoid SSR issues)
 let BackgroundManager = null;
@@ -883,11 +875,9 @@ export function mountCarousel3D(container, menuData) {
     // MENU TREE & NAVIGATION SYSTEM (Phase 3)
     // =======================
     // Initialize the hierarchical menu tree for deep navigation with API
-    let menuTreeInstance = null;
     
     // Initialize menu tree with API wrapper for nested navigation
     initializeMenuTreeWithAPI().then(tree => {
-        menuTreeInstance = tree;
         console.warn('[🍉 MenuTree] Initialized with API:', {
             rootChildren: tree.root.children.length,
             totalNodes: tree.nodeMap.size,
@@ -897,18 +887,10 @@ export function mountCarousel3D(container, menuData) {
         console.error('[🍉 MenuTree] Failed to initialize:', err);
     });
     
-    // Function to check if a submenu item has its own children
-    const canNavigateDeeper = (itemLabel, parentLabel = null) => {
-        if (!menuTreeInstance) return false;
-        const node = getNodeByLabel(menuTreeInstance, itemLabel);
-        return node?.hasChildren || false;
-    };
-    
-    // Function to get children of a submenu item for nested navigation
-    const getNestedSubmenuItems = (itemLabel) => {
-        if (!menuTreeInstance) return [];
-        return getChildLabels(menuTreeInstance, itemLabel);
-    };
+    // Functions for nested navigation - reserved for Phase 5 deep nesting
+    // canNavigateDeeper(itemLabel, parentLabel) - check if submenu item has children
+    // getNestedSubmenuItems(itemLabel) - get children of submenu item
+    // These are implemented via getNodeByLabel() and getChildLabels() from menuTreeManager
     
     // =======================
     // CONTENT MANAGER INTEGRATION
@@ -1033,16 +1015,8 @@ export function mountCarousel3D(container, menuData) {
     
     let isFerrisWheelMode = isMobileDevice() && (mobileConfig.enableFerrisWheelMode !== false);
     
-    // =======================
-    // MOBILE CONSTRAINT SETTINGS
-    // =======================
-    const mobileConstraints = {
-        lockRotationAxes: true,        // Only allow rotation on the wheel axis
-        disableTilt: true,             // No tilting the wheel
-        snapToItems: true,             // Always snap to nearest item
-        reducedInertia: true,          // Less "floaty" feel
-        fixedCameraPosition: true,     // Camera doesn't move
-    };
+    // Mobile constraints - settings applied via applyFerrisWheelLayout
+    // lockRotationAxes, disableTilt, snapToItems, reducedInertia, fixedCameraPosition
     
     // Function to convert carousel to Ferris wheel (vertical) layout
     function applyFerrisWheelLayout() {
@@ -1885,7 +1859,7 @@ export function mountCarousel3D(container, menuData) {
                         
                         // Spawn nested submenu with children
                         const nestedSubmenu = new Carousel3DSubmenu(scene, camera, parentMesh, nestedChildren, {
-                            radius: SUBMENU_RADIUS * 0.85, // Slightly smaller for nested
+                            radius: 2.5 * 0.85, // Slightly smaller for nested
                             vertical: !carousel.isMobile, // Desktop = horizontal, mobile = Ferris wheel
                             isFerrisWheelMode: carousel.isMobile,
                             isMobile: carousel.isMobile,

@@ -1,6 +1,6 @@
 import {useEffect, useRef, useState, lazy, Suspense} from 'react';
 import ClientOnly from './ClientOnly';
-import {BackgroundStage} from './backgrounds/BackgroundStage';
+// import {BackgroundStage} from './backgrounds/BackgroundStage';
 
 // Dynamic imports for browser-only test utilities - don't import at module level
 // These are loaded conditionally inside useEffect to avoid SSR issues

@@ -22,7 +22,7 @@ const DEFAULT_CONFIG = {
 let THREE = null;
 let gsap = null;
 let scene = null;
-let camera = null;
+// let camera = null; // Reserved for camera-relative effects
 let config = { ...DEFAULT_CONFIG };
 
 let hexGroup = null;
@@ -43,12 +43,12 @@ export async function init(sceneRef, cameraRef, rendererRef, options) {
     try {
         const gsapModule = await import('gsap');
         gsap = gsapModule.gsap || gsapModule.default || gsapModule;
-    } catch (e) {
+    } catch {
         gsap = null;
     }
     
     scene = sceneRef;
-    camera = cameraRef;
+    // camera = cameraRef; // Reserved for camera-relative effects
     config = { ...DEFAULT_CONFIG, ...options };
     
     // Create a group to hold hexagons
@@ -303,7 +303,7 @@ export function dispose() {
     if (menuIdleTimer) { clearTimeout(menuIdleTimer); menuIdleTimer = null; }
     
     if (typeof window !== 'undefined' && window._wmHexWallCleanup) {
-        window._wmHexWallCleanup.forEach(fn => { try { fn(); } catch (e) {} });
+        window._wmHexWallCleanup.forEach(fn => { try { fn(); } catch { /* ignore cleanup errors */ } });
         delete window._wmHexWallCleanup;
     }
     
@@ -326,7 +326,7 @@ export function dispose() {
     meshes = [];
     hexGroup = null;
     light1 = light2 = light3 = light4 = ambientLight = null;
-    scene = camera = THREE = gsap = null;
+    scene = THREE = gsap = null;
 }
 
 export default { init, update, dispose, setInteractive };

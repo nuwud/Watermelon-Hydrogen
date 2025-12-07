@@ -23,9 +23,9 @@ const DEFAULT_CONFIG = {
 };
 
 let THREE = null;
-let gsap = null;
+// let gsap = null; // Reserved for future animations
 let scene = null;
-let camera = null;
+// let camera = null; // Reserved for camera-relative effects
 let config = { ...DEFAULT_CONFIG };
 
 let skyballGroup = null;
@@ -44,15 +44,14 @@ export async function init(sceneRef, cameraRef, rendererRef, options) {
     if (typeof window === 'undefined') return;
 
     THREE = await import('three');
-    try {
-        const gsapModule = await import('gsap');
-        gsap = gsapModule.gsap || gsapModule.default || gsapModule;
-    } catch (e) {
-        gsap = null;
-    }
+    // gsap reserved for future animations
+    // try {
+    //     const gsapModule = await import('gsap');
+    //     gsap = gsapModule.gsap || gsapModule.default || gsapModule;
+    // } catch { gsap = null; }
 
     scene = sceneRef;
-    camera = cameraRef;
+    // camera = cameraRef; // Reserved for future camera-relative effects
     config = { ...DEFAULT_CONFIG, ...options };
 
     skyballGroup = new THREE.Group();
@@ -343,7 +342,7 @@ export function dispose() {
     if (menuIdleTimer) { clearTimeout(menuIdleTimer); menuIdleTimer = null; }
 
     if (typeof window !== 'undefined' && window._wmSkyballCleanup) {
-        window._wmSkyballCleanup.forEach(fn => { try { fn(); } catch (e) {} });
+        window._wmSkyballCleanup.forEach(fn => { try { fn(); } catch { /* ignore cleanup errors */ } });
         delete window._wmSkyballCleanup;
     }
 
@@ -362,7 +361,7 @@ export function dispose() {
     panelMeshes = [];
     skyballGroup = null;
     light1 = light2 = light3 = light4 = ambientLight = hemisphereLight = null;
-    scene = camera = THREE = gsap = null;
+    scene = THREE = null;
 }
 
 export default { init, update, dispose, setInteractive };

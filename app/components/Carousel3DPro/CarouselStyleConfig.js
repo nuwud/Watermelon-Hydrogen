@@ -7,7 +7,7 @@
 
 // Simple white glow for all menu items
 // Admin controls can override these later
-export function getMenuItemColor(label) {
+export function getMenuItemColor(/* label */) {
   // Return very bright colors for maximum contrast against blue background
   return { glow: 0xffffff, text: 0xffffff };
 }

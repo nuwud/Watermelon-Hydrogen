@@ -62,7 +62,7 @@ export async function loader({ request, context }) {
         menuTheme = { ...menuTheme, ...storedTheme };
       }
     }
-  } catch (e) {
+  } catch {
     // Metafield not available, use defaults
     console.log('[api.admin.config] Using default menu theme');
   }

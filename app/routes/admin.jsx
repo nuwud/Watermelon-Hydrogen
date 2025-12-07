@@ -66,7 +66,7 @@ const DEFAULT_CONFIG = {
   },
 };
 
-export async function loader({request}) {
+export async function loader() {
   // In production, load from Shopify Metaobjects
   // For now, return defaults
   return json({
