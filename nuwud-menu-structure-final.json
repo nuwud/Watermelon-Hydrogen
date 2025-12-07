@@ -56,7 +56,35 @@
             "type": "control_panel",
             "description": "3D model: wrench/floating control panel",
             "glbPath": "/assets/models/settings-panel.glb"
-          }
+          },
+          "submenu": [
+            {
+              "id": "appearance",
+              "label": "Appearance",
+              "url": "/pages/settings/appearance",
+              "submenu": [
+                { "id": "theme-light", "label": "Light Theme" },
+                { "id": "theme-dark", "label": "Dark Theme" },
+                { "id": "theme-cyberpunk", "label": "Cyberpunk Theme" },
+                { "id": "theme-custom", "label": "Custom Theme" }
+              ]
+            },
+            {
+              "id": "account-settings",
+              "label": "Account",
+              "url": "/pages/settings/account"
+            },
+            {
+              "id": "notifications",
+              "label": "Notifications",
+              "url": "/pages/settings/notifications"
+            },
+            {
+              "id": "privacy",
+              "label": "Privacy",
+              "url": "/pages/settings/privacy"
+            }
+          ]
         }
       ]
     },
