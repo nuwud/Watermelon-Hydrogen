@@ -195,23 +195,52 @@ export function mountCarousel3D(container, menuData) {
         }
         container.appendChild(submenuCloseProxyButton);
     }
+    
+    // =======================
+    // MOBILE DETECTION (early, before controls setup)
+    // =======================
+    const mobileConfigEarly = carouselConfig?.mobile || {};
+    const isMobileDeviceEarly = () => {
+        return window.innerWidth < (mobileConfigEarly.breakpoint || 768) || 
+               ('ontouchstart' in window && window.innerWidth < 1024);
+    };
+    const isMobileNow = isMobileDeviceEarly();
+    
     // Setup OrbitControls with correct zoom handling
     const controls = new OrbitControls(camera, renderer.domElement); // Initialize OrbitControls
     controls.enableDamping = true; // Enable damping (inertia) for smoother controls
     controls.dampingFactor = 0.05; // Damping factor for smoother controls
     controls.maxDistance = 20; // Maximum distance for zooming out
     controls.minDistance = 5; // Minimum distance for zooming in
-    // FIX 1: Correct setup for middle mouse zoom only
-    controls.enableZoom = true; // Keep enabled, but we'll control when it's used
-    controls.zoomSpeed = 1.0; // Zoom speed for middle mouse button
-    // Keep rotation and pan controls
-    controls.mouseButtons = { // Set mouse button controls
-        LEFT: THREE.MOUSE.ROTATE, // Keep LEFT button as rotate
-        MIDDLE: THREE.MOUSE.DOLLY, // Keep MIDDLE button as dolly/zoom
-        RIGHT: THREE.MOUSE.PAN, // Keep RIGHT button as pan
-    };
-    // Disable pinch-to-zoom on touch
-    controls.touches.TWO = null; // Disable pinch-to-zoom gesture on touch devices
+    
+    // =======================
+    // MOBILE CAMERA CONSTRAINTS
+    // =======================
+    if (isMobileNow) {
+        // MOBILE: Lock the camera - disable ALL OrbitControls interactions
+        controls.enabled = false; // Completely disable OrbitControls on mobile
+        controls.enableRotate = false;
+        controls.enablePan = false;
+        controls.enableZoom = false;
+        
+        // Lock camera to fixed mobile-optimized position
+        camera.position.set(0, 0, 12); // Centered, pulled back for better view
+        camera.lookAt(0, 0, 0);
+        
+        console.warn('[🍉 Mobile] Camera locked, OrbitControls disabled');
+    } else {
+        // DESKTOP: Full OrbitControls experience
+        controls.enableZoom = true;
+        controls.zoomSpeed = 1.0;
+        controls.mouseButtons = {
+            LEFT: THREE.MOUSE.ROTATE,
+            MIDDLE: THREE.MOUSE.DOLLY,
+            RIGHT: THREE.MOUSE.PAN,
+        };
+    }
+    
+    // Disable pinch-to-zoom on touch (for both mobile and desktop touch screens)
+    controls.touches.TWO = null;
     // Tracking wheel handler state - MUST initially be true
     let isWheelHandlerActive = true;
     // Store the wheel event listener so we can remove/add it properly
@@ -287,14 +316,27 @@ export function mountCarousel3D(container, menuData) {
     let lastTapTime = 0;
     const DOUBLE_TAP_THRESHOLD = 300; // ms
     
-    // Configuration
-    const MOBILE_CONFIG = {
-        TAP_THRESHOLD: 15,       // Max pixels to count as tap
-        TAP_MAX_DURATION: 300,   // Max ms for a tap
-        SWIPE_THRESHOLD: 40,     // Min pixels to trigger swipe action
-        SCROLL_DEBOUNCE: 200,    // ms between scroll actions
-        MOMENTUM_THRESHOLD: 0.8, // Min velocity for momentum
+    // Configuration - MOBILE uses stricter settings
+    const isMobileTouch = isMobileDeviceEarly();
+    const MOBILE_CONFIG = isMobileTouch ? {
+        // MOBILE-OPTIMIZED: Stricter thresholds, no momentum, snap-to-item
+        TAP_THRESHOLD: 20,       // More forgiving tap detection
+        TAP_MAX_DURATION: 400,   // Longer tap allowance
+        SWIPE_THRESHOLD: 60,     // Higher threshold = more deliberate swipes required
+        SCROLL_DEBOUNCE: 300,    // Longer debounce = slower, more controlled navigation
+        MOMENTUM_THRESHOLD: 999, // Effectively disable momentum on mobile (too wild)
+        SNAP_TO_ITEM: true,      // Always snap to nearest item
+    } : {
+        // DESKTOP: Original settings
+        TAP_THRESHOLD: 15,
+        TAP_MAX_DURATION: 300,
+        SWIPE_THRESHOLD: 40,
+        SCROLL_DEBOUNCE: 200,
+        MOMENTUM_THRESHOLD: 0.8,
+        SNAP_TO_ITEM: false,
     };
+    
+    console.warn('[🍉 Touch] Using', isMobileTouch ? 'MOBILE' : 'DESKTOP', 'touch config:', MOBILE_CONFIG);
     
     // Detect if we're on a touch device
     const isTouchDevice = () => 'ontouchstart' in window || navigator.maxTouchPoints > 0;
@@ -454,10 +496,11 @@ export function mountCarousel3D(container, menuData) {
             event.preventDefault();
         }
         
-        // Apply momentum for fast swipes (only if not a tap)
+        // Apply momentum for fast swipes (DISABLED ON MOBILE for stability)
         if (touchState.gestureType && !touchState.handled) {
             const velocity = distance / Math.max(duration, 1);
             
+            // Only apply momentum on desktop (MOBILE_CONFIG.MOMENTUM_THRESHOLD is 999 on mobile)
             if (velocity > MOBILE_CONFIG.MOMENTUM_THRESHOLD) {
                 const angleStep = (2 * Math.PI) / items.length;
                 const isFerrisWheel = carousel.userData?.isFerrisWheel;
@@ -478,6 +521,24 @@ export function mountCarousel3D(container, menuData) {
                     }
                 }
             }
+        }
+        
+        // MOBILE: Snap to nearest item after gesture ends
+        if (MOBILE_CONFIG.SNAP_TO_ITEM && !isTap) {
+            const isFerrisWheel = carousel.userData?.isFerrisWheel;
+            const rotationProp = isFerrisWheel ? 'x' : 'y';
+            const angleStep = (2 * Math.PI) / items.length;
+            const currentRotation = carousel.itemGroup?.rotation[rotationProp] || 0;
+            
+            // Calculate nearest item index
+            const nearestIndex = Math.round(-currentRotation / angleStep) % items.length;
+            const normalizedIndex = nearestIndex < 0 ? nearestIndex + items.length : nearestIndex;
+            
+            // Snap to that item
+            carousel.targetRotation = -normalizedIndex * angleStep;
+            carousel.currentIndex = normalizedIndex;
+            
+            console.warn('[🍉 Mobile] Snapping to item', normalizedIndex);
         }
         
         // Reset state
@@ -748,6 +809,15 @@ export function mountCarousel3D(container, menuData) {
     carousel.isAnimating = false; // Track animation state
     
     // =======================
+    // MOBILE: Apply stricter carousel settings
+    // =======================
+    if (isMobileDeviceEarly()) {
+        // Faster rotation = snappier feel on mobile
+        carousel.rotationSpeed = 0.15; // Much faster than default 0.05
+        console.warn('[🍉 Mobile] Applied faster rotation speed:', carousel.rotationSpeed);
+    }
+    
+    // =======================
     // MOBILE FERRIS WHEEL MODE
     // =======================
     const mobileConfig = carouselConfig?.mobile || {};
@@ -758,12 +828,24 @@ export function mountCarousel3D(container, menuData) {
     
     let isFerrisWheelMode = isMobileDevice() && (mobileConfig.enableFerrisWheelMode !== false);
     
+    // =======================
+    // MOBILE CONSTRAINT SETTINGS
+    // =======================
+    const mobileConstraints = {
+        lockRotationAxes: true,        // Only allow rotation on the wheel axis
+        disableTilt: true,             // No tilting the wheel
+        snapToItems: true,             // Always snap to nearest item
+        reducedInertia: true,          // Less "floaty" feel
+        fixedCameraPosition: true,     // Camera doesn't move
+    };
+    
     // Function to convert carousel to Ferris wheel (vertical) layout
     function applyFerrisWheelLayout() {
         if (!carousel.itemGroup || !carousel.itemMeshes) return;
         
         const ferrisRadius = mobileConfig.ferrisWheelRadius || 4;
-        const tilt = mobileConfig.ferrisWheelTilt || 0.15;
+        // MOBILE: Reduce or remove tilt for stability
+        const tilt = mobileConstraints.disableTilt ? 0 : (mobileConfig.ferrisWheelTilt || 0.15);
         const itemCount = carousel.itemMeshes.length;
         const angleStep = (2 * Math.PI) / itemCount;
         
