@@ -553,8 +553,8 @@ updateHoverVisuals() {
       if (!mesh.userData.isPulsing) {
         mesh.userData.isPulsing = true;
         mesh.userData.pulseAnimation = gsap.to(mesh.material, {
-          emissiveIntensity: 2.5,
-          duration: 0.6,
+          emissiveIntensity: 1.3,
+          duration: 0.8,
           yoyo: true,
           repeat: -1,
           ease: 'sine.inOut'
@@ -577,9 +577,9 @@ updateHoverVisuals() {
       
       // Normal non-selected appearance with VISIBLE distance dimming
       mesh.material.color.setHex(0xeeffff); // Consistent cyan-tinted white
-      mesh.material.emissive = new THREE.Color(0x6699cc); // Brighter base emissive
+      mesh.material.emissive = new THREE.Color(0x5588aa); // Moderate base emissive
       // Apply distance factor directly to emissive - distant items are dimmer
-      mesh.material.emissiveIntensity = 0.8 * distanceFactor * submenuDimFactor;
+      mesh.material.emissiveIntensity = 0.5 * distanceFactor * submenuDimFactor;
       // Also apply to opacity for more visible depth effect  
       mesh.material.opacity = Math.max(0.4, distanceFactor * submenuDimFactor); // Never fully invisible
       
