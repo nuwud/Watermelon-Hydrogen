@@ -591,9 +591,14 @@ selectItem(index, animate = true) {
 
   // Use the withSelectionLock helper to ensure safe state transitions
   return withSelectionLock(this.guard, index, () => {
+    const isFerrisWheel = this.userData?.isFerrisWheel;
+    const rotationProp = isFerrisWheel ? 'x' : 'y';
     const angleStep = (2 * Math.PI) / this.itemMeshes.length;
-    const currentRotation = this.itemGroup.rotation.y;
-    const targetAngle = -index * angleStep;
+    const currentRotation = this.itemGroup.rotation[rotationProp];
+    
+    // For horizontal carousel: negative rotation brings item to front
+    // For Ferris wheel: positive rotation brings item to front (inverted)
+    const targetAngle = isFerrisWheel ? (index * angleStep) : (-index * angleStep);
 
     // Shortest angular distance (modulo 2π)
     const twoPi = Math.PI * 2;
@@ -938,22 +943,25 @@ updateCurrentItemFromRotation() {
  * @returns {number|undefined} The index of the item that is closest to the front position, or undefined if no items exist
  * 
  * @description
- * This method calculates which item in the carousel should be considered the front-facing item
- * based on the current rotation. For Ferris wheel mode (rotating around X axis), the front 
- * is at the bottom of the wheel (closest to camera).
+ * For horizontal carousel (Y-axis rotation): Front is at z=+radius, items rotate around Y.
+ * For Ferris wheel (X-axis rotation): Front is at z=+radius (y=0), items rotate around X.
+ * 
+ * When rotation increases:
+ * - Horizontal: Items at front move LEFT (counter-clockwise from above)
+ * - Ferris: Items at front move DOWN (when viewed from right side)
  */
-calculateIndexFromRotation(rotation/**, axis = 'y'*/) {
+calculateIndexFromRotation(rotation) {
   if (!this.itemMeshes.length) return undefined;
   const angleStep = (2 * Math.PI) / this.items.length;
   const twoPi = Math.PI * 2;
-  const currentRotation = rotation;
-  
-  // For Ferris wheel mode, the "front" item is at the bottom of the wheel
-  // This corresponds to an offset of π/2 from the standard front position
   const isFerrisWheel = this.userData?.isFerrisWheel;
-  const frontOffset = isFerrisWheel ? (Math.PI / 2) : 0;
   
-  const frontAngleInGroupSpace = (((-currentRotation + frontOffset) % twoPi) + twoPi) % twoPi;
+  // For Ferris wheel mode, rotation direction is inverted relative to item angles
+  // Positive rotation.x moves front items DOWN, so items with LOWER angles rise to front
+  // This means we use +rotation instead of -rotation for Ferris mode
+  const effectiveRotation = isFerrisWheel ? rotation : -rotation;
+  
+  const frontAngleInGroupSpace = ((effectiveRotation % twoPi) + twoPi) % twoPi;
   let closestIndex = 0;
   let minAngleDiff = twoPi;
 

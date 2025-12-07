@@ -325,6 +325,13 @@ export function mountCarousel3D(container, menuData) {
         // For all other cases, prevent default and stop propagation
         event.preventDefault(); // Prevent default scrolling behavior
         event.stopPropagation(); // Stop propagation to prevent interference with other handlers
+        
+        // CRITICAL: Block wheel during submenu spawning transition
+        if (isSpawningSubmenu) {
+            console.warn('[🍉 Wheel] Blocked during submenu spawn');
+            return;
+        }
+        
         // Navigate menus based on wheel direction
         const delta = event.deltaY; // Get the wheel delta
         
@@ -914,44 +921,59 @@ export function mountCarousel3D(container, menuData) {
         if (!carousel.itemGroup || !carousel.itemMeshes) return;
         
         const ferrisRadius = mobileConfig.ferrisWheelRadius || 4;
-        // MOBILE: Reduce or remove tilt for stability
-        const tilt = mobileConstraints.disableTilt ? 0 : (mobileConfig.ferrisWheelTilt || 0.15);
+        // MOBILE: No tilt for stability and clarity
+        const tilt = 0;
         const itemCount = carousel.itemMeshes.length;
         const angleStep = (2 * Math.PI) / itemCount;
         
-        // Reposition items for vertical wheel (rotate around X axis)
-        // IMPORTANT: Items stay LEVEL like Ferris wheel carts - they don't rotate with the wheel
+        // Position items in a vertical wheel (Y-Z plane)
+        // Camera is at Z+ looking at origin, so Z+ is "front" (closest to camera)
+        // Items rotate around X-axis (vertical wheel)
         carousel.itemMeshes.forEach((mesh, index) => {
+            // Item 0 starts at FRONT of wheel (z=+radius, y=0)
+            // As wheel rotates around X, items move up/back/down/front
+            // angle=0 → cos(0)=1, sin(0)=0 → position (0, 0, +radius) = front
             const angle = angleStep * index;
-            // Ferris wheel: items positioned in Y-Z plane instead of X-Z
-            mesh.position.x = 0; // Center horizontally
-            mesh.position.y = ferrisRadius * Math.sin(angle);
-            mesh.position.z = ferrisRadius * Math.cos(angle);
             
-            // FERRIS CART STYLE: Items stay LEVEL (rotation.x = 0)
-            // They don't tilt with their position on the wheel
-            mesh.rotation.x = 0; // Stay level!
-            mesh.rotation.y = 0; // Face forward
-            mesh.rotation.z = 0; // No tilt
+            // Position in Y-Z plane (vertical wheel)
+            // NOTE: For X-axis rotation, we swap sin/cos for proper rotation direction
+            // Z = radius * cos(angle) = front at angle=0
+            // Y = radius * sin(angle) = level at angle=0, up at angle=π/2
+            mesh.position.x = 0; // Centered horizontally
+            mesh.position.y = ferrisRadius * Math.sin(angle); // Vertical position  
+            mesh.position.z = ferrisRadius * Math.cos(angle); // Depth position (front/back)
             
-            // Update hit area position (also stays level)
+            // ALL items face the camera (which is at +Z)
+            // Text geometry faces +Z by default, so rotation.y = 0 faces camera
+            // Items keep level orientation regardless of wheel position
+            mesh.rotation.x = 0;
+            mesh.rotation.y = 0;
+            mesh.rotation.z = 0;
+            
+            // Update hit area to match
             if (mesh.userData.hitArea) {
                 mesh.userData.hitArea.position.copy(mesh.position);
-                mesh.userData.hitArea.rotation.set(0, 0, 0); // Level
+                mesh.userData.hitArea.rotation.set(0, 0, 0);
             }
         });
         
-        // Apply slight tilt to the whole wheel for 3D effect
+        // No tilt - keep wheel perfectly vertical for clarity
         carousel.itemGroup.rotation.z = tilt;
+        carousel.itemGroup.rotation.x = 0; // Start at no rotation
+        carousel.itemGroup.rotation.y = 0;
         
-        // Store the rotation axis for this mode
+        // Store mode flags
         carousel.userData.rotationAxis = 'x'; // Ferris wheel rotates around X
         carousel.userData.isFerrisWheel = true;
+        
+        // Initialize target rotation to 0 (item 0 at front/bottom)
+        carousel.targetRotation = 0;
         
         console.warn('[🍉 Mobile] Ferris wheel layout applied', { 
             itemCount, 
             radius: ferrisRadius,
-            tilt 
+            firstItemPosition: 'bottom (closest to camera)',
+            facingDirection: '+Z (toward camera)'
         });
     }
     
@@ -1806,7 +1828,8 @@ export function mountCarousel3D(container, menuData) {
                     const rotationProp = isFerrisWheel ? 'x' : 'y';
                     const angleStep = (2 * Math.PI) / carousel.itemMeshes.length;
                     const currentRotation = carousel.itemGroup.rotation[rotationProp];
-                    const targetAngle = -i * angleStep;
+                    // Ferris wheel uses positive rotation, horizontal uses negative
+                    const targetAngle = isFerrisWheel ? (i * angleStep) : (-i * angleStep);
                     
                     // Shortest angular distance
                     const twoPi = Math.PI * 2;
