@@ -18,6 +18,16 @@ import {CentralContentPanel} from './CentralContentPanel.js';
 import {ContentManager} from '../../utils/contentManager.js';
 import {getItemAngles} from '../../utils/carouselAngleUtils.js';
 import {enhanceCartIntegration} from '../../utils/cartIntegrationEnhancer.js';
+import {
+    initializeMenuTree,
+    initializeMenuTreeWithAPI,
+    getMenuTree,
+    getChildLabels,
+    hasNestedChildren,
+    getNodeByLabel,
+    getBreadcrumbs,
+    NavigationHistory
+} from '../../utils/menuTreeManager.js';
 
 // Background system imports (dynamic to avoid SSR issues)
 let BackgroundManager = null;
@@ -783,6 +793,37 @@ export function mountCarousel3D(container, menuData) {
     };
     
     // =======================
+    // MENU TREE & NAVIGATION SYSTEM (Phase 3)
+    // =======================
+    // Initialize the hierarchical menu tree for deep navigation with API
+    let menuTreeInstance = null;
+    
+    // Initialize menu tree with API wrapper for nested navigation
+    initializeMenuTreeWithAPI().then(tree => {
+        menuTreeInstance = tree;
+        console.warn('[🍉 MenuTree] Initialized with API:', {
+            rootChildren: tree.root.children.length,
+            totalNodes: tree.nodeMap.size,
+            apiMethods: Object.keys(window.menuTree || {})
+        });
+    }).catch(err => {
+        console.error('[🍉 MenuTree] Failed to initialize:', err);
+    });
+    
+    // Function to check if a submenu item has its own children
+    const canNavigateDeeper = (itemLabel, parentLabel = null) => {
+        if (!menuTreeInstance) return false;
+        const node = getNodeByLabel(menuTreeInstance, itemLabel);
+        return node?.hasChildren || false;
+    };
+    
+    // Function to get children of a submenu item for nested navigation
+    const getNestedSubmenuItems = (itemLabel) => {
+        if (!menuTreeInstance) return [];
+        return getChildLabels(menuTreeInstance, itemLabel);
+    };
+    
+    // =======================
     // CONTENT MANAGER INTEGRATION
     // =======================
       // Initialize Content Manager for contextual content
@@ -1503,6 +1544,7 @@ export function mountCarousel3D(container, menuData) {
     }
 
     // Fix 2: Improved version of closeSubmenu to properly reset state
+    // Enhanced for Phase 3: Supports nested submenu navigation (back to parent)
     function closeSubmenu(immediate = false) {
         // Check the guard state as well as activeSubmenu
         if (!activeSubmenu) {
@@ -1512,8 +1554,53 @@ export function mountCarousel3D(container, menuData) {
             }
             return;
         }
+        
+        // ============================================
+        // PHASE 3: NESTED SUBMENU BACK NAVIGATION
+        // If this is a nested submenu, go back to parent instead of closing everything
+        // ============================================
+        if (activeSubmenu.isNestedSubmenu && activeSubmenu.parentSubmenu) {
+            console.warn(`[🍉 Nested] Closing nested submenu (level ${activeSubmenu.nestingLevel}), returning to parent`);
+            
+            // Pop navigation state
+            window.menuTree?.popNavigation();
+            console.warn(`[🍉 Nested] Navigation depth after pop: ${window.menuTree?.getNavigationDepth()}`);
+            console.warn(`[🍉 Nested] Breadcrumb: ${window.menuTree?.getBreadcrumb().join(' > ')}`);
+            
+            const nestedSubmenu = activeSubmenu;
+            const parentSubmenu = nestedSubmenu.parentSubmenu;
+            
+            // Animate out nested submenu
+            gsap.to(nestedSubmenu.group.scale, {
+                x: 0, y: 0, z: 0,
+                duration: 0.25,
+                ease: 'back.in(1.2)',
+                onComplete: () => {
+                    scene.remove(nestedSubmenu.group);
+                    nestedSubmenu.dispose?.();
+                }
+            });
+            
+            // Restore parent submenu
+            parentSubmenu.group.visible = true;
+            gsap.to(parentSubmenu.group.scale, {
+                x: 1, y: 1, z: 1,
+                duration: 0.3,
+                ease: 'back.out(1.2)'
+            });
+            
+            activeSubmenu = parentSubmenu;
+            console.warn(`[🍉 Nested] Returned to parent submenu (level ${parentSubmenu.nestingLevel || 1})`);
+            return; // Don't proceed with full close
+        }
+        
+        // Standard close for non-nested submenus (original logic)
         const closingSubmenu = activeSubmenu;
         setActiveSubmenu(null);
+        
+        // Pop navigation back to root if we have any navigation state
+        window.menuTree?.resetNavigation();
+        console.warn(`[🍉 Nested] Navigation reset to root`);
         
         // Use the guard to manage transition state
         globalGuard.isTransitioning = true;
@@ -1679,7 +1766,72 @@ export function mountCarousel3D(container, menuData) {
                     if (!item) {
                         console.warn('[Watermelon] No item found for submenu index:', index); // Debug log
                         return; // Exit if no item is found
-                    }                    // Force index sync
+                    }
+                    
+                    // ============================================
+                    // PHASE 3: NESTED SUBMENU SUPPORT
+                    // Check if this submenu item has children (deeper nesting)
+                    // ============================================
+                    const parentItem = activeSubmenu.parentItem?.userData?.item || 'Unknown';
+                    const nestedChildren = window.menuTree?.getChildrenOf(parentItem, item);
+                    
+                    if (nestedChildren && nestedChildren.length > 0) {
+                        console.warn(`[🍉 Nested] Item "${item}" has ${nestedChildren.length} children - spawning nested submenu`);
+                        
+                        // Push navigation state for breadcrumb tracking
+                        window.menuTree?.pushNavigation(parentItem, item);
+                        console.warn(`[🍉 Nested] Navigation depth: ${window.menuTree?.getNavigationDepth()}`);
+                        console.warn(`[🍉 Nested] Breadcrumb: ${window.menuTree?.getBreadcrumb().join(' > ')}`);
+                        
+                        // Close current submenu first
+                        const parentSubmenu = activeSubmenu;
+                        const parentMesh = parentSubmenu.parentItem;
+                        
+                        // Animate out current submenu
+                        gsap.to(parentSubmenu.group.scale, {
+                            x: 0.8, y: 0.8, z: 0.8,
+                            duration: 0.2,
+                            onComplete: () => {
+                                parentSubmenu.group.visible = false;
+                            }
+                        });
+                        
+                        // Spawn nested submenu with children
+                        const nestedSubmenu = new Carousel3DSubmenu(scene, camera, parentMesh, nestedChildren, {
+                            radius: SUBMENU_RADIUS * 0.85, // Slightly smaller for nested
+                            vertical: !carousel.isMobile, // Desktop = horizontal, mobile = Ferris wheel
+                            isFerrisWheelMode: carousel.isMobile,
+                            isMobile: carousel.isMobile,
+                            parentCarousel: carousel
+                        });
+                        nestedSubmenu.parentItem = parentMesh;
+                        nestedSubmenu.isNestedSubmenu = true;
+                        nestedSubmenu.parentSubmenu = parentSubmenu;
+                        nestedSubmenu.nestingLevel = (parentSubmenu.nestingLevel || 1) + 1;
+                        
+                        // Position nested submenu
+                        const isMobileNested = carousel.isMobile;
+                        if (isMobileNested) {
+                            nestedSubmenu.group.position.set(2, 0, 10); // Submenu layer position
+                        } else {
+                            nestedSubmenu.group.position.set(parentMesh.position.x + 2.5, parentMesh.position.y, parentMesh.position.z);
+                        }
+                        
+                        // Animate in nested submenu
+                        nestedSubmenu.group.scale.set(0, 0, 0);
+                        gsap.to(nestedSubmenu.group.scale, {
+                            x: 1, y: 1, z: 1,
+                            duration: 0.3,
+                            ease: 'back.out(1.2)'
+                        });
+                        
+                        activeSubmenu = nestedSubmenu;
+                        console.warn(`[🍉 Nested] Nested submenu spawned at level ${nestedSubmenu.nestingLevel}`);
+                        return; // Exit - we're spawning nested submenu instead of loading content
+                    }
+                    
+                    // No children - proceed with normal content loading
+                    // Force index sync
                     activeSubmenu.currentIndex = index; // Sync the current index of the submenu to the clicked index
                     if (mobileEnhancementsEnabled) {
                         const parentIndex = activeSubmenu.parentItem?.userData?.index ?? carousel.currentIndex ?? null;
@@ -1690,8 +1842,6 @@ export function mountCarousel3D(container, menuData) {
                         });
                     }
                     
-                    // Load contextual content for the selected submenu item
-                    const parentItem = activeSubmenu.parentItem?.userData?.item || 'Unknown';
                     console.warn(`[🍉 Content] Submenu item selected: ${parentItem} > ${item}`);
                     
                     // Show the submenu item preview first
