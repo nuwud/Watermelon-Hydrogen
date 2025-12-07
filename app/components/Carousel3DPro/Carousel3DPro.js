@@ -94,6 +94,25 @@ export class Carousel3DPro extends Group {
     this.submenuState = { open: false, parentIndex: null, selectedChildIndex: null };
     this.userData.submenuState = { ...this.submenuState };
 
+    // Ring Scatter Animation state
+    this.scatterState = {
+      isScattered: false,
+      anchorIndex: null,
+      originalPositions: [], // Store original mesh positions for reassembly
+      scatterTimeline: null  // GSAP timeline for scatter animation
+    };
+    this.scatterConfig = {
+      enabled: true,
+      scatterDistance: 3.0,        // How far items scatter outward
+      scatterDuration: 0.5,        // Animation duration
+      staggerDelay: 0.04,          // Delay between each item
+      selectedZoom: 0.8,           // How much selected item comes forward (Z)
+      reassembleEase: 'back.out(1.7)',
+      scatterEase: 'power2.out',
+      mobileScatterDistance: 2.0,  // Smaller scatter for mobile
+      dimOpacity: 0.3              // How dim scattered items become
+    };
+
     this.guard = new SelectionGuard();
     // For backward compatibility, keep the main isAnimating flag synced
     Object.defineProperty(this, 'isAnimating', {
@@ -1114,5 +1133,252 @@ getCurrentItem() {
  */
 resize() {
   // Update for responsive layout 
+}
+
+// ============================================
+// RING SCATTER ANIMATION SYSTEM
+// Items spread outward to reveal content area
+// ============================================
+
+/**
+ * Scatters the ring items outward from center, leaving space for content.
+ * The selected item (anchor) zooms forward while others scatter radially.
+ * 
+ * @param {number} anchorIndex - The index of the item to anchor (stays prominent)
+ * @param {Function} onComplete - Callback when scatter animation completes
+ * @returns {Promise} Resolves when animation completes
+ */
+scatterRing(anchorIndex = this.currentIndex, onComplete = null) {
+  if (!this.scatterConfig.enabled || this.scatterState.isScattered) {
+    return Promise.resolve();
+  }
+
+  console.log(`[🍉 Scatter] Scattering ring with anchor at index ${anchorIndex}`);
+  
+  // Store state
+  this.scatterState.isScattered = true;
+  this.scatterState.anchorIndex = anchorIndex;
+  this.scatterState.originalPositions = [];
+
+  // Kill any existing scatter timeline
+  if (this.scatterState.scatterTimeline) {
+    this.scatterState.scatterTimeline.kill();
+  }
+
+  // Detect mobile for smaller scatter distance
+  const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
+  const scatterDistance = isMobile 
+    ? this.scatterConfig.mobileScatterDistance 
+    : this.scatterConfig.scatterDistance;
+
+  // Create GSAP timeline
+  const tl = gsap.timeline({
+    onComplete: () => {
+      console.log('[🍉 Scatter] Scatter animation complete');
+      if (onComplete) onComplete();
+      
+      // Dispatch event for content panel to appear
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('carousel-scattered', {
+          detail: { anchorIndex, item: this.items[anchorIndex] }
+        }));
+      }
+    }
+  });
+
+  this.scatterState.scatterTimeline = tl;
+
+  // Calculate scatter directions and animate each item
+  const angleStep = (2 * Math.PI) / this.itemMeshes.length;
+
+  this.itemMeshes.forEach((mesh, index) => {
+    // Store original position for reassembly
+    this.scatterState.originalPositions[index] = {
+      x: mesh.position.x,
+      y: mesh.position.y,
+      z: mesh.position.z,
+      scaleX: mesh.scale.x,
+      scaleY: mesh.scale.y,
+      scaleZ: mesh.scale.z,
+      opacity: mesh.material.opacity
+    };
+
+    const isAnchor = index === anchorIndex;
+    const itemAngle = angleStep * index;
+
+    if (isAnchor) {
+      // Anchor item: zoom forward toward camera, scale up, brighten
+      tl.to(mesh.position, {
+        z: mesh.position.z + this.scatterConfig.selectedZoom,
+        duration: this.scatterConfig.scatterDuration,
+        ease: this.scatterConfig.scatterEase
+      }, 0);
+
+      tl.to(mesh.scale, {
+        x: mesh.userData.originalScale.x * 1.2,
+        y: mesh.userData.originalScale.y * 1.2,
+        z: mesh.userData.originalScale.z * 1.2,
+        duration: this.scatterConfig.scatterDuration,
+        ease: 'back.out(1.5)'
+      }, 0);
+
+      tl.to(mesh.material, {
+        emissiveIntensity: 1.5,
+        duration: this.scatterConfig.scatterDuration * 0.5
+      }, 0);
+
+    } else {
+      // Non-anchor items: scatter radially outward
+      const scatterX = Math.sin(itemAngle) * scatterDistance;
+      const scatterZ = Math.cos(itemAngle) * scatterDistance;
+      
+      // Calculate stagger delay based on distance from anchor
+      const distanceFromAnchor = Math.abs(index - anchorIndex);
+      const wrappedDistance = Math.min(distanceFromAnchor, this.items.length - distanceFromAnchor);
+      const staggerOffset = wrappedDistance * this.scatterConfig.staggerDelay;
+
+      tl.to(mesh.position, {
+        x: mesh.position.x + scatterX,
+        z: mesh.position.z + scatterZ,
+        duration: this.scatterConfig.scatterDuration,
+        ease: this.scatterConfig.scatterEase
+      }, staggerOffset);
+
+      // Dim and slightly shrink non-anchor items
+      tl.to(mesh.material, {
+        opacity: this.scatterConfig.dimOpacity,
+        emissiveIntensity: 0.2,
+        duration: this.scatterConfig.scatterDuration * 0.7
+      }, staggerOffset);
+
+      tl.to(mesh.scale, {
+        x: mesh.userData.originalScale.x * 0.85,
+        y: mesh.userData.originalScale.y * 0.85,
+        z: mesh.userData.originalScale.z * 0.85,
+        duration: this.scatterConfig.scatterDuration
+      }, staggerOffset);
+    }
+  });
+
+  return new Promise(resolve => {
+    tl.eventCallback('onComplete', () => {
+      if (onComplete) onComplete();
+      resolve();
+    });
+  });
+}
+
+/**
+ * Reassembles the scattered ring back to its original formation.
+ * Items snap back with elastic easing for satisfying feel.
+ * 
+ * @param {Function} onComplete - Callback when reassembly completes
+ * @returns {Promise} Resolves when animation completes
+ */
+reassembleRing(onComplete = null) {
+  if (!this.scatterState.isScattered) {
+    return Promise.resolve();
+  }
+
+  console.log('[🍉 Scatter] Reassembling ring');
+
+  // Kill any existing scatter timeline
+  if (this.scatterState.scatterTimeline) {
+    this.scatterState.scatterTimeline.kill();
+  }
+
+  // Create reassembly timeline
+  const tl = gsap.timeline({
+    onComplete: () => {
+      console.log('[🍉 Scatter] Reassembly complete');
+      this.scatterState.isScattered = false;
+      this.scatterState.anchorIndex = null;
+      
+      if (onComplete) onComplete();
+      
+      // Dispatch event for content panel to hide
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('carousel-reassembled'));
+      }
+    }
+  });
+
+  this.scatterState.scatterTimeline = tl;
+
+  // Animate each item back to original position
+  this.itemMeshes.forEach((mesh, index) => {
+    const original = this.scatterState.originalPositions[index];
+    if (!original) return;
+
+    // Calculate stagger (reverse order - furthest items return first)
+    const anchorIndex = this.scatterState.anchorIndex || this.currentIndex;
+    const distanceFromAnchor = Math.abs(index - anchorIndex);
+    const wrappedDistance = Math.min(distanceFromAnchor, this.items.length - distanceFromAnchor);
+    const maxDistance = Math.floor(this.items.length / 2);
+    const staggerOffset = (maxDistance - wrappedDistance) * this.scatterConfig.staggerDelay;
+
+    // Position back with elastic snap
+    tl.to(mesh.position, {
+      x: original.x,
+      y: original.y,
+      z: original.z,
+      duration: this.scatterConfig.scatterDuration * 1.2,
+      ease: this.scatterConfig.reassembleEase
+    }, staggerOffset);
+
+    // Scale back
+    tl.to(mesh.scale, {
+      x: original.scaleX,
+      y: original.scaleY,
+      z: original.scaleZ,
+      duration: this.scatterConfig.scatterDuration,
+      ease: 'back.out(1.2)'
+    }, staggerOffset);
+
+    // Restore opacity and emissive
+    tl.to(mesh.material, {
+      opacity: original.opacity,
+      emissiveIntensity: index === this.currentIndex ? 1.0 : 0.5,
+      duration: this.scatterConfig.scatterDuration * 0.8
+    }, staggerOffset);
+  });
+
+  return new Promise(resolve => {
+    tl.eventCallback('onComplete', () => {
+      if (onComplete) onComplete();
+      resolve();
+    });
+  });
+}
+
+/**
+ * Toggles the scatter state - scatters if assembled, reassembles if scattered.
+ * 
+ * @param {number} anchorIndex - The index to anchor when scattering
+ * @returns {Promise} Resolves when animation completes
+ */
+toggleScatter(anchorIndex = this.currentIndex) {
+  if (this.scatterState.isScattered) {
+    return this.reassembleRing();
+  } else {
+    return this.scatterRing(anchorIndex);
+  }
+}
+
+/**
+ * Check if the ring is currently scattered.
+ * @returns {boolean}
+ */
+isScattered() {
+  return this.scatterState.isScattered;
+}
+
+/**
+ * Updates scatter configuration (can be called from admin panel).
+ * @param {Object} newConfig - Partial config to merge
+ */
+updateScatterConfig(newConfig = {}) {
+  Object.assign(this.scatterConfig, newConfig);
+  console.log('[🍉 Scatter] Config updated:', this.scatterConfig);
 }
 }

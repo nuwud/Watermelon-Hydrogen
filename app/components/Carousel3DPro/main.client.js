@@ -226,6 +226,11 @@ export function mountCarousel3D(container, menuData) {
                 carousel.highlightScale = config.carousel.highlightScale;
             }
         }
+        
+        // Apply scatter settings (if carousel has scatter capability)
+        if (config.scatter && carousel && typeof carousel.updateScatterConfig === 'function') {
+            carousel.updateScatterConfig(config.scatter);
+        }
     }
     
     // Load saved config on startup
@@ -244,6 +249,16 @@ export function mountCarousel3D(container, menuData) {
         // Listen for real-time config updates
         window.addEventListener('watermelon-config-update', (e) => {
             applyAdminConfig(e.detail);
+        });
+        
+        // Listen for scatter test events from admin panel
+        window.addEventListener('watermelon-scatter-test', () => {
+            console.log('[🍉 Scatter] Test triggered from admin panel');
+            if (carousel && typeof carousel.toggleScatter === 'function') {
+                carousel.toggleScatter();
+            } else {
+                console.warn('[🍉 Scatter] Carousel does not have toggleScatter method');
+            }
         });
     }
 

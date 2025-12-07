@@ -52,6 +52,16 @@ const DEFAULT_CONFIG = {
     ferrisWheelRadius: 4,
     breakpoint: 768,
   },
+  // Scatter Animation settings
+  scatter: {
+    enabled: true,
+    scatterDistance: 3.0,
+    scatterDuration: 0.5,
+    staggerDelay: 0.04,
+    selectedZoom: 0.8,
+    mobileScatterDistance: 2.0,
+    dimOpacity: 0.3,
+  },
   // Theme preset
   activeTheme: 'default',
 };
@@ -170,7 +180,7 @@ export default function AdminPanel() {
       <div style={styles.main}>
         {/* Sidebar Tabs */}
         <nav style={styles.sidebar}>
-          {['scene', 'camera', 'carousel', 'submenu', 'mobile'].map(tab => (
+          {['scene', 'camera', 'carousel', 'submenu', 'mobile', 'scatter'].map(tab => (
             <button
               key={tab}
               onClick={() => setActiveTab(tab)}
@@ -397,6 +407,87 @@ export default function AdminPanel() {
                 step={8}
                 onChange={v => updateConfig('mobile', 'breakpoint', v)}
               />
+            </ConfigSection>
+          )}
+
+          {activeTab === 'scatter' && (
+            <ConfigSection title="Ring Scatter Animation">
+              <ToggleInput
+                label="Enable Scatter Animation"
+                value={config.scatter.enabled}
+                onChange={v => updateConfig('scatter', 'enabled', v)}
+              />
+              <SliderInput
+                label="Scatter Distance"
+                value={config.scatter.scatterDistance}
+                min={1}
+                max={6}
+                step={0.5}
+                onChange={v => updateConfig('scatter', 'scatterDistance', v)}
+              />
+              <SliderInput
+                label="Animation Duration (s)"
+                value={config.scatter.scatterDuration}
+                min={0.2}
+                max={1.5}
+                step={0.1}
+                onChange={v => updateConfig('scatter', 'scatterDuration', v)}
+              />
+              <SliderInput
+                label="Stagger Delay (s)"
+                value={config.scatter.staggerDelay}
+                min={0.01}
+                max={0.15}
+                step={0.01}
+                onChange={v => updateConfig('scatter', 'staggerDelay', v)}
+              />
+              <SliderInput
+                label="Selected Zoom Forward"
+                value={config.scatter.selectedZoom}
+                min={0.2}
+                max={2}
+                step={0.1}
+                onChange={v => updateConfig('scatter', 'selectedZoom', v)}
+              />
+              <SliderInput
+                label="Mobile Scatter Distance"
+                value={config.scatter.mobileScatterDistance}
+                min={1}
+                max={4}
+                step={0.5}
+                onChange={v => updateConfig('scatter', 'mobileScatterDistance', v)}
+              />
+              <SliderInput
+                label="Dim Opacity"
+                value={config.scatter.dimOpacity}
+                min={0.1}
+                max={0.8}
+                step={0.05}
+                onChange={v => updateConfig('scatter', 'dimOpacity', v)}
+              />
+              
+              {/* Test Button */}
+              <div style={{marginTop: '20px', paddingTop: '15px', borderTop: '1px solid #333'}}>
+                <button 
+                  onClick={() => {
+                    if (typeof window !== 'undefined') {
+                      window.dispatchEvent(new CustomEvent('watermelon-scatter-test'));
+                    }
+                  }} 
+                  style={{
+                    background: 'linear-gradient(135deg, #4488ff, #00aaff)',
+                    color: 'white',
+                    border: 'none',
+                    padding: '12px 20px',
+                    borderRadius: '8px',
+                    cursor: 'pointer',
+                    fontWeight: 'bold',
+                    width: '100%'
+                  }}
+                >
+                  🎯 Test Scatter Animation
+                </button>
+              </div>
             </ConfigSection>
           )}
         </div>
