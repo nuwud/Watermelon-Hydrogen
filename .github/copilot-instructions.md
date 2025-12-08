@@ -48,8 +48,19 @@
 
 * Env misuse in `app/**`:
   `process\.env|import\.meta\.env|context\.env`
+  
+  **Exceptions (valid patterns):**
+  - `process.env.NODE_ENV` — Standard dev/prod check
+  - `getEnvServer(context.env)` — Correct wrapper usage
+  - `context.env as Record<...>` — TypeScript type casting for wrappers
+  - Files: `env.server.ts`, `env.public.ts`, `buildInfo.server.ts`
+
 * Hard‑coded domains:
   `ynx40dr|nx40dr-bu\.myshopify\.com|nuwudorder\.com|o2\.myshopify\.dev`
+  
+  **Exceptions:**
+  - Comments in `env.server.ts` / `env.public.ts` (examples only)
+
 * SSR hazards: direct DOM/Three usage outside `<ClientOnly>` or without `typeof window`.
 
 **Plan**

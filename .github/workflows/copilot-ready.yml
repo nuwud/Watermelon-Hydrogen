@@ -51,9 +51,18 @@ jobs:
       - name: Forbid raw env in app/** (exclude helpers)
         run: |
           set -e
+          # Check for forbidden env patterns, excluding:
+          # - env.server.ts, env.public.ts (wrappers)
+          # - buildInfo.server.ts (server utility)
+          # - NODE_ENV checks (standard pattern)
+          # - context.env passed to getEnvServer() (valid pattern)
           if git grep -nE '(process\.env|import\.meta\.env|context\.env)' -- 'app/' \
             | grep -v 'app/utils/env.server' \
-            | grep -v 'app/utils/env.public' ; then
+            | grep -v 'app/utils/env.public' \
+            | grep -v 'app/utils/buildInfo.server' \
+            | grep -v 'NODE_ENV' \
+            | grep -v 'getEnvServer(context.env)' \
+            | grep -v 'context.env as Record' ; then
             echo "❌ Raw env usage in app/**"
             exit 1
           fi
@@ -62,7 +71,10 @@ jobs:
       - name: Hard-coded domain scan in app/**
         run: |
           set -e
-          if git grep -nE '(ynx40dr-bu\.myshopify\.com|nuwudorder\.com|o2\.myshopify\.dev)' -- app/ ; then
+          # Scan for hard-coded domains, excluding env helper files (where examples may appear)
+          if git grep -nE '(ynx40dr-bu\.myshopify\.com|nuwudorder\.com|o2\.myshopify\.dev)' -- app/ \
+            | grep -v 'app/utils/env.server' \
+            | grep -v 'app/utils/env.public' ; then
             echo "❌ Hard-coded domain(s) in app/**"
             exit 1
           fi
@@ -71,6 +83,9 @@ jobs:
   build:
     name: Build & Lint
     runs-on: ubuntu-latest
+    env:
+      # Increase Node memory for builds with large bundles
+      NODE_OPTIONS: '--max-old-space-size=4096'
     steps:
       - uses: actions/checkout@v4
         with:
