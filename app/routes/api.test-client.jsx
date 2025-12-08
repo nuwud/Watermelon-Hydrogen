@@ -1,7 +1,7 @@
-import { json } from '@shopify/remix-oxygen';
+import { data } from 'react-router';
 
 export async function loader() {
-	return json({
+	return data({
 		success: true,
 		message: 'Client API test successful',
 		timestamp: new Date().toISOString(),

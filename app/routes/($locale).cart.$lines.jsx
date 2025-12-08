@@ -1,4 +1,4 @@
-import {redirect} from '@shopify/remix-oxygen';
+import {redirect} from 'react-router';
 
 /**
  * Automatically creates a new cart based on the URL and redirects straight to checkout.

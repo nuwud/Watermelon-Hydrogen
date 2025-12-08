@@ -1,6 +1,6 @@
-import {useLoaderData} from '@remix-run/react';
+import {useLoaderData} from 'react-router';
 import {CartForm} from '@shopify/hydrogen';
-import {data} from '@shopify/remix-oxygen';
+import {data} from 'react-router';
 import {CartMain} from '~/components/CartMain';
 
 /**
@@ -119,7 +119,7 @@ export default function Cart() {
   );
 }
 
-/** @template T @typedef {import('@remix-run/react').MetaFunction<T>} MetaFunction */
+/** @template T @typedef {import('react-router').MetaFunction<T>} MetaFunction */
 /** @typedef {import('@shopify/hydrogen').CartQueryDataReturn} CartQueryDataReturn */
 /** @typedef {import('@shopify/remix-oxygen').LoaderFunctionArgs} LoaderFunctionArgs */
 /** @typedef {import('@shopify/remix-oxygen').ActionFunctionArgs} ActionFunctionArgs */

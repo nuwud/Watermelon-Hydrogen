@@ -1,4 +1,4 @@
-import {Link, useFetcher} from '@remix-run/react';
+import {Link, useFetcher} from 'react-router';
 import {Image, Money} from '@shopify/hydrogen';
 import {useRef, useEffect} from 'react';
 import {
@@ -303,5 +303,5 @@ function usePredictiveSearch() {
  * }} SearchResultsPredictiveProps
  */
 
-/** @template T @typedef {import('@remix-run/react').Fetcher<T>} Fetcher */
+/** @template T @typedef {import('react-router').Fetcher<T>} Fetcher */
 /** @typedef {import('~/lib/search').PredictiveSearchReturn} PredictiveSearchReturn */

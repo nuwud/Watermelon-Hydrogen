@@ -1,5 +1,5 @@
 // app/routes/api.page.jsx
-import { json } from '@shopify/remix-oxygen';
+import { data } from 'react-router';
 import { PAGE_QUERY } from '~/lib/fragments';
 
 /**
@@ -12,7 +12,7 @@ export async function loader({ request, context }) {
   const pageHandle = url.searchParams.get('handle');
 
   if (!pageHandle) {
-    return json({ error: 'Page handle is required' }, { status: 400 });
+    return data({ error: 'Page handle is required' }, { status: 400 });
   }
 
   try {
@@ -26,15 +26,15 @@ export async function loader({ request, context }) {
     });
 
     if (!pageResult.page) {
-      return json({ error: 'Page not found' }, { status: 404 });
+      return data({ error: 'Page not found' }, { status: 404 });
     }
 
-    return json({
+    return data({
       page: pageResult.page,
       success: true
     });
   } catch (error) {
     console.error('[API] Error fetching page:', error);
-    return json({ error: 'Failed to fetch page content' }, { status: 500 });
+    return data({ error: 'Failed to fetch page content' }, { status: 500 });
   }
 }

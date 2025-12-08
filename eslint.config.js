@@ -41,6 +41,7 @@ export default [
       '**/.hydrogen/',
       '**/.devcontainer/',
       '**/scripts/debug/**',
+      '**/.react-router/**',
     ],
   },
   ...fixupConfigRules(

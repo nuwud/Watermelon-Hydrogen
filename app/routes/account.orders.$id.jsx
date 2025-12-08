@@ -1,6 +1,6 @@
 // TODO: Customer account functionality temporarily disabled due to GraphQL schema issues
-import {redirect} from '@shopify/remix-oxygen';
-import {useLoaderData} from '@remix-run/react';
+import {redirect} from 'react-router';
+import {useLoaderData} from 'react-router';
 import {Money, Image} from '@shopify/hydrogen';
 // TODO: Fix customer account GraphQL - import {CUSTOMER_ORDER_QUERY} from '~/graphql/customer-account/CustomerOrderQuery';
 
@@ -242,6 +242,6 @@ function OrderLineRow({lineItem}) {
 }
 
 /** @typedef {import('@shopify/remix-oxygen').LoaderFunctionArgs} LoaderFunctionArgs */
-/** @template T @typedef {import('@remix-run/react').MetaFunction<T>} MetaFunction */
+/** @template T @typedef {import('react-router').MetaFunction<T>} MetaFunction */
 /** @typedef {import('customer-accountapi.generated').OrderLineItemFullFragment} OrderLineItemFullFragment */
 /** @typedef {import('@shopify/remix-oxygen').SerializeFrom<typeof loader>} LoaderReturnData */

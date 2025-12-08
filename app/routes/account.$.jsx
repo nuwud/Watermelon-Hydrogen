@@ -1,4 +1,4 @@
-import {redirect} from '@shopify/remix-oxygen';
+import {redirect} from 'react-router';
 
 // fallback wild card for all unauthenticated routes in account section
 /**

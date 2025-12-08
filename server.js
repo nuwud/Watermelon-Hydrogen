@@ -1,8 +1,8 @@
 // Virtual entry point for the app
-// @ts-ignore - virtual module provided by Vite/Remix Hydrogen
-import * as remixBuild from 'virtual:remix/server-build';
+// @ts-ignore - virtual module provided by Vite/React Router
+import * as build from 'virtual:react-router/server-build';
+import {createRequestHandler} from '@shopify/hydrogen/oxygen';
 import {storefrontRedirect} from '@shopify/hydrogen';
-import {createRequestHandler} from '@shopify/remix-oxygen';
 import {createAppLoadContext} from '~/lib/context';
 
 /**
@@ -24,11 +24,11 @@ export default {
       );
 
       /**
-       * Create a Remix request handler and pass
+       * Create a request handler and pass
        * Hydrogen's Storefront client to the loader context.
        */
       const handleRequest = createRequestHandler({
-        build: remixBuild,
+        build,
         mode: env.NODE_ENV ?? process.env.NODE_ENV,
         getLoadContext: () => loadContextPromise,
       });

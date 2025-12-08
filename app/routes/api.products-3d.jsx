@@ -3,7 +3,7 @@
  * Fetches Shopify products with 3D model metadata for menu integration
  */
 
-import { json } from '@shopify/remix-oxygen';
+import { data } from 'react-router';
 import { COLLECTION_QUERY } from '../lib/fragments.js';
 
 export async function loader({ request, context }) {
@@ -80,7 +80,7 @@ export async function loader({ request, context }) {
       };
     });
 
-    return json({
+    return data({
       success: true,
       products: processedProducts,
       total: processedProducts.length,
@@ -91,7 +91,7 @@ export async function loader({ request, context }) {
   } catch (error) {
     console.error('Error fetching Shopify products for 3D menu:', error);
 
-    return json({
+    return data({
       success: false,
       error: error.message,
       products: [],
@@ -235,7 +235,7 @@ export async function action({ request, context }) {
       // Fetch products by handles
       const products = await fetchProductsByHandles(storefront, allProductHandles);
 
-      return json({
+      return data({
         success: true,
         products,
         mappedItems: mapProductsToMenuStructure(products, menuStructure)
@@ -245,20 +245,20 @@ export async function action({ request, context }) {
     // Fetch specific product handles
     if (productHandles.length > 0) {
       const products = await fetchProductsByHandles(storefront, productHandles);
-      return json({
+      return data({
         success: true,
         products
       });
     }
 
-    return json({
+    return data({
       success: false,
       error: 'No valid request data provided'
     }, { status: 400 });
 
   } catch (error) {
     console.error('Error in products API action:', error);
-    return json({
+    return data({
       success: false,
       error: error.message
     }, { status: 500 });

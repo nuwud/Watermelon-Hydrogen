@@ -1,4 +1,4 @@
-import {json, type ActionFunctionArgs, type LoaderFunctionArgs} from '@shopify/remix-oxygen';
+import {data, type ActionFunctionArgs, type LoaderFunctionArgs} from 'react-router';
 import {getEnvServer} from '../utils/env.server';
 import {requireBackgroundAdminToken} from '../utils/backgroundAdminAuth.server';
 import {
@@ -44,13 +44,13 @@ export async function loader({request, context, params}: LoaderFunctionArgs) {
   );
 
   if (!record) {
-    return json(
+    return data(
       {error: 'Preset not found'},
       {status: 404, headers: {'Cache-Control': 'no-store'}},
     );
   }
 
-  return json(serializePreset(record), {
+  return data(serializePreset(record), {
     headers: {
       'Cache-Control': 'no-store',
       'Content-Type': 'application/json',
@@ -61,7 +61,7 @@ export async function loader({request, context, params}: LoaderFunctionArgs) {
 export async function action({request, context, params}: ActionFunctionArgs) {
   const method = request.method.toUpperCase();
   if (method !== METHOD_PATCH && method !== METHOD_DELETE) {
-    return json(
+    return data(
       {error: 'Method Not Allowed'},
       {
         status: 405,
@@ -89,7 +89,7 @@ export async function action({request, context, params}: ActionFunctionArgs) {
       return new Response(null, {status: 204, headers: {'Cache-Control': 'no-store'}});
     } catch (error) {
       console.error('[api.backgrounds.$id] Failed to delete preset', error);
-      return json(
+      return data(
         {error: error instanceof Error ? error.message : 'Failed to delete preset'},
         {status: 500, headers: {'Cache-Control': 'no-store'}},
       );
@@ -101,7 +101,7 @@ export async function action({request, context, params}: ActionFunctionArgs) {
     parsedBody = await request.json();
   } catch (error) {
     console.warn('[api.backgrounds.$id] Failed to parse JSON body', error);
-    return json(
+    return data(
       {error: 'Invalid JSON payload'},
       {status: 400, headers: {'Cache-Control': 'no-store'}},
     );
@@ -112,7 +112,7 @@ export async function action({request, context, params}: ActionFunctionArgs) {
     presetInput = parsePresetInput(parsedBody);
   } catch (error) {
     console.warn('[api.backgrounds.$id] Invalid preset payload', error);
-    return json(
+    return data(
       {error: error instanceof Error ? error.message : 'Invalid preset payload'},
       {status: 400, headers: {'Cache-Control': 'no-store'}},
     );
@@ -129,7 +129,7 @@ export async function action({request, context, params}: ActionFunctionArgs) {
       presetInput,
     );
 
-    return json(serializePreset(record), {
+    return data(serializePreset(record), {
       headers: {
         'Cache-Control': 'no-store',
         'Content-Type': 'application/json',
@@ -137,7 +137,7 @@ export async function action({request, context, params}: ActionFunctionArgs) {
     });
   } catch (error) {
     console.error('[api.backgrounds.$id] Failed to update preset', error);
-    return json(
+    return data(
       {error: error instanceof Error ? error.message : 'Failed to update preset'},
       {status: 500, headers: {'Cache-Control': 'no-store'}},
     );

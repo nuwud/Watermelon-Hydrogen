@@ -2,7 +2,7 @@
 
 import {
   Links, Meta, Scripts, useRouteLoaderData, ScrollRestoration, Outlet,
-} from '@remix-run/react';
+} from 'react-router';
 import {useNonce} from '@shopify/hydrogen';
 import resetStyles from '~/styles/reset.css?url';
 import appStyles from '~/styles/app.css?url';

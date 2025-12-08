@@ -6,8 +6,8 @@
  */
 
 import {useState, useEffect, useCallback} from 'react';
-import {json} from '@shopify/remix-oxygen';
-import {useLoaderData} from '@remix-run/react';
+import {data} from 'react-router';
+import {useLoaderData} from 'react-router';
 
 // Default configuration
 const DEFAULT_CONFIG = {
@@ -76,7 +76,7 @@ const DEFAULT_CONFIG = {
 export async function loader() {
   // In production, load from Shopify Metaobjects
   // For now, return defaults
-  return json({
+  return data({
     config: DEFAULT_CONFIG,
     isDevMode: process.env.NODE_ENV === 'development',
   });

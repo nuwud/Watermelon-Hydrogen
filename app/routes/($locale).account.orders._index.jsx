@@ -1,5 +1,5 @@
 // TODO: Customer account functionality temporarily disabled due to GraphQL schema issues
-import {Link, useLoaderData} from '@remix-run/react';
+import {Link, useLoaderData} from 'react-router';
 import {
   Money,
   // TODO: Re-enable when customer account is fixed
@@ -121,7 +121,7 @@ function OrderItem({order}) {
   );
 }
 
-/** @template T @typedef {import('@remix-run/react').MetaFunction<T>} MetaFunction */
+/** @template T @typedef {import('react-router').MetaFunction<T>} MetaFunction */
 /** @typedef {import('@shopify/remix-oxygen').LoaderFunctionArgs} LoaderFunctionArgs */
 /** @typedef {import('customer-accountapi.generated').CustomerOrdersFragment} CustomerOrdersFragment */
 /** @typedef {import('customer-accountapi.generated').OrderItemFragment} OrderItemFragment */

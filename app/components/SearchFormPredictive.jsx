@@ -1,4 +1,4 @@
-import {useFetcher, useNavigate} from '@remix-run/react';
+import {useFetcher, useNavigate} from 'react-router';
 import {useRef, useEffect} from 'react';
 import {useAside} from './Aside';
 
@@ -73,6 +73,6 @@ export function SearchFormPredictive({
  * }} SearchFormPredictiveProps
  */
 
-/** @typedef {import('@remix-run/react').FormProps} FormProps */
-/** @template T @typedef {import('@remix-run/react').Fetcher<T>} Fetcher */
+/** @typedef {import('react-router').FormProps} FormProps */
+/** @template T @typedef {import('react-router').Fetcher<T>} Fetcher */
 /** @typedef {import('~/lib/search').PredictiveSearchReturn} PredictiveSearchReturn */

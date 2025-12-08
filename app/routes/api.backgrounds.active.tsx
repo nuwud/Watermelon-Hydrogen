@@ -1,4 +1,4 @@
-import {json, type LoaderFunctionArgs} from '@shopify/remix-oxygen';
+import {data, type LoaderFunctionArgs} from 'react-router';
 import {getEnvServer} from '../utils/env.server';
 import {
   DEFAULT_CALM_INTENSITY,
@@ -19,7 +19,7 @@ export async function loader({context}: LoaderFunctionArgs) {
       {refresh: false},
     );
 
-    return json(preset, {
+    return data(preset, {
       headers: {
         'Cache-Control': `public, max-age=${ACTIVE_CACHE_SECONDS}, stale-while-revalidate=${ACTIVE_CACHE_SECONDS * 2}`,
         'Content-Type': 'application/json',
@@ -27,7 +27,7 @@ export async function loader({context}: LoaderFunctionArgs) {
     });
   } catch (error) {
     console.error('[api.backgrounds.active] Failed to resolve active preset', error);
-    return json(
+    return data(
       {
         id: 'background:fallback',
         handle: 'fallback',

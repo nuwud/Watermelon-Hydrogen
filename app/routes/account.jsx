@@ -1,5 +1,5 @@
-import {data as remixData} from '@shopify/remix-oxygen';
-import {Form, NavLink, Outlet, useLoaderData} from '@remix-run/react';
+import {data as remixData} from 'react-router';
+import {Form, NavLink, Outlet, useLoaderData} from 'react-router';
 // TODO: Fix customer account GraphQL schema issues
 // import {CUSTOMER_DETAILS_QUERY} from '~/graphql/customer-account/CustomerDetailsQuery';
 

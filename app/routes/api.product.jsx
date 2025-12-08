@@ -3,7 +3,7 @@
  * Provides JSON product data for the content manager
  */
 
-import {json} from '@shopify/remix-oxygen';
+import {data} from 'react-router';
 import {PRODUCT_QUERY} from '~/lib/fragments';
 
 /**
@@ -15,7 +15,7 @@ export async function loader({request, context}) {
   const handle = url.searchParams.get('handle');
 
   if (!handle) {
-    return json({
+    return data({
       success: false,
       error: 'Product handle is required'
     }, {status: 400});
@@ -31,14 +31,14 @@ export async function loader({request, context}) {
     });
 
     if (!product?.id) {
-      return json({
+      return data({
         success: false,
         error: `Product not found: ${handle}`
       }, {status: 404});
     }
 
     // Return simplified product data for content manager
-    return json({
+    return data({
       success: true,
       product: {
         id: product.id,
@@ -60,7 +60,7 @@ export async function loader({request, context}) {
 
   } catch (error) {
     console.error('[API] Error fetching product:', error);
-    return json({
+    return data({
       success: false,
       error: `Failed to fetch product: ${error.message}`
     }, {status: 500});

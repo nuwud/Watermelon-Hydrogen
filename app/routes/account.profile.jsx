@@ -1,12 +1,12 @@
 // TODO: Customer account functionality temporarily disabled due to GraphQL schema issues
 // TODO: Fix customer account GraphQL - import {CUSTOMER_UPDATE_MUTATION} from '~/graphql/customer-account/CustomerUpdateMutation';
-import {data} from '@shopify/remix-oxygen';
+import {data} from 'react-router';
 import {
   Form,
   useActionData,
   useNavigation,
   useOutletContext,
-} from '@remix-run/react';
+} from 'react-router';
 
 /**
  * @type {MetaFunction}
@@ -156,6 +156,6 @@ export default function AccountProfile() {
 /** @typedef {import('@shopify/hydrogen/customer-account-api-types').CustomerUpdateInput} CustomerUpdateInput */
 /** @typedef {import('@shopify/remix-oxygen').ActionFunctionArgs} ActionFunctionArgs */
 /** @typedef {import('@shopify/remix-oxygen').LoaderFunctionArgs} LoaderFunctionArgs */
-/** @template T @typedef {import('@remix-run/react').MetaFunction<T>} MetaFunction */
+/** @template T @typedef {import('react-router').MetaFunction<T>} MetaFunction */
 /** @typedef {import('@shopify/remix-oxygen').SerializeFrom<typeof loader>} LoaderReturnData */
 /** @typedef {import('@shopify/remix-oxygen').SerializeFrom<typeof action>} ActionReturnData */

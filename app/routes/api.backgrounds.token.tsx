@@ -1,4 +1,4 @@
-import {json, type ActionFunctionArgs} from '@shopify/remix-oxygen';
+import {data, type ActionFunctionArgs} from 'react-router';
 import {getEnvServer} from '../utils/env.server';
 import {
   issueBackgroundAdminToken,
@@ -10,7 +10,7 @@ const HEADER_ADMIN_KEY = 'x-background-admin-key';
 
 export async function action({request, context}: ActionFunctionArgs) {
   if (request.method !== 'POST') {
-    return json(
+    return data(
       {error: 'Method Not Allowed'},
       {status: 405, headers: {'Allow': 'POST', 'Cache-Control': 'no-store'}},
     );
@@ -34,7 +34,7 @@ export async function action({request, context}: ActionFunctionArgs) {
   }
 
   if (!providedKey || !validateSharedAdminKey(env, providedKey)) {
-    return json(
+    return data(
       {error: 'Invalid admin key'},
       {status: 401, headers: {'Cache-Control': 'no-store'}},
     );
@@ -42,7 +42,7 @@ export async function action({request, context}: ActionFunctionArgs) {
 
   const tokenResponse = await issueBackgroundAdminToken(env);
 
-  return json(
+  return data(
     {
       token: tokenResponse.token,
       expiresAt: tokenResponse.expiresAt,

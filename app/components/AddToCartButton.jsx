@@ -38,5 +38,5 @@ export function AddToCartButton({
   );
 }
 
-/** @typedef {import('@remix-run/react').FetcherWithComponents} FetcherWithComponents */
+/** @typedef {import('react-router').FetcherWithComponents} FetcherWithComponents */
 /** @typedef {import('@shopify/hydrogen').OptimisticCartLineInput} OptimisticCartLineInput */

@@ -1,4 +1,4 @@
-import {json, type ActionFunctionArgs} from '@shopify/remix-oxygen';
+import {data, type ActionFunctionArgs} from 'react-router';
 import {getEnvServer} from '../utils/env.server';
 import {requireBackgroundAdminToken} from '../utils/backgroundAdminAuth.server';
 import {
@@ -30,7 +30,7 @@ async function authenticate(request: Request, context: ActionFunctionArgs['conte
 
 export async function action({request, context, params}: ActionFunctionArgs) {
   if (request.method.toUpperCase() !== METHOD_POST) {
-    return json(
+    return data(
       {error: 'Method Not Allowed'},
       {status: 405, headers: {'Allow': METHOD_POST, 'Cache-Control': 'no-store'}},
     );
@@ -49,13 +49,13 @@ export async function action({request, context, params}: ActionFunctionArgs) {
     const record = await getBackgroundPreset(runtime, id);
 
     if (!record) {
-      return json(
+      return data(
         {error: 'Preset not found after activation'},
         {status: 404, headers: {'Cache-Control': 'no-store'}},
       );
     }
 
-    return json(serializePreset(record), {
+    return data(serializePreset(record), {
       headers: {
         'Cache-Control': 'no-store',
         'Content-Type': 'application/json',
@@ -63,7 +63,7 @@ export async function action({request, context, params}: ActionFunctionArgs) {
     });
   } catch (error) {
     console.error('[api.backgrounds.$id.activate] Failed to activate preset', error);
-    return json(
+    return data(
       {error: error instanceof Error ? error.message : 'Failed to activate preset'},
       {status: 500, headers: {'Cache-Control': 'no-store'}},
     );

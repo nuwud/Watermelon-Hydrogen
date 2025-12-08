@@ -1,5 +1,5 @@
 import {useRef, useEffect} from 'react';
-import {Form} from '@remix-run/react';
+import {Form} from 'react-router';
 
 /**
  * Search form component that sends search requests to the `/search` route.
@@ -71,4 +71,4 @@ function useFocusOnCmdK(inputRef) {
  * }} SearchFormProps
  */
 
-/** @typedef {import('@remix-run/react').FormProps} FormProps */
+/** @typedef {import('react-router').FormProps} FormProps */

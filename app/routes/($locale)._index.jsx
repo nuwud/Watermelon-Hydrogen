@@ -1,7 +1,7 @@
 // ($locale)._index.jsx 
 
-import { useLoaderData } from '@remix-run/react';
-import { json } from '@shopify/remix-oxygen';
+import { useLoaderData } from 'react-router';
+import { data } from 'react-router';
 import { HEADER_QUERY } from '~/lib/fragments';
 import { Carousel3DMenu } from '../components/Carousel3DMenu';
 import { transformShopifyMenuForCarousel, createFallbackMenuData } from '~/utils/menuTransform';
@@ -26,7 +26,7 @@ export async function loader({ context }) {
     // Transform Shopify menu data for carousel
     const carouselMenuData = transformShopifyMenuForCarousel(menuResult);
     
-    return json({
+    return data({
       menuData: carouselMenuData,
       shop: menuResult.shop,
     });
@@ -34,7 +34,7 @@ export async function loader({ context }) {
     console.error('[Homepage Loader] Error fetching menu data:', error);
     
     // Return fallback data if Shopify query fails
-    return json({
+    return data({
       menuData: createFallbackMenuData(),
       shop: null,
       error: 'Failed to load menu from Shopify',

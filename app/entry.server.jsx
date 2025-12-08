@@ -1,4 +1,4 @@
-import {RemixServer} from '@remix-run/react';
+import {ServerRouter} from 'react-router';
 import {isbot} from 'isbot';
 import {renderToReadableStream} from 'react-dom/server';
 import {createContentSecurityPolicy} from '@shopify/hydrogen';
@@ -8,14 +8,14 @@ import {createContentSecurityPolicy} from '@shopify/hydrogen';
  * @param {Request} request
  * @param {number} responseStatusCode
  * @param {Headers} responseHeaders
- * @param {EntryContext} remixContext
+ * @param {RouterContext} routerContext
  * @param {AppLoadContext} context
  */
 export default async function handleRequest(
   request,
   responseStatusCode,
   responseHeaders,
-  remixContext,
+  routerContext,
   context,
 ) {
   // Use context.rawEnv to access runtime environment in Workers
@@ -50,7 +50,7 @@ export default async function handleRequest(
 
   const body = await renderToReadableStream(
     <NonceProvider>
-      <RemixServer context={remixContext} url={request.url} nonce={nonce} />
+      <ServerRouter context={routerContext} url={request.url} nonce={nonce} />
     </NonceProvider>,
     {
       nonce,
@@ -79,5 +79,5 @@ export default async function handleRequest(
   });
 }
 
-/** @typedef {import('@shopify/remix-oxygen').EntryContext} EntryContext */
-/** @typedef {import('@shopify/remix-oxygen').AppLoadContext} AppLoadContext */
+/** @typedef {import('react-router').LoaderFunctionArgs['context']} RouterContext */
+/** @typedef {import('@shopify/hydrogen').HydrogenContext} AppLoadContext */

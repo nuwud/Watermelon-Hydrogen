@@ -1,4 +1,4 @@
-import { json } from '@shopify/remix-oxygen';
+import { data } from 'react-router';
 
 /**
  * Admin API for menu mode, theme settings, and configuration
@@ -39,7 +39,7 @@ export async function loader({ request, context }) {
   const isThemeRequest = url.searchParams.get('theme') === 'true';
   
   if (!isDev && !hasAdminFlag && !isThemeRequest) {
-    return json({ error: 'Unauthorized' }, { status: 401 });
+    return data({ error: 'Unauthorized' }, { status: 401 });
   }
   
   // Try to load menu theme from Shopify metafields if storefront is available
@@ -82,7 +82,7 @@ export async function loader({ request, context }) {
     lastUpdated: new Date().toISOString()
   };
   
-  return json({ success: true, config, menuTheme });
+  return data({ success: true, config, menuTheme });
 }
 
 export async function action({ request }) {
@@ -91,7 +91,7 @@ export async function action({ request }) {
   const isDev = url.hostname === 'localhost' || url.hostname.includes('ngrok');
   
   if (!isDev) {
-    return json({ error: 'Unauthorized' }, { status: 401 });
+    return data({ error: 'Unauthorized' }, { status: 401 });
   }
   
   try {
@@ -108,7 +108,7 @@ export async function action({ request }) {
     
     console.log('Admin config updated:', updatedConfig);
     
-    return json({ 
+    return data({ 
       success: true, 
       message: 'Configuration updated successfully',
       config: updatedConfig 
@@ -116,7 +116,7 @@ export async function action({ request }) {
     
   } catch (error) {
     console.error('Admin config error:', error);
-    return json({ 
+    return data({ 
       success: false, 
       error: 'Failed to update configuration' 
     }, { status: 500 });

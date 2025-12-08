@@ -1,4 +1,4 @@
-import {useLoaderData, Link} from '@remix-run/react';
+import {useLoaderData, Link} from 'react-router';
 import {getPaginationVariables, Image} from '@shopify/hydrogen';
 import {PaginatedResourceSection} from '~/components/PaginatedResourceSection';
 

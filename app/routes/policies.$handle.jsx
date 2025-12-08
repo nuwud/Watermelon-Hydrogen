@@ -1,4 +1,4 @@
-import {Link, useLoaderData} from '@remix-run/react';
+import {Link, useLoaderData} from 'react-router';
 
 /**
  * @type {MetaFunction<typeof loader>}
@@ -99,6 +99,6 @@ const POLICY_CONTENT_QUERY = `#graphql
  */
 
 /** @typedef {import('@shopify/remix-oxygen').LoaderFunctionArgs} LoaderFunctionArgs */
-/** @template T @typedef {import('@remix-run/react').MetaFunction<T>} MetaFunction */
+/** @template T @typedef {import('react-router').MetaFunction<T>} MetaFunction */
 /** @typedef {import('@shopify/hydrogen/storefront-api-types').Shop} Shop */
 /** @typedef {import('@shopify/remix-oxygen').SerializeFrom<typeof loader>} LoaderReturnData */

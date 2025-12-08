@@ -1,5 +1,5 @@
 import {getShopAnalytics} from '@shopify/hydrogen';
-import {Outlet, useRouteError, isRouteErrorResponse} from '@remix-run/react';
+import {Outlet, useRouteError, isRouteErrorResponse} from 'react-router';
 import {FOOTER_QUERY, HEADER_QUERY} from '~/lib/fragments';
 
 /**
@@ -165,5 +165,5 @@ export function ErrorBoundary() {
 /** @typedef {Class<loader>} RootLoader */
 
 /** @typedef {import('@shopify/remix-oxygen').LoaderFunctionArgs} LoaderFunctionArgs */
-/** @typedef {import('@remix-run/react').ShouldRevalidateFunction} ShouldRevalidateFunction */
+/** @typedef {import('react-router').ShouldRevalidateFunction} ShouldRevalidateFunction */
 /** @typedef {import('@shopify/remix-oxygen').SerializeFrom<typeof loader>} LoaderReturnData */

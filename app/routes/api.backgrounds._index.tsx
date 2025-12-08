@@ -1,4 +1,4 @@
-import {json, type ActionFunctionArgs, type LoaderFunctionArgs} from '@shopify/remix-oxygen';
+import {data, type ActionFunctionArgs, type LoaderFunctionArgs} from 'react-router';
 import {getEnvServer} from '../utils/env.server';
 import {requireBackgroundAdminToken} from '../utils/backgroundAdminAuth.server';
 import {
@@ -29,7 +29,7 @@ export async function loader({request, context}: LoaderFunctionArgs) {
     rawEnv: context.env as Record<string, string | undefined>,
   });
 
-  return json(presets.map(serializePreset), {
+  return data(presets.map(serializePreset), {
     headers: {
       'Cache-Control': 'no-store',
       'Content-Type': 'application/json',
@@ -39,7 +39,7 @@ export async function loader({request, context}: LoaderFunctionArgs) {
 
 export async function action({request, context}: ActionFunctionArgs) {
   if (request.method !== METHOD_POST) {
-    return json(
+    return data(
       {error: 'Method Not Allowed'},
       {status: 405, headers: {'Allow': METHOD_POST, 'Cache-Control': 'no-store'}},
     );
@@ -52,7 +52,7 @@ export async function action({request, context}: ActionFunctionArgs) {
     parsedBody = await request.json();
   } catch (error) {
     console.warn('[api.backgrounds._index] Failed to parse JSON body', error);
-    return json(
+    return data(
       {error: 'Invalid JSON payload'},
       {status: 400, headers: {'Cache-Control': 'no-store'}},
     );
@@ -63,7 +63,7 @@ export async function action({request, context}: ActionFunctionArgs) {
     presetInput = parsePresetInput(parsedBody);
   } catch (error) {
     console.warn('[api.backgrounds._index] Invalid preset payload', error);
-    return json(
+    return data(
       {error: error instanceof Error ? error.message : 'Invalid preset payload'},
       {status: 400, headers: {'Cache-Control': 'no-store'}},
     );
@@ -79,7 +79,7 @@ export async function action({request, context}: ActionFunctionArgs) {
       presetInput,
     );
 
-    return json(serializePreset(record), {
+    return data(serializePreset(record), {
       status: 201,
       headers: {
         'Cache-Control': 'no-store',
@@ -88,7 +88,7 @@ export async function action({request, context}: ActionFunctionArgs) {
     });
   } catch (error) {
     console.error('[api.backgrounds._index] Failed to create preset', error);
-    return json(
+    return data(
       {error: error instanceof Error ? error.message : 'Failed to create preset'},
       {status: 500, headers: {'Cache-Control': 'no-store'}},
     );
