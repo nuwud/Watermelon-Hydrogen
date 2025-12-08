@@ -122,10 +122,12 @@ export function mountCarousel3D(container, menuData) {
     container.appendChild(renderer.domElement); // Append renderer to the container
 
     // --- CameraHUD Setup ---
-    // Creates 3D HUD elements that orbit around the camera (cart icon, nav helpers)
+    // DISABLED: Cart HUD icon was not rendering properly (turquoise box)
+    // TODO: Re-enable when cart icon design is finalized
     let cameraHUD = null;
     let cartHUDIcon = null;
     
+    /*
     try {
         cameraHUD = new CameraHUD(camera, {
             radius: 2.5,
@@ -159,6 +161,7 @@ export function mountCarousel3D(container, menuData) {
     } catch (e) {
         console.warn('[🍉 Carousel] CameraHUD failed to initialize:', e);
     }
+    */
 
     // --- BackgroundManager Setup ---
     let backgroundManager = null;
@@ -2036,6 +2039,11 @@ export function mountCarousel3D(container, menuData) {
         // ============================================
         // NORMAL MAIN CAROUSEL CLICK HANDLING (no submenu open)
         // ============================================
+        
+        // MOBILE FIX: Collect ALL hit items and their indices, then pick the best one
+        // The raycaster returns hits sorted by distance, but on a 3D carousel,
+        // the "best" hit is often the one closest to the front (currentIndex)
+        const hitItems = [];
         for (const hit of itemsHit) {
             let current = hit.object;
             
@@ -2044,35 +2052,63 @@ export function mountCarousel3D(container, menuData) {
                 current = current.parent;
             }
             if (current && current.userData.index !== undefined) {
-                const i = current.userData.index;
-                const itemName = items[i];
-                
-                console.warn(`[🍉 Click] Clicked main carousel item at index ${i}: ${itemName}`);
-                console.warn(`[🍉 Click] This item has submenu: ${!!submenus[itemName]}`);
-
-                if (mobileEnhancementsEnabled) {
-                    updateSubmenuInteractionState({
-                        open: false, // No submenu open yet
-                        parentIndex: i,
-                        selectedChildIndex: null,
+                const idx = current.userData.index;
+                // Don't add duplicates
+                if (!hitItems.find(h => h.index === idx)) {
+                    hitItems.push({ 
+                        index: idx, 
+                        distance: hit.distance,
+                        mesh: current 
                     });
                 }
-                
-                // Load content for the main carousel item
-                loadContentForItem(itemName).then(contentData => {
-                    if (contentData) {
-                        console.warn(`[🍉 Content] Loaded content for main item: ${itemName}`);
-                    }
-                }).catch(error => {
-                    console.error(`[🍉 Content] Failed to load content for main item ${itemName}:`, error);
-                });
-                
-                // IMPORTANT: First rotate the carousel to the clicked item
-                // Then open the submenu AFTER rotation completes
-                // This ensures the item swings to front before submenu spawns
-                const hasSubmenu = !!submenus[itemName];
-                
-                if (hasSubmenu) {
+            }
+        }
+        
+        if (hitItems.length === 0) {
+            console.warn('[🍉 Click] No carousel items hit');
+            return;
+        }
+        
+        console.warn(`[🍉 Click] Found ${hitItems.length} unique items hit:`, hitItems.map(h => h.index));
+        
+        // MOBILE PRIORITY: If the current front item was hit, always prefer it
+        // This prevents accidentally selecting items behind the front item
+        const frontItemHit = hitItems.find(h => h.index === carousel.currentIndex);
+        const selectedHit = frontItemHit || hitItems[0]; // Fall back to closest if front not hit
+        
+        if (frontItemHit && hitItems.length > 1) {
+            console.warn(`[🍉 Click] MOBILE FIX: Preferring front item (index ${frontItemHit.index}) over ${hitItems.length - 1} other hits`);
+        }
+        
+        const i = selectedHit.index;
+        const itemName = items[i];
+        
+        console.warn(`[🍉 Click] Selected main carousel item at index ${i}: ${itemName}`);
+        console.warn(`[🍉 Click] This item has submenu: ${!!submenus[itemName]}`);
+
+        if (mobileEnhancementsEnabled) {
+            updateSubmenuInteractionState({
+                open: false, // No submenu open yet
+                parentIndex: i,
+                selectedChildIndex: null,
+            });
+        }
+        
+        // Load content for the main carousel item
+        loadContentForItem(itemName).then(contentData => {
+            if (contentData) {
+                console.warn(`[🍉 Content] Loaded content for main item: ${itemName}`);
+            }
+        }).catch(error => {
+            console.error(`[🍉 Content] Failed to load content for main item ${itemName}:`, error);
+        });
+        
+        // IMPORTANT: First rotate the carousel to the clicked item
+        // Then open the submenu AFTER rotation completes
+        // This ensures the item swings to front before submenu spawns
+        const hasSubmenu = !!submenus[itemName];
+        
+        if (hasSubmenu) {
                     // For items with submenus: rotate first, then open submenu on complete
                     console.warn(`[🍉 Click] Item ${itemName} has submenu - rotating first, then opening`);
                     
@@ -2137,9 +2173,6 @@ export function mountCarousel3D(container, menuData) {
                     console.warn(`[🍉 Click] Item ${itemName} has no submenu - standard selection`);
                     carousel.selectItem(i, true);
                 }
-                break;
-            }
-        }
         
         // DEBUG: Log carousel visibility and position
         console.warn('[🍉 Click] Main carousel state:', {
