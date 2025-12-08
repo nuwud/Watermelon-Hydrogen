@@ -137,4 +137,23 @@ Before marking a feature complete:
 ---
 
 *Generated: 2025-10-13*
-*Last Updated: Project initialization with Spec-Kit integration*
+*Last Updated: 2025-12-08 - Added 005-3d-ux-enhancement-roadmap epic*
+
+## 📋 Active Specifications
+
+| Spec | Status | Description |
+|------|--------|-------------|
+| [001-3d-immersive-checkout](./001-3d-immersive-checkout/) | 📦 Archived | 3D checkout experience |
+| [002-three-js-version](./002-three-js-version/) | ✅ Complete | Three.js upgrade |
+| [003-title-redesign-primary](./003-title-redesign-primary/) | 📦 Archived | Title redesign |
+| [004-let-s-fix](./004-let-s-fix/) | 📦 Archived | Bug fixes batch |
+| [005-3d-ux-enhancement-roadmap](./005-3d-ux-enhancement-roadmap/) | 🚧 Active | **Major epic: 4 phases of 3D UX improvements** |
+
+### 005 Phase Breakdown
+
+| Phase | Status | Focus |
+|-------|--------|-------|
+| [Phase 1: Quick Fixes](./005-3d-ux-enhancement-roadmap/phase-1-quick-fixes.md) | 🔴 Ready | Hover, fog, glow, spotlight, dim |
+| [Phase 2: Enhanced Polish](./005-3d-ux-enhancement-roadmap/phase-2-enhanced-polish.md) | ⬜ Planning | Sublines, HUD, atmosphere |
+| [Phase 3: Menu Expansion](./005-3d-ux-enhancement-roadmap/phase-3-menu-expansion.md) | ⬜ Planning | Ring scatter, content displays |
+| [Phase 4: Admin Editor](./005-3d-ux-enhancement-roadmap/phase-4-admin-editor.md) | ⬜ Planning | WYSIWYG 3D config editor |
