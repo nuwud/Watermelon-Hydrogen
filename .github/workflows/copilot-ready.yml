@@ -81,9 +81,8 @@ jobs:
           cache: 'npm'
       - run: npm ci
 
-      # Seed benign PUBLIC env for PR builds so build can run without secrets
-      - name: Seed public env + CI context for PR
-        if: github.event_name == 'pull_request'
+      # Seed benign PUBLIC env for CI builds so build can run without real secrets
+      - name: Seed public env + CI context
         run: |
           {
             echo "PUBLIC_STORE_DOMAIN=example.myshopify.com"
