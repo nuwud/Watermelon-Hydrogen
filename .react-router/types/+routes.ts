@@ -36,9 +36,6 @@ type Pages = {
       "blogHandle": string;
     };
   };
-  "/test-digital-products-3d": {
-    params: {};
-  };
   "/api/backgrounds/active": {
     params: {};
   };
@@ -49,9 +46,6 @@ type Pages = {
     params: {};
   };
   "/api/backgrounds/token": {
-    params: {};
-  };
-  "/digital-products-test": {
     params: {};
   };
   "/api/backgrounds/:id": {
@@ -87,9 +81,6 @@ type Pages = {
     params: {
       "handle": string;
     };
-  };
-  "/test-3d-products": {
-    params: {};
   };
   "/account/logout": {
     params: {};
@@ -135,9 +126,6 @@ type Pages = {
     params: {};
   };
   "/api/test-3d": {
-    params: {};
-  };
-  "/simple-test": {
     params: {};
   };
   "/:locale?": {
@@ -333,25 +321,16 @@ type Pages = {
       "*": string;
     };
   };
-  "/graphiql": {
-    params: {};
-  };
-  "/subrequest-profiler": {
-    params: {};
-  };
-  "/.well-known/appspecific/com.chrome.devtools.json": {
-    params: {};
-  };
 };
 
 type RouteFiles = {
   "root.jsx": {
     id: "root";
-    page: "/" | "/blogs/:blogHandle/:articleHandle" | "/api/backgrounds/telemetry" | "/sitemap/:type/:page.xml" | "/api/test-digital-submenu" | "/blogs/:blogHandle" | "/test-digital-products-3d" | "/api/backgrounds/active" | "/api/backgrounds" | "/api/products-3d-simple" | "/api/backgrounds/token" | "/digital-products-test" | "/api/backgrounds/:id" | "/api/backgrounds/:id/activate" | "/collections/:handle" | "/account/authorize" | "/collections" | "/api/admin/config" | "/policies/:handle" | "/products/:handle" | "/test-3d-products" | "/account/logout" | "/api/products-3d" | "/api/test-client" | "/collections/all" | "/policies" | "/account/login" | "/discount/:code" | "/favicon.ico" | "/pages/:handle" | "/sitemap.xml" | "/blogs" | "/robots.txt" | "/api/product" | "/api/test-3d" | "/simple-test" | "/:locale?" | "/:locale?/blogs/:blogHandle/:articleHandle" | "/:locale?/sitemap/:type/:page.xml" | "/:locale?/blogs/:blogHandle" | "/:locale?/collections/:handle" | "/:locale?/account/authorize" | "/:locale?/collections" | "/:locale?/policies/:handle" | "/:locale?/products/:handle" | "/:locale?/account/logout" | "/:locale?/collections/all" | "/:locale?/policies" | "/:locale?/account/login" | "/:locale?/discount/:code" | "/:locale?/pages/:handle" | "/:locale?/sitemap.xml" | "/:locale?/blogs" | "/:locale?/account" | "/:locale?/account/orders" | "/:locale?/account/orders/:id" | "/:locale?/account/addresses" | "/:locale?/account/profile" | "/:locale?/account/*" | "/:locale?/search" | "/:locale?/cart" | "/:locale?/cart/:lines" | "/:locale?/*" | "/api/page" | "/account" | "/account/orders" | "/account/orders/:id" | "/account/addresses" | "/account/profile" | "/account/*" | "/search" | "/admin" | "/cart" | "/cart/:lines" | "/*" | "/graphiql" | "/subrequest-profiler" | "/.well-known/appspecific/com.chrome.devtools.json";
+    page: "/" | "/blogs/:blogHandle/:articleHandle" | "/api/backgrounds/telemetry" | "/sitemap/:type/:page.xml" | "/api/test-digital-submenu" | "/blogs/:blogHandle" | "/api/backgrounds/active" | "/api/backgrounds" | "/api/products-3d-simple" | "/api/backgrounds/token" | "/api/backgrounds/:id" | "/api/backgrounds/:id/activate" | "/collections/:handle" | "/account/authorize" | "/collections" | "/api/admin/config" | "/policies/:handle" | "/products/:handle" | "/account/logout" | "/api/products-3d" | "/api/test-client" | "/collections/all" | "/policies" | "/account/login" | "/discount/:code" | "/favicon.ico" | "/pages/:handle" | "/sitemap.xml" | "/blogs" | "/robots.txt" | "/api/product" | "/api/test-3d" | "/:locale?" | "/:locale?/blogs/:blogHandle/:articleHandle" | "/:locale?/sitemap/:type/:page.xml" | "/:locale?/blogs/:blogHandle" | "/:locale?/collections/:handle" | "/:locale?/account/authorize" | "/:locale?/collections" | "/:locale?/policies/:handle" | "/:locale?/products/:handle" | "/:locale?/account/logout" | "/:locale?/collections/all" | "/:locale?/policies" | "/:locale?/account/login" | "/:locale?/discount/:code" | "/:locale?/pages/:handle" | "/:locale?/sitemap.xml" | "/:locale?/blogs" | "/:locale?/account" | "/:locale?/account/orders" | "/:locale?/account/orders/:id" | "/:locale?/account/addresses" | "/:locale?/account/profile" | "/:locale?/account/*" | "/:locale?/search" | "/:locale?/cart" | "/:locale?/cart/:lines" | "/:locale?/*" | "/api/page" | "/account" | "/account/orders" | "/account/orders/:id" | "/account/addresses" | "/account/profile" | "/account/*" | "/search" | "/admin" | "/cart" | "/cart/:lines" | "/*";
   };
   "./layout.jsx": {
     id: "layout";
-    page: "/blogs/:blogHandle/:articleHandle" | "/api/backgrounds/telemetry" | "/sitemap/:type/:page.xml" | "/api/test-digital-submenu" | "/blogs/:blogHandle" | "/test-digital-products-3d" | "/api/backgrounds/active" | "/api/backgrounds" | "/api/products-3d-simple" | "/api/backgrounds/token" | "/digital-products-test" | "/api/backgrounds/:id" | "/api/backgrounds/:id/activate" | "/collections/:handle" | "/account/authorize" | "/collections" | "/api/admin/config" | "/policies/:handle" | "/products/:handle" | "/test-3d-products" | "/account/logout" | "/api/products-3d" | "/api/test-client" | "/collections/all" | "/policies" | "/account/login" | "/discount/:code" | "/favicon.ico" | "/pages/:handle" | "/sitemap.xml" | "/blogs" | "/robots.txt" | "/api/product" | "/api/test-3d" | "/simple-test" | "/:locale?" | "/:locale?/blogs/:blogHandle/:articleHandle" | "/:locale?/sitemap/:type/:page.xml" | "/:locale?/blogs/:blogHandle" | "/:locale?/collections/:handle" | "/:locale?/account/authorize" | "/:locale?/collections" | "/:locale?/policies/:handle" | "/:locale?/products/:handle" | "/:locale?/account/logout" | "/:locale?/collections/all" | "/:locale?/policies" | "/:locale?/account/login" | "/:locale?/discount/:code" | "/:locale?/pages/:handle" | "/:locale?/sitemap.xml" | "/:locale?/blogs" | "/:locale?/account" | "/:locale?/account/orders" | "/:locale?/account/orders/:id" | "/:locale?/account/addresses" | "/:locale?/account/profile" | "/:locale?/account/*" | "/:locale?/search" | "/:locale?/cart" | "/:locale?/cart/:lines" | "/:locale?/*" | "/api/page" | "/account" | "/account/orders" | "/account/orders/:id" | "/account/addresses" | "/account/profile" | "/account/*" | "/search" | "/" | "/admin" | "/cart" | "/cart/:lines" | "/*";
+    page: "/blogs/:blogHandle/:articleHandle" | "/api/backgrounds/telemetry" | "/sitemap/:type/:page.xml" | "/api/test-digital-submenu" | "/blogs/:blogHandle" | "/api/backgrounds/active" | "/api/backgrounds" | "/api/products-3d-simple" | "/api/backgrounds/token" | "/api/backgrounds/:id" | "/api/backgrounds/:id/activate" | "/collections/:handle" | "/account/authorize" | "/collections" | "/api/admin/config" | "/policies/:handle" | "/products/:handle" | "/account/logout" | "/api/products-3d" | "/api/test-client" | "/collections/all" | "/policies" | "/account/login" | "/discount/:code" | "/favicon.ico" | "/pages/:handle" | "/sitemap.xml" | "/blogs" | "/robots.txt" | "/api/product" | "/api/test-3d" | "/:locale?" | "/:locale?/blogs/:blogHandle/:articleHandle" | "/:locale?/sitemap/:type/:page.xml" | "/:locale?/blogs/:blogHandle" | "/:locale?/collections/:handle" | "/:locale?/account/authorize" | "/:locale?/collections" | "/:locale?/policies/:handle" | "/:locale?/products/:handle" | "/:locale?/account/logout" | "/:locale?/collections/all" | "/:locale?/policies" | "/:locale?/account/login" | "/:locale?/discount/:code" | "/:locale?/pages/:handle" | "/:locale?/sitemap.xml" | "/:locale?/blogs" | "/:locale?/account" | "/:locale?/account/orders" | "/:locale?/account/orders/:id" | "/:locale?/account/addresses" | "/:locale?/account/profile" | "/:locale?/account/*" | "/:locale?/search" | "/:locale?/cart" | "/:locale?/cart/:lines" | "/:locale?/*" | "/api/page" | "/account" | "/account/orders" | "/account/orders/:id" | "/account/addresses" | "/account/profile" | "/account/*" | "/search" | "/" | "/admin" | "/cart" | "/cart/:lines" | "/*";
   };
   "routes/blogs.$blogHandle.$articleHandle.jsx": {
     id: "routes/blogs.$blogHandle.$articleHandle";
@@ -373,10 +352,6 @@ type RouteFiles = {
     id: "routes/blogs.$blogHandle._index";
     page: "/blogs/:blogHandle";
   };
-  "routes/test-digital-products-3d.jsx": {
-    id: "routes/test-digital-products-3d";
-    page: "/test-digital-products-3d";
-  };
   "routes/api.backgrounds.active.tsx": {
     id: "routes/api.backgrounds.active";
     page: "/api/backgrounds/active";
@@ -392,10 +367,6 @@ type RouteFiles = {
   "routes/api.backgrounds.token.tsx": {
     id: "routes/api.backgrounds.token";
     page: "/api/backgrounds/token";
-  };
-  "routes/digital-products-test.jsx": {
-    id: "routes/digital-products-test";
-    page: "/digital-products-test";
   };
   "routes/api.backgrounds.$id.tsx": {
     id: "routes/api.backgrounds.$id";
@@ -428,10 +399,6 @@ type RouteFiles = {
   "routes/products.$handle.jsx": {
     id: "routes/products.$handle";
     page: "/products/:handle";
-  };
-  "routes/test-3d-products.jsx": {
-    id: "routes/test-3d-products";
-    page: "/test-3d-products";
   };
   "routes/account_.logout.jsx": {
     id: "routes/account_.logout";
@@ -488,10 +455,6 @@ type RouteFiles = {
   "routes/api.test-3d.jsx": {
     id: "routes/api.test-3d";
     page: "/api/test-3d";
-  };
-  "routes/simple-test.jsx": {
-    id: "routes/simple-test";
-    page: "/simple-test";
   };
   "routes/($locale).jsx": {
     id: "routes/($locale)";
@@ -664,25 +627,5 @@ type RouteFiles = {
   "routes/$.jsx": {
     id: "routes/$";
     page: "/*";
-  };
-  "../../../../../..//Users/Nuwud/Projects/watermelon-hydrogen/node_modules/@shopify/hydrogen/dist/vite/virtual-routes/layout.jsx": {
-    id: "/Users/Nuwud/Projects/watermelon-hydrogen/node_modules/@shopify/hydrogen/dist/vite/virtual-routes/layout";
-    page: "/graphiql" | "/subrequest-profiler" | "/.well-known/appspecific/com.chrome.devtools.json" | "/";
-  };
-  "../../../../../..//Users/Nuwud/Projects/watermelon-hydrogen/node_modules/@shopify/hydrogen/dist/vite/virtual-routes/routes/graphiql.jsx": {
-    id: "vite/virtual-routes/routes/graphiql";
-    page: "/graphiql";
-  };
-  "../../../../../..//Users/Nuwud/Projects/watermelon-hydrogen/node_modules/@shopify/hydrogen/dist/vite/virtual-routes/routes/subrequest-profiler.jsx": {
-    id: "vite/virtual-routes/routes/subrequest-profiler";
-    page: "/subrequest-profiler";
-  };
-  "../../../../../..//Users/Nuwud/Projects/watermelon-hydrogen/node_modules/@shopify/hydrogen/dist/vite/virtual-routes/routes/[.]well-known.appspecific.com[.]chrome[.]devtools[.]json.jsx": {
-    id: "vite/virtual-routes/routes/[.]well-known.appspecific.com[.]chrome[.]devtools[.]json";
-    page: "/.well-known/appspecific/com.chrome.devtools.json";
-  };
-  "../../../../../..//Users/Nuwud/Projects/watermelon-hydrogen/node_modules/@shopify/hydrogen/dist/vite/virtual-routes/routes/index.jsx": {
-    id: "vite/virtual-routes/routes/index";
-    page: "/";
   };
 };
