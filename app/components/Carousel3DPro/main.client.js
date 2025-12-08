@@ -21,8 +21,9 @@ import {enhanceCartIntegration} from '../../utils/cartIntegrationEnhancer.js';
 // Menu tree utilities - Phase 5 will use getChildLabels and getNodeByLabel for deep nesting
 import {initializeMenuTreeWithAPI} from '../../utils/menuTreeManager.js';
 // Camera HUD system for 3D UI elements orbiting the camera
-import {CameraHUD, HUD_SLOTS} from './CameraHUD.js';
-import {CartHUDIcon3D} from './CartHUDIcon3D.js';
+// DISABLED: HUD cart icon was not rendering properly (turquoise box)
+// import {CameraHUD, HUD_SLOTS} from './CameraHUD.js';
+// import {CartHUDIcon3D} from './CartHUDIcon3D.js';
 
 // Background system imports (dynamic to avoid SSR issues)
 let BackgroundManager = null;
