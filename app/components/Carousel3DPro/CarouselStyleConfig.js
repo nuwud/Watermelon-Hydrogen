@@ -39,9 +39,9 @@ export const defaultCarouselStyle = {
   distanceDimming: {
     enabled: true,
     nearDistance: 4,             // Items closer than this are full brightness
-    farDistance: 12,             // Items farther than this are maximum dimmed (wider range)
-    minOpacity: 0.4,             // Minimum opacity for far items
-    minBrightness: 0.45,         // Minimum brightness multiplier - noticeable but not harsh
+    farDistance: 10,             // Items farther than this are maximum dimmed (tighter for visibility)
+    minOpacity: 0.35,            // Minimum opacity for far items - more visible dimming
+    minBrightness: 0.35,         // Minimum brightness multiplier - noticeable depth
   },
   
   // Submenu open state - dim main menu when submenu is active
@@ -65,9 +65,9 @@ export const defaultCarouselStyle = {
   hoverScale: 1.12,              // More noticeable scale on hover
   animationDuration: 0.8,
   
-  // Glow effect
-  glowIntensity: 3.0,            // Much stronger glow
-  glowSize: 1.15,
+  // Glow effect - emanating text glow
+  glowIntensity: 4.5,            // Strong emanating glow from text
+  glowSize: 1.2,
   pulseSpeed: 2.0,
   
   // Bevel settings for text

@@ -90,8 +90,8 @@ export function mountCarousel3D(container, menuData) {
     let currentTheme = defaultCarouselStyle; // Initialize with default theme
     scene.background = new THREE.Color(0x0a0a1a); // Dark blue-black background
     
-    // Add fog for distance dimming effect - subtle depth cue
-    scene.fog = new THREE.Fog(0x0a0a1a, 12, 45); // Start fading at distance 12, fully faded at 45
+    // Add fog for distance dimming effect - noticeable depth cue
+    scene.fog = new THREE.Fog(0x0a0a1a, 8, 28); // Start fading at distance 8, fully faded at 28 (tighter for visibility)
     
     const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000); // Set up camera
     camera.position.set(0, 2, 10); // Position the camera
@@ -1009,6 +1009,52 @@ export function mountCarousel3D(container, menuData) {
         
         // Debug helpers
         repairState: () => repairBrokenState(),
+        
+        // === PHASE 1 VISUAL EFFECTS DEBUG ===
+        // Test submenu dimming
+        watchSubmenuState: () => {
+            const handler = (e) => {
+                console.group('🎨 Submenu State Changed');
+                console.log('Open:', e.detail.open);
+                console.log('Parent Index:', e.detail.parentIndex);
+                console.log('Expected main menu dim:', e.detail.open ? '25%' : '100%');
+                console.groupEnd();
+            };
+            window.addEventListener('carousel-submenu-state', handler);
+            console.log('✅ Now watching submenu state changes. Click a menu item to test.');
+            return () => window.removeEventListener('carousel-submenu-state', handler);
+        },
+        
+        // Force update hover visuals for testing
+        refreshVisuals: () => {
+            if (carousel?.updateHoverVisuals) {
+                carousel.updateHoverVisuals();
+                console.log('✅ Hover visuals refreshed');
+            }
+            if (activeSubmenu?.updateHoverVisuals) {
+                activeSubmenu.updateHoverVisuals();
+                console.log('✅ Submenu hover visuals refreshed');
+            }
+        },
+        
+        // Get current visual config
+        getVisualConfig: () => ({
+            fog: { near: scene.fog?.near, far: scene.fog?.far, color: scene.fog?.color?.getHexString() },
+            distanceDimming: carousel?.config?.distanceDimming,
+            submenuOpenDim: carousel?.config?.submenuOpenDim,
+            glowIntensity: carousel?.config?.glowIntensity,
+            hoverScale: carousel?.config?.hoverScale,
+        }),
+        
+        // Test fog adjustment live
+        setFog: (near, far) => {
+            if (scene.fog) {
+                scene.fog.near = near;
+                scene.fog.far = far;
+                console.log(`✅ Fog updated: near=${near}, far=${far}`);
+            }
+        },
+        
         showHelp: () => {
             console.group('🍉 Watermelon Admin Commands');
             console.log('Menu Controls:');
@@ -1025,6 +1071,12 @@ export function mountCarousel3D(container, menuData) {
             console.log('  watermelonAdmin.getCarousel()           - Get carousel instance');
             console.log('  watermelonAdmin.repairState()           - Fix broken states');
             console.log('  watermelonAdmin.closeSubmenu()          - Close active submenu');
+            console.log('');
+            console.log('🎨 Phase 1 Visual Effects:');
+            console.log('  watermelonAdmin.watchSubmenuState()     - Log submenu state changes');
+            console.log('  watermelonAdmin.refreshVisuals()        - Force visual update');
+            console.log('  watermelonAdmin.getVisualConfig()       - Show current effect settings');
+            console.log('  watermelonAdmin.setFog(near, far)       - Tune fog live (e.g., 8, 25)');
             console.groupEnd();
         }
     };
