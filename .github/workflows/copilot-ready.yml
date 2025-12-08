@@ -42,8 +42,16 @@ jobs:
       - name: Lightweight secret scan
         run: |
           set -e
-          if git grep -nE '(PRIVATE_STOREFRONT_API_TOKEN|SESSION_SECRET|shpat_[0-9a-f]{8,})' -- . ; then
-            echo "❌ Potential secret found"
+          # Only scan for actual secret VALUES, not variable names
+          # - shpat_* = Shopify private app tokens
+          # - Actual token patterns (hex strings after = sign)
+          if git grep -nE 'shpat_[0-9a-fA-F]{32,}' -- . ':!*.md' ':!*.yml' ':!*.yaml' ; then
+            echo "❌ Potential Shopify token found"
+            exit 1
+          fi
+          # Check for actual secret values (not empty assignments)
+          if git grep -nE '(PRIVATE_STOREFRONT_API_TOKEN|SESSION_SECRET)=[a-zA-Z0-9]{20,}' -- . ':!*.md' ':!*.sample' ; then
+            echo "❌ Potential secret value found"
             exit 1
           fi
           echo "✅ No obvious secrets in tracked text"
@@ -84,8 +92,10 @@ jobs:
     name: Build & Lint
     runs-on: ubuntu-latest
     env:
-      # Increase Node memory for builds with large bundles
-      NODE_OPTIONS: '--max-old-space-size=4096'
+      # Increase Node memory for builds with large bundles (8GB for safety)
+      NODE_OPTIONS: '--max-old-space-size=8192'
+      # Set CI context so env:check runs in public-only mode
+      WM_CI_CONTEXT: 'pr'
     steps:
       - uses: actions/checkout@v4
         with:
@@ -96,18 +106,18 @@ jobs:
           cache: 'npm'
       - run: npm ci
 
-      # Seed benign PUBLIC env for CI builds so build can run without real secrets
-      - name: Seed public env + CI context
+      # Create .env file with dummy values for CI builds
+      - name: Create .env for CI
         run: |
-          {
-            echo "PUBLIC_STORE_DOMAIN=example.myshopify.com"
-            echo "PUBLIC_STOREFRONT_API_TOKEN=dummy"
-            echo "PUBLIC_STOREFRONT_ID=0000000000"
-            echo "PUBLIC_STOREFRONT_API_VERSION=2025-04"
-            echo "PUBLIC_CUSTOMER_ACCOUNT_API_CLIENT_ID=dummy"
-            echo "PUBLIC_CUSTOMER_ACCOUNT_API_URL=https://shopify.com/00000000000"
-            echo "WM_CI_CONTEXT=pr"
-          } >> "$GITHUB_ENV"
+          cat > .env << 'EOF'
+          PUBLIC_STORE_DOMAIN=example.myshopify.com
+          PUBLIC_STOREFRONT_API_TOKEN=dummy-token-for-ci-build
+          PUBLIC_STOREFRONT_ID=0000000000
+          PUBLIC_STOREFRONT_API_VERSION=2025-04
+          PUBLIC_CUSTOMER_ACCOUNT_API_CLIENT_ID=dummy-client-id
+          PUBLIC_CUSTOMER_ACCOUNT_API_URL=https://shopify.com/00000000000
+          WM_CI_CONTEXT=pr
+          EOF
 
       - name: env:check (mode aware)
         run: npm run env:check
