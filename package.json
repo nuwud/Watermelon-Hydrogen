@@ -12,7 +12,12 @@
     "codegen": "shopify hydrogen codegen",
     "export-copilot-chats": "node scripts/tools/export-copilot-chats.mjs",
     "archive-pruned-chats": "node scripts/tools/archive-pruned-chats.mjs",
-    "env:check": "node --env-file=.env scripts/env-check.mjs"
+    "env:check": "node --env-file=.env scripts/env-check.mjs",
+    "validate": "npm run env:check && npm run lint && npm run build",
+    "ship": "npm run validate && git add -A && git commit -m",
+    "deploy": "npx shopify hydrogen deploy --env production",
+    "upgrade:check": "npx shopify hydrogen upgrade --check",
+    "clean": "rm -rf node_modules/.vite dist .hydrogen/cache"
   },
   "prettier": "@shopify/prettier-config",
   "dependencies": {

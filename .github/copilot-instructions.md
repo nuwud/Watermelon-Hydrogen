@@ -202,46 +202,55 @@ export async function loader({context, params}) {
 
 ## 8) Validation Gates (must pass)
 
-* `npm run env:check` (no secrets printed)
-* `npm run lint`
-* `npm run build`
+* `npm run validate` (runs env:check + lint + build)
 * No files > 80 MB; no `docs/chats/*.json` tracked
+
+**Quick Commands:**
+* `npm run validate` — Check everything before commit
+* `npm run ship "message"` — Validate + commit + stage (add `&& git push` manually)
+* `npm run deploy` — Manual deploy to Oxygen production
+* `npm run upgrade:check` — Check for Hydrogen version updates
+* `npm run clean` — Clear caches when things get weird
 
 **Never commit:** `.env`, `.env.development`, `.env.production` (use `.env.sample` only)
 
 ---
 
-## 9) Spec-Driven Development with Spec-Kit
+## 9) Default Workflow: Spec-Kit (AUTO-APPLIED)
 
-**GitHub Spec-Kit Integration**
+**When the user asks for any feature, fix, or enhancement, Copilot should automatically use spec-driven development.**
 
-This project uses [GitHub Spec-Kit][spec-kit] for spec-driven development workflows. Available slash commands:
+The user does NOT need to type `/speckit.*` commands. Copilot will:
+
+1. **For small fixes/tweaks**: Just do it (Scan → Plan → Patch)
+2. **For new features or multi-step work**: Auto-apply spec-kit workflow:
+   - Create a brief spec (what + why)
+   - Generate a plan (how, with tech stack)
+   - Break into tasks
+   - Implement with validation
+
+**User can simply say:**
+- "Add a loading spinner to the cart"
+- "Fix the hover glow on submenu items"
+- "Build a theme editor panel"
+
+**Copilot will automatically:**
+- Assess complexity
+- Apply appropriate workflow (quick fix vs full spec)
+- Use constitution principles from `.specify/memory/constitution.md`
+- Validate with `npm run validate` before completing
+
+**GitHub Spec-Kit Reference** (if user wants to be explicit):
 
 [spec-kit]: https://github.com/github/spec-kit
 
-**Core Commands (use in order):**
-* `/speckit.constitution` — Establish project principles and development guidelines
-* `/speckit.specify` — Define feature requirements (focus on WHAT and WHY, not tech stack)
-* `/speckit.plan` — Create technical implementation plan with tech stack choices
-* `/speckit.tasks` — Generate actionable task breakdown with dependencies
-* `/speckit.implement` — Execute implementation according to plan
-
-**Enhancement Commands (optional):**
-* `/speckit.clarify` — Clarify underspecified areas before planning
-* `/speckit.analyze` — Cross-artifact consistency analysis (run after tasks, before implement)
-* `/speckit.checklist` — Generate quality validation checklists
-
-**Spec-Kit Workflow Pattern:**
-
-```
-1. /speckit.constitution (if new feature area)
-2. /speckit.specify "Build a feature that allows users to..."
-3. /speckit.clarify (optional - if requirements unclear)
-4. /speckit.plan "Use Shopify Hydrogen with Three.js..."
-5. /speckit.tasks
-6. /speckit.analyze (optional - validate consistency)
-7. /speckit.implement
-```
+| Command | Purpose |
+|---------|---------|
+| `/speckit.specify` | Define requirements (WHAT + WHY) |
+| `/speckit.plan` | Technical approach (HOW) |
+| `/speckit.tasks` | Task breakdown |
+| `/speckit.implement` | Execute the plan |
+| `/speckit.clarify` | Ask questions if unclear |
 
 **Spec-Kit File Structure:**
 
