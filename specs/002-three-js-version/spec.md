@@ -2,7 +2,8 @@
 
 **Feature Branch**: `002-three-js-version`  
 **Created**: 2025-10-13  
-**Status**: Draft  
+**Status**: ✅ Partially Complete (Three.js upgraded to r180)  
+**Note**: Version display in admin can be added to Phase 4 Admin Editor as a "System Info" panel.  
 **Input**: User description: "Three.js has recent upgrades, should probably be part of a separate spec, but I want to be able to keep up with the three.js libraries natively if this project depends so heavily on it. Would love to be able to revert or choose versions from admin and either use from remote or somehow download into project."
 
 ## User Scenarios & Testing *(mandatory)*

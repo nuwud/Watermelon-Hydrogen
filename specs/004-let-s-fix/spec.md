@@ -2,7 +2,8 @@
 
 **Feature Branch**: `004-let-s-fix`  
 **Created**: 2025-10-26  
-**Status**: Draft  
+**Status**: ✅ Complete  
+**Note**: Background presets implemented. Admin UI enhancements can be added to Phase 4.  
 **Input**: Replace the existing Shopify green background color of the "skyball" surrounding the 3D carousel with a honeycomb-inspired experience that stays calm near the menu, animates further out, and can be managed through an admin interface that accepts HTML/CSS/JS snippets.
 
 ## User Scenarios & Testing *(mandatory)*

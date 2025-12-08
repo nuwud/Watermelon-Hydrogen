@@ -2,7 +2,8 @@
 
 **Feature Branch**: `001-3d-immersive-checkout`  
 **Created**: 2025-10-13  
-**Status**: Draft  
+**Status**: 🔶 Superseded by `005-3d-ux-enhancement-roadmap` (Phase 3)  
+**Note**: Checkout display and animation styles now part of Phase 3 Content Displays and Phase 4 Admin Editor.  
 **Input**: User description: "Integrate Shopify checkout into the 3D carousel environment with center panel mode, configurable animation styles, and admin controls"
 
 ## User Scenarios & Testing *(mandatory)*

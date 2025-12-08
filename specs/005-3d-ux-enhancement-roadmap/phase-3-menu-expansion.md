@@ -12,6 +12,267 @@
 
 The transformative feature: when a submenu item is selected, the menu ring expands/scatters outward, leaving only the central content display visible. This creates an immersive, focused content experience.
 
+**Key Architecture:** The central display uses a **Modular Section System** inspired by Shopify's theme Sections, but designed for 3D space. This allows for:
+- Pluggable content types (products, galleries, blogs, custom)
+- Reusable Section components for HUD, panels, and displays
+- Admin-configurable Section ordering and settings
+- Future extensibility without core code changes
+
+---
+
+## Modular Section System (Shopify-Inspired)
+
+### What Are 3D Sections?
+
+In Shopify themes, **Sections** are modular blocks that merchants can add, remove, and reorder via the theme editor. We're creating the 3D equivalent:
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                    3D SECTION REGISTRY                       │
+├─────────────────────────────────────────────────────────────┤
+│                                                              │
+│  CONTENT SECTIONS (Central Display)                          │
+│  ├── Product3DSection      - GLB model viewer                │
+│  ├── ProductGallerySection - Image carousel in 3D            │
+│  ├── TextContentSection    - 3D text for blogs/articles      │
+│  ├── VideoSection          - Video panel in 3D space         │
+│  ├── StoreWalkthroughSection - Full 3D environment           │
+│  ├── CheckoutSection       - Embedded checkout (from 001)    │
+│  └── CustomEmbedSection    - iFrame/HTML in 3D panel         │
+│                                                              │
+│  HUD SECTIONS (Camera-Relative)                              │
+│  ├── CartHUDSection        - Cart icon with badge            │
+│  ├── MenuToggleSection     - Menu show/hide button           │
+│  ├── BreadcrumbSection     - Navigation trail                │
+│  ├── SearchSection         - Search interface                │
+│  └── UserAccountSection    - Login/account status            │
+│                                                              │
+│  UTILITY SECTIONS                                            │
+│  ├── MiniPreviewSection    - Floating preview after return   │
+│  ├── LoadingSection        - Loading indicators              │
+│  └── NotificationSection   - Toast/alert messages            │
+│                                                              │
+└─────────────────────────────────────────────────────────────┘
+```
+
+### Section Base Class
+
+```javascript
+/**
+ * Base class for all 3D Sections
+ * Similar to Shopify's Section architecture but for Three.js
+ */
+class Section3D {
+  static type = 'base';           // Unique section type identifier
+  static category = 'content';    // 'content' | 'hud' | 'utility'
+  static displayName = 'Base Section';
+  static icon = '📦';
+  
+  // Schema for admin configuration (like Shopify section schema)
+  static schema = {
+    settings: [],  // Section-level settings
+    blocks: [],    // Repeatable block types within section
+    presets: []    // Default configurations
+  };
+  
+  constructor(container, config = {}) {
+    this.container = container;
+    this.config = config;
+    this.group = new THREE.Group();
+    this.group.name = `section-${this.constructor.type}`;
+    this.isLoaded = false;
+    this.isVisible = false;
+  }
+  
+  // Lifecycle methods
+  async load(data) { throw new Error('Implement in subclass'); }
+  async unload() { this.dispose(); }
+  
+  show(animate = true) {
+    this.isVisible = true;
+    this.group.visible = true;
+    if (animate) {
+      gsap.from(this.group.scale, { x: 0.9, y: 0.9, z: 0.9, duration: 0.3 });
+      gsap.from(this.group, { opacity: 0, duration: 0.3 });
+    }
+  }
+  
+  hide(animate = true) {
+    this.isVisible = false;
+    if (animate) {
+      gsap.to(this.group.scale, { 
+        x: 0.9, y: 0.9, z: 0.9, 
+        duration: 0.2,
+        onComplete: () => { this.group.visible = false; }
+      });
+    } else {
+      this.group.visible = false;
+    }
+  }
+  
+  update(deltaTime) { /* Override for animations */ }
+  
+  dispose() {
+    this.group.traverse(child => {
+      child.geometry?.dispose();
+      if (Array.isArray(child.material)) {
+        child.material.forEach(m => m?.dispose());
+      } else {
+        child.material?.dispose();
+      }
+    });
+    this.container.remove(this.group);
+  }
+  
+  // For mini-preview system
+  createThumbnail() {
+    const clone = this.group.clone();
+    clone.scale.setScalar(0.15);
+    return clone;
+  }
+  
+  // Admin configuration
+  getConfig() { return this.config; }
+  setConfig(newConfig) { 
+    this.config = { ...this.config, ...newConfig };
+    this.applyConfig();
+  }
+  applyConfig() { /* Override to react to config changes */ }
+}
+```
+
+### Section Registry
+
+```javascript
+/**
+ * Central registry for all available 3D Sections
+ * Manages registration, instantiation, and discovery
+ */
+const SectionRegistry = {
+  sections: new Map(),
+  
+  register(SectionClass) {
+    if (!SectionClass.type) {
+      throw new Error('Section must have static type property');
+    }
+    this.sections.set(SectionClass.type, SectionClass);
+    console.log(`[SectionRegistry] Registered: ${SectionClass.type}`);
+  },
+  
+  get(type) {
+    return this.sections.get(type);
+  },
+  
+  create(type, container, config) {
+    const SectionClass = this.sections.get(type);
+    if (!SectionClass) {
+      console.warn(`[SectionRegistry] Unknown section type: ${type}`);
+      return null;
+    }
+    return new SectionClass(container, config);
+  },
+  
+  listByCategory(category) {
+    return Array.from(this.sections.values())
+      .filter(S => S.category === category);
+  },
+  
+  getSchema(type) {
+    const SectionClass = this.sections.get(type);
+    return SectionClass?.schema || null;
+  },
+  
+  // For admin UI - list all available sections
+  getAvailableSections() {
+    return Array.from(this.sections.values()).map(S => ({
+      type: S.type,
+      category: S.category,
+      displayName: S.displayName,
+      icon: S.icon,
+      schema: S.schema
+    }));
+  }
+};
+
+// Auto-register built-in sections
+import { Product3DSection } from './sections/Product3DSection';
+import { ProductGallerySection } from './sections/ProductGallerySection';
+import { TextContentSection } from './sections/TextContentSection';
+import { CartHUDSection } from './sections/CartHUDSection';
+// ... etc
+
+SectionRegistry.register(Product3DSection);
+SectionRegistry.register(ProductGallerySection);
+SectionRegistry.register(TextContentSection);
+SectionRegistry.register(CartHUDSection);
+```
+
+### Section Manager
+
+```javascript
+/**
+ * Manages active sections in a container (center display or HUD)
+ */
+class SectionManager {
+  constructor(container, options = {}) {
+    this.container = container;
+    this.activeSections = new Map();
+    this.sectionOrder = [];
+    this.options = options;
+  }
+  
+  async addSection(type, config = {}, position = -1) {
+    const section = SectionRegistry.create(type, this.container, config);
+    if (!section) return null;
+    
+    const id = `${type}-${Date.now()}`;
+    this.activeSections.set(id, section);
+    
+    if (position === -1) {
+      this.sectionOrder.push(id);
+    } else {
+      this.sectionOrder.splice(position, 0, id);
+    }
+    
+    this.container.add(section.group);
+    this.updateLayout();
+    
+    return { id, section };
+  }
+  
+  removeSection(id) {
+    const section = this.activeSections.get(id);
+    if (section) {
+      section.dispose();
+      this.activeSections.delete(id);
+      this.sectionOrder = this.sectionOrder.filter(i => i !== id);
+      this.updateLayout();
+    }
+  }
+  
+  reorderSections(newOrder) {
+    this.sectionOrder = newOrder;
+    this.updateLayout();
+  }
+  
+  updateLayout() {
+    // Position sections based on order and container type
+    // For center display: stack vertically or use tabs
+    // For HUD: position in predefined slots
+  }
+  
+  update(deltaTime) {
+    this.activeSections.forEach(section => section.update(deltaTime));
+  }
+  
+  disposeAll() {
+    this.activeSections.forEach(section => section.dispose());
+    this.activeSections.clear();
+    this.sectionOrder = [];
+  }
+}
+```
+
 ---
 
 ## Visual Flow

@@ -57,7 +57,9 @@ This epic encompasses multiple phases of enhancements to transform the current 3
 
 The transformative feature:
 - Ring scatter animation (items move outward, no scaling)
-- Central content display system (modular, pluggable)
+- **Modular Section System** (Shopify-like Sections for 3D)
+- Central content display with pluggable Section types
+- HUD Sections (cart, menu toggle, breadcrumbs)
 - Floating mini-preview persistence
 - Quick return gesture
 - Camera focus transitions
@@ -66,6 +68,8 @@ The transformative feature:
 **Spec:** `specs/005-3d-ux-enhancement-roadmap/phase-4-admin-editor.md`
 
 WYSIWYG editor for 3D configuration:
+- Control ALL 3D settings from one place
+- Section configuration (add, remove, reorder)
 - Shopify Metaobjects for storage (no external DB)
 - Hydrogen `/admin` route with live preview
 - Real-time 3D scene updates

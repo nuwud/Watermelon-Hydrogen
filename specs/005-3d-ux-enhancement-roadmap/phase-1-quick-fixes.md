@@ -7,6 +7,27 @@
 
 ---
 
+## ⚠️ Design Principle: SUBTLETY FIRST
+
+**The user explicitly prefers subtle effects over dramatic ones.**
+
+- ❌ NO full-blast shader glows
+- ❌ NO overwhelming emissive intensities
+- ✅ Gentle, barely-perceptible enhancements
+- ✅ Effects that enhance without distracting
+- ✅ Prefer low opacity, soft edges, gradual transitions
+
+**Example Values (use as starting points, tune down if needed):**
+| Effect | Max Value | Notes |
+|--------|-----------|-------|
+| Emissive intensity | 0.2-0.3 | Never exceed 0.5 |
+| Glow opacity | 0.3-0.4 | Should feel ambient |
+| Hover scale | 1.02-1.05 | Subtle, not bouncy |
+| Fog density | 0.02-0.03 | Hint of depth, not obscuring |
+| Spotlight intensity | 0.3-0.5 | Soft fill, not harsh |
+
+---
+
 ## Overview
 
 Immediate UX improvements that will significantly enhance the visual polish without major architectural changes.
