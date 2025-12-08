@@ -50,7 +50,6 @@ The heart of the 3D carousel experience.
 
 | File | Status | Purpose |
 |------|--------|---------|
-| `cartIntegration.js` | ✅ | Cart bridge for 3D scene |
 | `FloatingPreview.js` | ✅ | Floating preview system |
 | `selectionGuards.js` | ✅ | Selection state management, prevents race conditions |
 | `README.md` | ✅ | Module documentation |
@@ -377,9 +376,9 @@ All empty/duplicate files have been removed (commit 3540427).
 | Cart System | 17 | ~2,500 |
 | Backgrounds | 10 | ~1,500 |
 | Utilities | 22 | ~4,000 |
-| Routes (custom) | 11 | ~800 |
-| Scripts | 18 | ~1,200 |
-| **Total Custom** | **~99** | **~18,000** |
+| Routes (custom) | 8 | ~700 |
+| Scripts | 4 | ~400 |
+| **Total Custom** | **~85** | **~16,800** |
 
 ---
 
@@ -389,6 +388,9 @@ All empty/duplicate files have been removed (commit 3540427).
 - Deleted 7 empty/duplicate files (commit 3540427)
 - Merged integration test files 
 - Moved 9 test HTML files from `public/` to `dev-workspace/test-pages/`
+- Deleted 7 empty route/module files (empty stubs)
+- Deleted 14 empty debug scripts (0 bytes)
+- Fixed GitHub Actions workflow hygiene checks
 
 ### ⚠️ Remaining Opportunities
 - CentralContentPanel: Review if both JS and JSX versions needed
