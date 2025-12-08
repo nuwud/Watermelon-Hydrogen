@@ -20,6 +20,9 @@ import {getItemAngles} from '../../utils/carouselAngleUtils.js';
 import {enhanceCartIntegration} from '../../utils/cartIntegrationEnhancer.js';
 // Menu tree utilities - Phase 5 will use getChildLabels and getNodeByLabel for deep nesting
 import {initializeMenuTreeWithAPI} from '../../utils/menuTreeManager.js';
+// Camera HUD system for 3D UI elements orbiting the camera
+import {CameraHUD, HUD_SLOTS} from './CameraHUD.js';
+import {CartHUDIcon3D} from './CartHUDIcon3D.js';
 
 // Background system imports (dynamic to avoid SSR issues)
 let BackgroundManager = null;
@@ -117,6 +120,45 @@ export function mountCarousel3D(container, menuData) {
     renderer.setSize(window.innerWidth, window.innerHeight); // Set renderer size
     renderer.setPixelRatio(window.devicePixelRatio); // Set pixel ratio for high DPI displays
     container.appendChild(renderer.domElement); // Append renderer to the container
+
+    // --- CameraHUD Setup ---
+    // Creates 3D HUD elements that orbit around the camera (cart icon, nav helpers)
+    let cameraHUD = null;
+    let cartHUDIcon = null;
+    
+    try {
+        cameraHUD = new CameraHUD(camera, {
+            radius: 2.5,
+            opacity: 0.95,
+            showDebugSphere: false, // Set to true to visualize HUD sphere
+        });
+        scene.add(cameraHUD);
+        
+        // Create and add cart icon to HUD
+        cartHUDIcon = new CartHUDIcon3D({
+            size: 0.12,
+            glowColor: 0x00ffcc,
+            emissiveIntensity: 0.4,
+        });
+        
+        cameraHUD.addElement('cart', cartHUDIcon, {
+            slot: HUD_SLOTS.CART,
+            interactive: true,
+            onClick: () => {
+                // Dispatch cart toggle event for cart-ui.jsx integration
+                window.dispatchEvent(new Event('cart-toggle-clicked'));
+                console.log('[🍉 HUD] Cart icon clicked');
+            },
+        });
+        
+        // Expose for admin panel control
+        window.__wmCameraHUD = cameraHUD;
+        window.__wmCartHUDIcon = cartHUDIcon;
+        
+        console.log('[🍉 Carousel] CameraHUD initialized with cart icon');
+    } catch (e) {
+        console.warn('[🍉 Carousel] CameraHUD failed to initialize:', e);
+    }
 
     // --- BackgroundManager Setup ---
     let backgroundManager = null;
@@ -2235,6 +2277,16 @@ export function mountCarousel3D(container, menuData) {
                     backgroundManager.update(0.016);
                 }
                 
+                // Update Camera HUD (follows camera position)
+                if (cameraHUD) {
+                    cameraHUD.update(0.016);
+                }
+                
+                // Update cart icon idle animation
+                if (cartHUDIcon) {
+                    cartHUDIcon.update();
+                }
+                
                 controls.update();
                 // Main scene renders ON TOP with autoClear=false (background already cleared)
                 renderer.render(scene, camera); 
@@ -2359,6 +2411,28 @@ export function mountCarousel3D(container, menuData) {
                 console.warn("BackgroundManager disposed."); // Debug log
             } catch (e) {
                 console.warn("BackgroundManager dispose error:", e);
+            }
+        }
+        // Dispose CameraHUD
+        if (cameraHUD) {
+            try {
+                cameraHUD.dispose();
+                scene.remove(cameraHUD);
+                cameraHUD = null;
+                window.__wmCameraHUD = null;
+                console.warn("CameraHUD disposed."); // Debug log
+            } catch (e) {
+                console.warn("CameraHUD dispose error:", e);
+            }
+        }
+        if (cartHUDIcon) {
+            try {
+                cartHUDIcon.dispose();
+                cartHUDIcon = null;
+                window.__wmCartHUDIcon = null;
+                console.warn("CartHUDIcon disposed."); // Debug log
+            } catch (e) {
+                console.warn("CartHUDIcon dispose error:", e);
             }
         }
         // Phase 2: Remove Global Event Listeners

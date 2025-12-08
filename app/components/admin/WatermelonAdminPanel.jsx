@@ -1,6 +1,15 @@
 import {useState, useEffect} from 'react';
-import {ClientOnly} from '../ClientOnly';
+import ClientOnly from '../ClientOnly';
 import {BackgroundPresetManager} from './BackgroundPresetManager';
+
+// HUD slot positions for the admin controls
+const HUD_SLOT_OPTIONS = [
+  { label: 'Top Left', value: 'TOP_LEFT' },
+  { label: 'Top Right', value: 'TOP_RIGHT' },
+  { label: 'Bottom Left', value: 'BOTTOM_LEFT' },
+  { label: 'Bottom Right', value: 'BOTTOM_RIGHT' },
+  { label: 'Cart (Default)', value: 'CART' },
+];
 
 /**
  * Visual Admin Panel for Watermelon Hydrogen 3D Menu System
@@ -9,11 +18,15 @@ import {BackgroundPresetManager} from './BackgroundPresetManager';
 export function WatermelonAdminPanel() {
   const [isVisible, setIsVisible] = useState(false);
   const [menuMode, setMenuMode] = useState('auto');
+  const [hudEnabled, setHudEnabled] = useState(true);
+  const [hudRadius, setHudRadius] = useState(2.5);
+  const [cartSlot, setCartSlot] = useState('CART');
   const [systemStatus, setSystemStatus] = useState({
     carouselLoaded: false,
     contentManagerLoaded: false,
     currentMenuSource: 'unknown',
-    activeSubmenu: null
+    activeSubmenu: null,
+    hudLoaded: false,
   });
 
   // Check system status
@@ -24,10 +37,16 @@ export function WatermelonAdminPanel() {
         contentManagerLoaded: !!window.contentManager,
         currentMenuSource: window.debugMenuData?.source || 'unknown',
         activeSubmenu: window.watermelonAdmin?.getActiveSubmenu?.() ? 'open' : 'closed',
-        menuMode: window.getMenuMode?.() || 'unknown'
+        menuMode: window.getMenuMode?.() || 'unknown',
+        hudLoaded: !!window.__wmCameraHUD,
       };
       setSystemStatus(status);
       setMenuMode(status.menuMode);
+      
+      // Sync HUD state if available
+      if (window.__wmCameraHUD) {
+        setHudEnabled(window.__wmCameraHUD.isVisible);
+      }
     };
 
     // Check immediately and then every 2 seconds
@@ -83,6 +102,42 @@ export function WatermelonAdminPanel() {
       window.watermelonAdmin.repairState();
       console.log('🔧 System state repaired');
     }
+  };
+
+  // HUD Control Handlers
+  const handleHudToggle = () => {
+    const newState = !hudEnabled;
+    setHudEnabled(newState);
+    if (window.__wmCameraHUD) {
+      window.__wmCameraHUD.setVisible(newState);
+    }
+    window.dispatchEvent(new CustomEvent('hud-toggle', { detail: { visible: newState } }));
+    console.log(`[🍉 Admin] HUD visibility: ${newState}`);
+  };
+
+  const handleHudRadiusChange = (e) => {
+    const newRadius = parseFloat(e.target.value);
+    setHudRadius(newRadius);
+    if (window.__wmCameraHUD) {
+      window.__wmCameraHUD.updateConfig({ radius: newRadius });
+    }
+    console.log(`[🍉 Admin] HUD radius: ${newRadius}`);
+  };
+
+  const handleCartSlotChange = (e) => {
+    const newSlot = e.target.value;
+    setCartSlot(newSlot);
+    if (window.__wmCameraHUD) {
+      window.__wmCameraHUD.moveElement('cart', newSlot, true);
+    }
+    console.log(`[🍉 Admin] Cart slot: ${newSlot}`);
+  };
+
+  const handleTestCartAdd = () => {
+    window.dispatchEvent(new CustomEvent('cart-item-added', {
+      detail: { totalQuantity: Math.floor(Math.random() * 5) + 1 }
+    }));
+    console.log('[🍉 Admin] Test cart add triggered');
   };
 
   if (!isVisible) {
@@ -273,6 +328,87 @@ export function WatermelonAdminPanel() {
         <div style={{ marginBottom: '16px', pointerEvents: 'auto' }}>
           <h3 style={{ margin: '0 0 8px 0', color: '#00ffcc' }}>Background Presets</h3>
           <BackgroundPresetManager />
+        </div>
+
+        {/* Camera HUD Controls */}
+        <div style={{ marginBottom: '16px' }}>
+          <h3 style={{ margin: '0 0 8px 0', color: '#00ffcc' }}>
+            Camera HUD {systemStatus.hudLoaded ? '✅' : '⏳'}
+          </h3>
+          
+          {/* HUD Toggle */}
+          <div style={{ marginBottom: '8px' }}>
+            <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
+              <input
+                type="checkbox"
+                checked={hudEnabled}
+                onChange={handleHudToggle}
+                style={{ cursor: 'pointer' }}
+              />
+              <span>HUD Visible</span>
+            </label>
+          </div>
+          
+          {/* HUD Radius */}
+          <div style={{ marginBottom: '8px' }}>
+            <label style={{ display: 'block', marginBottom: '4px', fontSize: '10px' }}>
+              HUD Radius: {hudRadius.toFixed(1)}
+            </label>
+            <input
+              type="range"
+              min="1.5"
+              max="5"
+              step="0.1"
+              value={hudRadius}
+              onChange={handleHudRadiusChange}
+              style={{ width: '100%' }}
+            />
+          </div>
+          
+          {/* Cart Slot Position */}
+          <div style={{ marginBottom: '8px' }}>
+            <label 
+              htmlFor="cart-slot-select"
+              style={{ display: 'block', marginBottom: '4px', fontSize: '10px' }}
+            >
+              Cart Position
+            </label>
+            <select
+              id="cart-slot-select"
+              value={cartSlot}
+              onChange={handleCartSlotChange}
+              style={{
+                width: '100%',
+                background: '#111',
+                color: '#00ff00',
+                border: '1px solid #00ff00',
+                padding: '4px',
+                borderRadius: '4px',
+                fontSize: '10px',
+              }}
+            >
+              {HUD_SLOT_OPTIONS.map(opt => (
+                <option key={opt.value} value={opt.value}>{opt.label}</option>
+              ))}
+            </select>
+          </div>
+          
+          {/* Test Cart Animation */}
+          <button
+            onClick={handleTestCartAdd}
+            style={{
+              background: 'transparent',
+              color: '#ff66cc',
+              border: '1px solid #ff66cc',
+              padding: '6px',
+              borderRadius: '4px',
+              cursor: 'pointer',
+              fontSize: '10px',
+              width: '100%',
+            }}
+          >
+            🛒 Test Cart Add Animation
+          </button>
         </div>
 
         {/* Help */}
