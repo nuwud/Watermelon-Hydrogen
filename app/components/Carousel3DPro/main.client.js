@@ -97,10 +97,10 @@ export function mountCarousel3D(container, menuData) {
     camera.position.set(0, 2, 10); // Position the camera
     
     // --- Camera-attached spotlight for constant illumination on focus area ---
-    const cameraSpotlight = new THREE.SpotLight(0xffffff, 2.5); // Increased intensity
+    const cameraSpotlight = new THREE.SpotLight(0xffffff, 0.5); // Subtle fill light
     cameraSpotlight.angle = Math.PI / 3; // 60 degree cone - wider coverage
-    cameraSpotlight.penumbra = 0.6; // Softer edge
-    cameraSpotlight.decay = 1.2; // Less decay for better reach
+    cameraSpotlight.penumbra = 0.8; // Very soft edge
+    cameraSpotlight.decay = 1.5; // Natural decay
     cameraSpotlight.distance = 40;
     cameraSpotlight.name = 'cameraSpotlight';
     camera.add(cameraSpotlight);
@@ -109,7 +109,7 @@ export function mountCarousel3D(container, menuData) {
     camera.add(cameraSpotlight.target);
     
     // Add soft fill light attached to camera for overall visibility
-    const cameraFillLight = new THREE.PointLight(0x88aacc, 1.2, 25); // Brighter, warmer, longer range
+    const cameraFillLight = new THREE.PointLight(0x88aacc, 0.4, 30); // Subtle ambient fill
     cameraFillLight.name = 'cameraFillLight';
     camera.add(cameraFillLight);
     cameraFillLight.position.set(0, 2, 0); // Slightly above camera

@@ -738,27 +738,27 @@ export class Carousel3DSubmenu extends THREE.Group {
       if (isSelected) {
         // Selected item ALSO gets hover boost when hovered
         if (isHovered) {
-          // Subtle boost on hover - gentle increase from 0.6 base
-          mesh.material.emissive.setHex(0x00ddee); // Soft cyan
-          mesh.material.emissiveIntensity = 0.9; // Moderate glow on hover
+          // Subtle boost on hover - gentle increase
+          mesh.material.emissive.setHex(0x88ccdd); // Muted cyan
+          mesh.material.emissiveIntensity = 0.5; // Gentle glow on hover
         } else {
-          // Normal selected state - subtle glow
-          mesh.material.emissive.setHex(0x00bbdd);
-          mesh.material.emissiveIntensity = 0.6;
+          // Normal selected state - very subtle glow
+          mesh.material.emissive.setHex(0x6699aa);
+          mesh.material.emissiveIntensity = 0.35;
         }
         return;
       }
       
       if (isHovered) {
-        // SUBTLE hover effect - gentle glow and pulse
+        // SUBTLE hover effect - gentle glow, minimal pop
         mesh.material.color.setHex(0xffffff); // Pure white on hover
-        mesh.material.emissive.setHex(0x5599cc); // Soft cyan-blue glow
-        mesh.material.emissiveIntensity = 0.7; // Moderate glow
+        mesh.material.emissive.setHex(0x446688); // Muted blue glow
+        mesh.material.emissiveIntensity = 0.4; // Gentle glow
         
-        // Scale up with elastic ease for satisfying pop
+        // Minimal scale up for subtle feedback
         const targetScale = mesh.userData.originalScale ? 
-          mesh.userData.originalScale.clone().multiplyScalar(1.15) :
-          new THREE.Vector3(1.15, 1.15, 1.15);
+          mesh.userData.originalScale.clone().multiplyScalar(1.05) :
+          new THREE.Vector3(1.05, 1.05, 1.05);
         gsap.to(mesh.scale, { 
           x: targetScale.x, 
           y: targetScale.y, 
@@ -771,8 +771,8 @@ export class Carousel3DSubmenu extends THREE.Group {
         if (!mesh.userData.isPulsing) {
           mesh.userData.isPulsing = true;
           mesh.userData.pulseAnimation = gsap.to(mesh.material, {
-            emissiveIntensity: 0.9,
-            duration: 0.7,
+            emissiveIntensity: 0.5,
+            duration: 0.9,
             yoyo: true,
             repeat: -1,
             ease: 'sine.inOut'
@@ -781,7 +781,7 @@ export class Carousel3DSubmenu extends THREE.Group {
         
         // Scale icon on hover too
         if (iconMesh && iconMesh.userData.originalScale) {
-          const iconTarget = iconMesh.userData.originalScale.clone().multiplyScalar(1.15);
+          const iconTarget = iconMesh.userData.originalScale.clone().multiplyScalar(1.05);
           gsap.to(iconMesh.scale, {
             x: iconTarget.x,
             y: iconTarget.y,
@@ -805,14 +805,14 @@ export class Carousel3DSubmenu extends THREE.Group {
           }
         }
         
-        // Not hovered, not selected - reset to normal with good glow
+        // Not hovered, not selected - reset to normal with minimal glow
         if (mesh.userData.originalColor) {
           mesh.material.color.copy(mesh.userData.originalColor);
         } else {
           mesh.material.color.setHex(0xffffff);
         }
-        mesh.material.emissive.setHex(0x336699); // Subtle blue emissive
-        mesh.material.emissiveIntensity = 0.3; // Gentle base glow
+        mesh.material.emissive.setHex(0x223344); // Very subtle emissive
+        mesh.material.emissiveIntensity = 0.15; // Minimal base glow
         
         // Restore original scale
         if (mesh.userData.originalScale) {

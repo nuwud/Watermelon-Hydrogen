@@ -305,11 +305,11 @@ export class Carousel3DPro extends Group {
         ? getMenuItemColor(p.originalLabel) 
         : { glow: this.config.glowColor, text: this.config.textColor };
       
-      // Use MeshStandardMaterial with STRONG EMISSIVE for bright glowing text
+      // Use MeshStandardMaterial with SUBTLE EMISSIVE for readable glow
       const material = new THREE.MeshStandardMaterial({
         color: 0xeeffff,           // Slightly cyan-tinted white for better visibility
-        emissive: 0x88bbff,        // Brighter blue-white glow for better readability
-        emissiveIntensity: 1.0,    // Strong emission for visibility in dark scene
+        emissive: 0x4477aa,        // Subtle blue glow - not overwhelming
+        emissiveIntensity: 0.3,    // Gentle emission - visible but not blinding
         transparent: true,
         opacity: 1.0,
         metalness: 0.1,            // Reduced metalness for cleaner look
@@ -552,28 +552,28 @@ updateHoverVisuals() {
     }
     
     if (isHovered && !submenuOpen) {
-      // ENHANCED HOVER EFFECT - pronounced glow, scale, and subtle pulse
-      mesh.material.color.setHex(0xffffff); // Pure white for maximum contrast
-      mesh.material.emissive = new THREE.Color(0xaaddff); // Bright cyan-white glow
-      mesh.material.emissiveIntensity = 2.0; // Strong glow on hover
+      // SUBTLE hover effect - gentle glow and modest scale
+      mesh.material.color.setHex(0xffffff); // Pure white for contrast
+      mesh.material.emissive = new THREE.Color(0x6699bb); // Soft cyan glow
+      mesh.material.emissiveIntensity = 0.6; // Moderate glow on hover
       mesh.material.opacity = 1.0;
       
-      // Scale up with elastic ease for "pop" effect
-      const hoverScale = mesh.userData.originalScale.clone().multiplyScalar(this.config.hoverScale || 1.15);
+      // Scale up gently - subtle "pop" effect
+      const hoverScale = mesh.userData.originalScale.clone().multiplyScalar(this.config.hoverScale || 1.05);
       gsap.to(mesh.scale, { 
         x: hoverScale.x, 
         y: hoverScale.y, 
         z: hoverScale.z, 
-        duration: 0.2,
-        ease: 'back.out(1.5)' // Elastic overshoot for satisfying pop
+        duration: 0.25,
+        ease: 'power2.out' // Smooth ease, no overshoot
       });
       
       // Add subtle continuous pulse animation (if not already pulsing)
       if (!mesh.userData.isPulsing) {
         mesh.userData.isPulsing = true;
         mesh.userData.pulseAnimation = gsap.to(mesh.material, {
-          emissiveIntensity: 1.3,
-          duration: 0.8,
+          emissiveIntensity: 0.8,
+          duration: 1.0,
           yoyo: true,
           repeat: -1,
           ease: 'sine.inOut'
