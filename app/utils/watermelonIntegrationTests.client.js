@@ -133,6 +133,46 @@ export const integrationTests = {
     }
   },
 
+  // Test Page API endpoint
+  async testPageAPI(handle = 'home') {
+    console.log('\n🔌 Testing Page API...');
+    
+    try {
+      const response = await fetch(`/api/page?handle=${handle}`);
+      const data = await response.json();
+      
+      if (data.success) {
+        console.log('✅ Page API working - found page:', data.page.title);
+        return data.page;
+      } else {
+        console.log('ℹ️ Page API working but page not found:', data.error);
+        return null;
+      }
+    } catch (error) {
+      console.error('❌ Page API error:', error);
+      return null;
+    }
+  },
+
+  // Test Central Panel availability
+  testCentralPanel() {
+    console.log('\n🎯 Testing Central Panel...');
+    
+    if (typeof window.centralPanel !== 'undefined') {
+      console.log('✅ CentralPanel is available globally');
+      
+      if (window.centralPanel.currentContent) {
+        console.log('✅ Central panel has current content');
+      } else {
+        console.log('ℹ️ Central panel ready for content');
+      }
+      return true;
+    } else {
+      console.log('❌ CentralPanel not available globally');
+      return false;
+    }
+  },
+
   // Test with simulated cart data
   async testWithSimulatedCart() {
     console.log('🎮 Testing with simulated cart data...');
@@ -219,10 +259,15 @@ export const integrationTests = {
 // Auto-run on load
 if (typeof window !== 'undefined') {
   window.integrationTests = integrationTests;
+  // Alias for backward compatibility
+  window.watermelonTests = integrationTests;
+  window.watermelonIntegrationTests = integrationTests;
   
   console.log('🧪 Integration Tests loaded. Available commands:');
   console.log('   window.integrationTests.runFullIntegrationTest()');
   console.log('   window.integrationTests.testWithSimulatedCart()');
+  console.log('   window.integrationTests.testPageAPI()');
+  console.log('   window.integrationTests.testCentralPanel()');
   console.log('   window.integrationTests.backgrounds.runHoneycombTest()');
 }
 

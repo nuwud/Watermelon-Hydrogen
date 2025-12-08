@@ -39,7 +39,7 @@ The heart of the 3D carousel experience.
 | `BackgroundDome.js` | ✅ | 3D background sphere | |
 | `BubblePanel3D.js` | ✅ | 3D bubble UI panels | |
 | `CameraHUD.js` | ✅ | Camera-relative HUD elements | |
-| `CartHUDIcon3D.js` | ⚠️ | 3D cart icon (383 lines) | **DUPLICATE** - also in cart-drawers/ |
+| `CartHUDIcon3D.js` | ⚠️ | 3D cart icon class (383 lines) | Class-based + GSAP, currently unused |
 | `CarouselShaderFX.js` | ✅ | Custom shader effects | |
 | `CarouselStyleConfig.js` | ✅ | Theme/style configuration | |
 | `CloseButton3D.js` | ✅ | 3D close button component | |
@@ -90,7 +90,7 @@ The heart of the 3D carousel experience.
 | `CartDrawerMount.jsx` | ✅ | React mount point | |
 | `CartDrawerRenderer.jsx` | ✅ | Renderer component | |
 | `CartDrawerInjector.jsx` | ✅ | Injects drawer into DOM | |
-| `CartHUDIcon3D.js` | ⚠️ | 3D cart icon (161 lines) | **DUPLICATE** - also in Carousel3DPro/ |
+| `CartHUDIcon3D.js` | ✅ | 3D cart icon (161 lines) | GLTF loader version, **ACTIVE** |
 | `CartBadge3D.js` | ✅ | 3D cart badge with count | |
 | `CartLineItems.jsx` | ✅ | Cart line items display | |
 | `CartSummary.jsx` | ✅ | Cart total/summary | |
@@ -186,8 +186,7 @@ Dynamic background presets and effects.
 
 | File | Status | Lines | Purpose | Notes |
 |------|--------|-------|---------|-------|
-| `integrationTests.client.js` | ⚠️ | 105 | Basic integration tests | **OVERLAPS** with watermelonIntegrationTests |
-| `watermelonIntegrationTests.client.js` | ✅ | 230 | Full integration test suite | **KEEP THIS ONE** |
+| `watermelonIntegrationTests.client.js` | ✅ | 280 | Full integration test suite | Consolidated from 2 files |
 | `cartTestUtils.client.js` | ✅ | 145 | Cart-specific tests | |
 | `menuTestUtils.client.js` | ✅ | 302 | Menu testing with mocks | |
 
@@ -260,14 +259,9 @@ Standard Hydrogen utilities (mostly stock).
 | `api.page.jsx` | ✅ | Page data API |
 | `api.product.jsx` | ✅ | Product data API |
 
-### Empty/Test Routes (🗑️ REMOVE)
+### Empty/Test Routes ✅ REMOVED
 
-| File | Status | Notes |
-|------|--------|-------|
-| `test-3d-products.jsx` | 🗑️ | **EMPTY FILE** |
-| `simple-test.jsx` | 🗑️ | **EMPTY FILE** |
-| `digital-products-test.jsx` | 🗑️ | **EMPTY FILE** |
-| `test-digital-products-3d.jsx` | 🗑️ | **EMPTY FILE** |
+Empty route files were deleted in commit 3540427.
 
 ---
 
@@ -305,24 +299,26 @@ All moved here during housekeeping. Development use only.
 | File | Status | Purpose |
 |------|--------|---------|
 | `cleanup-codebase.sh/.ps1` | ✅ | Codebase cleanup |
-| `setup/cleanup-codebase.sh/.ps1` | 🗑️ | **DUPLICATE** of above |
 | `fix-customer-account.sh` | ✅ | Customer account migration fix |
 | `setup-phase2.sh/.ps1` | 📦 | Phase 2 setup (historical) |
 
 ---
 
-## 13. PUBLIC TEST FILES (`public/`)
+## 13. DEV TEST PAGES (`dev-workspace/test-pages/`) ✅ MOVED
 
-| File | Status | Purpose | Notes |
-|------|--------|---------|-------|
-| `test-3d-products.html` | ⚠️ | Test page | Consider moving to dev-workspace |
-| `test-central-panel-system.html` | ⚠️ | Test page | Consider moving |
-| `test-console-interface.html` | ⚠️ | Test page | Consider moving |
-| `test-final-3d-system.html` | ⚠️ | Test page | Consider moving |
-| `test-green-ring.html` | ⚠️ | Test page | Consider moving |
-| `test-products.html` | ⚠️ | Test page | Consider moving |
-| `test-shopify-glb-data.html` | ⚠️ | Test page | Consider moving |
-| `test-updated-3d-system.html` | ⚠️ | Test page | Consider moving |
+Test HTML files moved from `public/` to `dev-workspace/test-pages/`:
+
+| File | Purpose |
+|------|---------|
+| `test-3d-products.html` | 3D product testing |
+| `test-api-products.html` | API product testing |
+| `test-central-panel-system.html` | Central panel testing |
+| `test-console-interface.html` | Console interface testing |
+| `test-final-3d-system.html` | Final 3D system testing |
+| `test-green-ring.html` | Green ring testing |
+| `test-products.html` | Product testing |
+| `test-shopify-glb-data.html` | Shopify GLB data testing |
+| `test-updated-3d-system.html` | Updated 3D system testing |
 
 ---
 
@@ -333,41 +329,33 @@ These directories contain archived code. Not part of active build.
 | Directory | Status | Purpose |
 |-----------|--------|---------|
 | `backup/` | 📦 | Route/component backups |
-| `dev-workspace/` | 📦 | Development sandbox, old versions |
+| `dev-workspace/` | 📦 | Development sandbox, test pages, old versions |
 | `docs/archives/` | 📦 | Archived documentation |
 
 ---
 
 ## 🚨 REDUNDANCY SUMMARY
 
-### Files to DELETE (Empty/Unused)
+### Files to DELETE (Empty/Unused) ✅ DONE
 
-```
-app/components/Carousel3DPro/Carousel3DSubmenu_WORKING.js  # Empty
-app/routes/test-3d-products.jsx                            # Empty
-app/routes/simple-test.jsx                                 # Empty
-app/routes/digital-products-test.jsx                       # Empty
-app/routes/test-digital-products-3d.jsx                    # Empty
-scripts/setup/cleanup-codebase.sh                          # Duplicate
-scripts/setup/cleanup-codebase.ps1                         # Duplicate
-```
+All empty/duplicate files have been removed (commit 3540427).
 
 ### Files to CONSOLIDATE
 
-1. **CartHUDIcon3D.js** — Two versions exist:
-   - `app/components/Carousel3DPro/CartHUDIcon3D.js` (383 lines, more complete)
-   - `app/components/cart-drawers/CartHUDIcon3D.js` (161 lines, simpler)
-   - **Action:** Keep Carousel3DPro version, update imports in cart-drawers
+1. **CartHUDIcon3D.js** — ❌ NOT DUPLICATES (different implementations):
+   - `Carousel3DPro/CartHUDIcon3D.js` — Class-based with GSAP, `createCartHUDIcon(config)`, currently unused
+   - `cart-drawers/CartHUDIcon3D.js` — GLTF loader, `createCartHUDIcon(camera, callback)`, **actively used**
+   - **Action:** Keep both; consider removing unused Carousel3DPro version if class-based approach not needed
 
 2. **ContentManager** — Two overlapping systems:
    - `app/utils/contentManager.js` (1307 lines)
    - `app/utils/contentManagerEnhanced.js` (709 lines)
    - **Action:** Review and merge; they serve slightly different purposes
 
-3. **Integration Tests** — Two test files:
-   - `app/utils/integrationTests.client.js` (105 lines) — basic
-   - `app/utils/watermelonIntegrationTests.client.js` (230 lines) — comprehensive
-   - **Action:** Keep watermelonIntegrationTests, migrate any unique tests, delete integrationTests
+3. **Integration Tests** — ✅ CONSOLIDATED
+   - Merged `integrationTests.client.js` into `watermelonIntegrationTests.client.js`
+   - Added `testPageAPI()` and `testCentralPanel()` methods
+   - Added aliases: `window.watermelonTests`, `window.watermelonIntegrationTests`
 
 4. **CentralContentPanel** — Two versions:
    - `CentralContentPanel.js` (Three.js class)
@@ -385,29 +373,27 @@ scripts/setup/cleanup-codebase.ps1                         # Duplicate
 
 | Category | Files | Lines (est.) |
 |----------|-------|--------------|
-| 3D Core | 22 | ~8,000 |
+| 3D Core | 21 | ~8,000 |
 | Cart System | 17 | ~2,500 |
 | Backgrounds | 10 | ~1,500 |
-| Utilities | 24 | ~4,000 |
-| Routes (custom) | 15 | ~800 |
-| Scripts | 20 | ~1,200 |
-| **Total Custom** | **~108** | **~18,000** |
+| Utilities | 22 | ~4,000 |
+| Routes (custom) | 11 | ~800 |
+| Scripts | 18 | ~1,200 |
+| **Total Custom** | **~99** | **~18,000** |
 
 ---
 
-## 🎯 RECOMMENDED CLEANUP ACTIONS
+## 🎯 CLEANUP STATUS
 
-### Priority 1: Delete Empty Files
-7 files, 0 lines — immediate cleanup
+### ✅ Completed
+- Deleted 7 empty/duplicate files (commit 3540427)
+- Merged integration test files 
+- Moved 9 test HTML files from `public/` to `dev-workspace/test-pages/`
 
-### Priority 2: Consolidate Duplicates
-5 consolidation opportunities — reduces confusion for AI agents
-
-### Priority 3: Move Test HTML Files
-8 test HTML files in `public/` → move to `dev-workspace/test-pages/`
-
-### Priority 4: Archive Unused Scripts
-Consider moving `scripts/debug/` scripts to archive if not regularly used
+### ⚠️ Remaining Opportunities
+- CentralContentPanel: Review if both JS and JSX versions needed
+- Carousel3DProWrapper: Verify which variant is active
+- ContentManager: Review overlap between base and Enhanced versions
 
 ---
 
@@ -426,4 +412,13 @@ Consider moving `scripts/debug/` scripts to archive if not regularly used
 - React wraps 3D in `<ClientOnly>` components
 - Event bridge: `window.dispatchEvent()` ↔ React context listeners
 - Env vars: Use `envPublic` / `envServer` wrappers only
+
+**Console test commands:**
+```javascript
+window.integrationTests.runFullIntegrationTest()
+window.integrationTests.testPageAPI()
+window.integrationTests.testCentralPanel()
+window.integrationTests.testWithSimulatedCart()
+window.integrationTests.backgrounds.runHoneycombTest()
+```
 

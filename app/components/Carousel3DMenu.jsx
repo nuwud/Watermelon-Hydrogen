@@ -34,7 +34,7 @@ export function Carousel3DMenu({menuData}) {
         // Load test utilities only in development (browser-only via .client suffix)
         if (typeof window !== 'undefined') {
           import('../utils/menuTestUtils.client').catch(() => {});
-          import('../utils/integrationTests.client').catch(() => {});
+          import('../utils/watermelonIntegrationTests.client').catch(() => {});
         }
         
         window.THREE = THREE;
